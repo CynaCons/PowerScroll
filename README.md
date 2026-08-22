@@ -52,20 +52,21 @@ edits—there is no shadow database to reconcile.
 
 ## Let an agent work in your notebook
 
-The bridge is off by default and listens only on your machine. Until the npm
-package is published, install the verified bridge tarball from the latest
-release:
+The bridge is off by default and listens only on your machine. Run the published
+package directly from npm:
 
 ```bash
-npm install --global https://github.com/CynaCons/PowerScroll/releases/latest/download/powerscroll-mcp.tgz
-powerscroll-mcp
+npx -y powerscroll-mcp
 ```
 
 Then open a notebook and enable **Settings → Agent bridge → Let a local agent
 write into this notebook**. See the [complete tool and client setup guide](powernote-mcp/README.md).
 
-The package is prepared for `npx powerscroll-mcp` and the official MCP Registry;
-those routes become available after the first npm publication.
+The executable is published as [`powerscroll-mcp`](https://www.npmjs.com/package/powerscroll-mcp)
+and its discovery metadata is active in the
+[official MCP Registry](https://registry.modelcontextprotocol.io/?q=powerscroll).
+The latest GitHub release also carries a package tarball as a fallback, but npm
+is the canonical install source.
 
 ## Selected capabilities
 
@@ -113,7 +114,9 @@ npm run test:bridge
 
 PowerScroll is built with React, TypeScript, Vite, Konva, and Zustand. Behavioral
 requirements and their test traceability live in [`docs/`](docs/). Contribution
-expectations are in [CONTRIBUTING.md](CONTRIBUTING.md).
+expectations are in [CONTRIBUTING.md](CONTRIBUTING.md). Maintainers should use
+the [release runbook](docs/RELEASING.md) and update the
+[deployment ledger](docs/DEPLOYMENTS.md) after publishing.
 
 ## License
 

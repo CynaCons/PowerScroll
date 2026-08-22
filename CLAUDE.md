@@ -126,3 +126,13 @@ between source and output.
 - Always include `Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>`
 - Tag major milestones: `v0.1.0`, `v0.2.0`
 - Never amend commits — always create new ones
+
+## Release and Deployment Operations
+
+Before changing a version, creating or pushing a tag, publishing npm, publishing
+MCP Registry metadata, or diagnosing a deployment, read `docs/RELEASING.md` and
+the current observed state in `docs/DEPLOYMENTS.md`. The repository-local
+`powerscroll-release` skill at `.agents/skills/powerscroll-release/SKILL.md`
+routes release work to those canonical documents. Update the deployment ledger
+after every external publication; never infer that npm, the MCP Registry,
+GitHub Releases, and GitHub Pages moved together.

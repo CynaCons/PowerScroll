@@ -20,14 +20,17 @@ the `.html` file and nothing to reconcile.
 
 ## Install
 
-Until the first npm publication, install the release package directly:
+Run the current public package without a global installation:
 
 ```bash
-npm install --global https://github.com/CynaCons/PowerScroll/releases/latest/download/powerscroll-mcp.tgz
-powerscroll-mcp
+npx -y powerscroll-mcp
 ```
 
-After npm publication the shorter command is `npx powerscroll-mcp`.
+The executable is published as [`powerscroll-mcp`](https://www.npmjs.com/package/powerscroll-mcp)
+and registered for discovery as
+[`io.github.CynaCons/powerscroll`](https://registry.modelcontextprotocol.io/?q=powerscroll).
+The latest GitHub release also contains `powerscroll-mcp.tgz` as a fallback; an
+MCP-only npm patch may be newer than that app-release attachment.
 
 Repository contributors can run `npm install --prefix powernote-mcp`; the
 server is registered in `.mcp.json`. Restart the agent session after changing

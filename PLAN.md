@@ -1341,6 +1341,7 @@
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.
 
+- **Automated MCP distribution** — Add a GitHub Actions workflow for MCP-only and coordinated app+MCP releases. Use npm Trusted Publishing and MCP Registry GitHub OIDC (no long-lived tokens); validate exact, case-sensitive `io.github.CynaCons/powerscroll` identity and synchronized versions; publish the immutable npm version first, wait until it is publicly resolvable, then publish and verify the matching official MCP Registry entry. Support safe/idempotent reruns and `workflow_dispatch`. Keep the full Playwright campaign local rather than making it a publishing-job gate. The canonical manual and future automated order is documented in `docs/RELEASING.md`.
 - **Editable Gantt (PowerPlanner)** — Today the embed is intentionally read-only (`pointerEvents: none` + read-only `GanttRenderer`). Future: double-click / edit mode to change tasks & dates, persist `node.data.doc` on save, optional deep-link into PowerPlanner for full editing
 - **Collapsible Containers** — Canvas-in-canvas named frames (deferred from v0.2); flat shape/stroke groups land in v0.27.0 first
 - **Template Gallery** — Pre-built page templates (meeting notes, project plan, etc.)
