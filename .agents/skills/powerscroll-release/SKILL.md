@@ -29,4 +29,3 @@ the process from shell history or prior chat.
 The full Playwright campaign is local pre-tag evidence, not a publishing-job
 gate. Follow `CLAUDE.md` for planning, SRS, showcase, commit, and test-reporting
 requirements that are outside distribution mechanics.
-

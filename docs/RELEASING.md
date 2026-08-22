@@ -171,4 +171,3 @@ dispatch. It must:
 - verify both public APIs and write a useful workflow summary;
 - avoid long-lived repository secrets and avoid rerunning the full Playwright
   campaign inside the publishing job.
-
