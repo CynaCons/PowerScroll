@@ -82,11 +82,16 @@ export function multiDragMove(
   y: number,
   stage: Konva.Stage | null,
 ): void {
-  if (!session || session.draggedId !== draggedId || !session.multi) return;
+  if (!session || session.draggedId !== draggedId) return;
+  const canvas = useCanvasStore.getState();
 
+  // Keep the store in step with the Konva group that the user grabbed. This
+  // lets bound arrows follow during the drag rather than only on release.
+  canvas.updateNodeSilent(draggedId, { x, y });
+
+  if (!session.multi) return;
   const dx = x - session.originX;
   const dy = y - session.originY;
-  const canvas = useCanvasStore.getState();
 
   for (const [id, start] of session.nodeStarts) {
     if (id === draggedId) continue;

@@ -32,3 +32,8 @@ Allow users to create, style, select, move, resize, and delete geometric shapes 
 | REQ-SHAPE-018 | The arrow/line stroke shall redraw live while a vertex handle is being dragged | Must | — |
 | REQ-SHAPE-019 | Hover highlight on arrows and lines shall detect the stroke path, not the bounding box | Must | — |
 | REQ-SHAPE-020 | Dragging the body of an arrow/line shall translate both endpoints together | Must | — |
+| REQ-SHAPE-021 | Releasing an arrow or line endpoint within the binding distance of a bindable node shall bind and snap it to that node's outline; a dashed candidate outline shall be shown while hovering. | Must | T194 |
+| REQ-SHAPE-022 | Bound endpoints shall follow a node through move, resize, and rotation in the same undo entry. | Must | T194 |
+| REQ-SHAPE-023 | Dragging an endpoint away shall unbind it; dragging an arrow body shall unbind both endpoints. | Must | T194 |
+| REQ-SHAPE-024 | Deleting either side shall clean up the other, and bindings shall round-trip through save/load. | Must | T194 |
+| REQ-SHAPE-025 | Pasted or duplicated arrows shall carry no bindings to nodes outside the copied set. | Must | T194 |

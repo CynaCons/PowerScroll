@@ -1462,14 +1462,23 @@
 - [x] Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y and the top-bar button use canUndo/canRedo from the history store, tool-independent; selections pruned after undo
 - [x] SRS REQ-CANVAS-011 rewritten, REQ-CANVAS-040..042 added, E2E T193; T57/T134 stay green; typecheck, lint, full Playwright green, commit
 
-### v0.72.0 — Arrows bind to shapes and follow them (ACTIVE)
+### v0.72.0 — Arrows bind to shapes and follow them (2026-09-02 · 773/773 green) (COMPLETE)
 > Arrows and lines were two loose points; nothing tracked the shape an arrow pointed at, so moving a box left its arrows behind — the biggest gap against Excalidraw for diagramming. Excalidraw's model: an arrow carries startBinding/endBinding { elementId, fixedPoint }, a bindable shape carries boundElements, binding happens on pointer up within a small distance of a shape, endpoints are recomputed whenever the shape moves, resizes or rotates, and deleting either side cleans up the other.
 **Goal:** Release an arrow endpoint near a shape and it snaps to the outline and stays attached through move, resize and rotation; drag it away or delete the shape and it becomes free again.
-- [ ] Data model: startBinding/endBinding {elementId, fixedPoint} on arrows and lines, boundElements on bindable nodes; pure helpers in arrowBinding.ts (outline points per shape kind, fixedPoint ↔ anchor, recomputeBoundArrows) [agent: codex]
-- [ ] Bind on release within 12 screen px of a bindable outline (hint outline while hovering), snap endpoint to outline, unbind when dragged away [agent: codex]
-- [ ] Bound endpoints follow move (single/multi-drag), transform end and bridge updates inside the same history batch; body drag unbinds both ends [agent: codex]
-- [ ] Cleanup on delete either side; copy/paste and Ctrl+drag duplicate drop bindings to nodes outside the copied set; save/load round trip [agent: codex]
-- [ ] SRS REQ-SHAPE-021..025 and E2E T194; typecheck, lint, full Playwright green, commit [agent: codex]
+- [x] Data model: startBinding/endBinding {elementId, fixedPoint} on arrows and lines, boundElements on bindable nodes; pure helpers in arrowBinding.ts (outline points per shape kind, fixedPoint ↔ anchor, recomputeBoundArrows)
+- [x] Bind on release within 12 screen px of a bindable outline (hint outline while hovering), snap endpoint to outline, unbind when dragged away
+- [x] Bound endpoints follow move (single/multi-drag), transform end and bridge updates inside the same history batch; body drag unbinds both ends
+- [x] Cleanup on delete either side; copy/paste and Ctrl+drag duplicate drop bindings to nodes outside the copied set; save/load round trip
+- [x] SRS REQ-SHAPE-021..025 and E2E T194; typecheck, lint, full Playwright green, commit
+
+### v0.73.0 — Whiteboard small wins — keyboard nudge, diamond, opacity, marquee on select + hand tool (ACTIVE)
+> Four small Excalidraw parity gaps: no arrow-key nudging (and Ctrl+T/D/E/L switched tools), no diamond shape, no opacity on shapes/images/strokes, and region selection needed the separate L tool because select-tool background drag panned. Excalidraw and every mainstream whiteboard use background drag for marquee and Space / middle button / hand tool for pan. DECISION TO VETO: this rewrites REQ-CANVAS-002 (pan) — left-drag on empty canvas now marquee-selects; pan via Space+drag, middle button, hand tool (H), wheel, touch drag.
+**Goal:** The select tool behaves like Excalidraw's: drag to marquee, arrows to nudge, and the shape palette gains diamond and opacity.
+- [ ] Arrow keys nudge nodes and strokes by 1 (Shift 10), one history entry per press; Ctrl+T/D/E/L no longer switch tools [agent: codex]
+- [ ] Diamond shape type: toolbar, render + hit rect, binding outline, round trip [agent: codex]
+- [ ] Opacity (0–100) on shapes, images and strokes via their toolbars, rendered as Konva opacity, persisted [agent: codex]
+- [ ] Select-tool background drag = marquee; pan via Space+drag, middle button, hand tool (H), wheel, touch; REQ-CANVAS-002/013 rewritten and affected specs updated [agent: codex]
+- [ ] SRS REQ-CANVAS-043/044, REQ-SHAPE-026/027, E2E T195; typecheck, lint, full Playwright green, commit [agent: codex]
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.

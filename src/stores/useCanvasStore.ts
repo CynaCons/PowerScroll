@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { CanvasNode, Stroke, Viewport } from '../types/data';
+import type { ArrowBinding, CanvasNode, ShapeNodeData, Stroke, Viewport } from '../types/data';
 import { generateId } from '../utils/ids';
 import { expandSelectionForGroup } from '../utils/groups';
 import { clampStageY, pageCeiling } from '../utils/scrollCeiling';
@@ -8,6 +8,7 @@ import { useWorkspaceStore } from './useWorkspaceStore';
 import { useDrawStore } from './useDrawStore';
 import { useGroupStore } from './useGroupStore';
 import { useHistoryStore } from './useHistoryStore';
+import { isBindableNode, recomputeBoundArrows } from '../utils/arrowBinding';
 
 /** Viewport zoom bounds — shared by wheel zoom, pinch zoom and the zoom bar. */
 export const MIN_SCALE = 0.1;
@@ -30,6 +31,7 @@ interface CanvasState {
   addNode: (node: CanvasNode) => void;
   updateNode: (id: string, updates: Partial<CanvasNode>) => void;
   updateNodeSilent: (id: string, updates: Partial<CanvasNode>) => void; // no undo push (for layout sync)
+  setArrowBinding: (id: string, endpoint: 'start' | 'end', binding: ArrowBinding | null) => void;
   deleteNode: (id: string) => void;
   deleteSelectedNodes: () => void;
 
@@ -68,6 +70,42 @@ let _konvaStageRef: any = null; // Konva.Stage reference for direct manipulation
 /** Compatibility helpers for existing gesture call sites. Frames always include all stores. */
 export function undoBatchStart(_nodes?: CanvasNode[]): void { useHistoryStore.getState().batchStart(); }
 export function undoBatchEnd(): void { useHistoryStore.getState().batchEnd(); }
+
+function isArrow(node: CanvasNode): boolean {
+  const data = node.data as ShapeNodeData;
+  return node.type === 'shape' && (data.shapeType === 'arrow' || data.shapeType === 'line');
+}
+
+/** Keep the reverse index small, correct, and derived solely from arrow data. */
+function reconcileArrowReferences(nodes: CanvasNode[]): CanvasNode[] {
+  const targetIds = new Set(nodes.filter(isBindableNode).map((node) => node.id));
+  const references = new Map<string, string[]>();
+  for (const arrow of nodes.filter(isArrow)) {
+    const data = arrow.data as ShapeNodeData;
+    for (const binding of [data.startBinding, data.endBinding]) {
+      if (binding && targetIds.has(binding.elementId)) {
+        const ids = references.get(binding.elementId) ?? [];
+        if (!ids.includes(arrow.id)) ids.push(arrow.id);
+        references.set(binding.elementId, ids);
+      }
+    }
+  }
+  return nodes.map((node) => {
+    if (!isBindableNode(node)) return node;
+    const ids = references.get(node.id) ?? [];
+    const previous = node.boundElements ?? [];
+    if (previous.length === ids.length && previous.every((entry) => ids.includes(entry.id))) return node;
+    return { ...node, boundElements: ids.map((id) => ({ id, type: 'arrow' as const })) };
+  });
+}
+
+function followUpdatedNode(nodes: CanvasNode[], id: string, updates: Partial<CanvasNode>): CanvasNode[] {
+  const next = nodes.map((node) => node.id === id ? syncImageMiniOnUpdate(node, updates) : node);
+  const changed = next.find((node) => node.id === id);
+  if (!changed || !isBindableNode(changed)) return reconcileArrowReferences(next);
+  const replacements = new Map(recomputeBoundArrows(next, [id]).map((arrow) => [arrow.id, arrow]));
+  return reconcileArrowReferences(next.map((node) => replacements.get(node.id) ?? node));
+}
 
 /**
  * Frame-deletion cascade (v0.53). Deleting a `type:'diagram'` node also
@@ -113,7 +151,13 @@ function applyNodeDeletion(
     useHistoryStore.getState().batchStart();
     useHistoryStore.getState().record();
     set({
-      nodes: state.nodes.filter((n) => !nodeIds.has(n.id)),
+      nodes: reconcileArrowReferences(state.nodes.filter((n) => !nodeIds.has(n.id)).map((node) => {
+        if (!isArrow(node)) return node;
+        const data = node.data as ShapeNodeData;
+        const startBinding = data.startBinding && nodeIds.has(data.startBinding.elementId) ? null : data.startBinding;
+        const endBinding = data.endBinding && nodeIds.has(data.endBinding.elementId) ? null : data.endBinding;
+        return startBinding === data.startBinding && endBinding === data.endBinding ? node : { ...node, data: { ...data, startBinding, endBinding } };
+      })),
       selectedNodeIds: state.selectedNodeIds.filter((id) => !nodeIds.has(id)),
     });
     const selectedStrokeIds = useDrawStore.getState().selectedStrokeIds;
@@ -128,7 +172,13 @@ function applyNodeDeletion(
   set((s) => {
     useHistoryStore.getState().record();
     return {
-      nodes: s.nodes.filter((n) => !nodeIds.has(n.id)),
+      nodes: reconcileArrowReferences(s.nodes.filter((n) => !nodeIds.has(n.id)).map((node) => {
+        if (!isArrow(node)) return node;
+        const data = node.data as ShapeNodeData;
+        const startBinding = data.startBinding && nodeIds.has(data.startBinding.elementId) ? null : data.startBinding;
+        const endBinding = data.endBinding && nodeIds.has(data.endBinding.elementId) ? null : data.endBinding;
+        return startBinding === data.startBinding && endBinding === data.endBinding ? node : { ...node, data: { ...data, startBinding, endBinding } };
+      })),
       selectedNodeIds: s.selectedNodeIds.filter((id) => !nodeIds.has(id)),
     };
   });
@@ -150,7 +200,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       // Default layers: text=4 (above shapes), shapes/images=3
       const defaultLayer = node.type === 'text' ? 4 : 3;
       const withLayer = { ...node, layer: node.layer ?? defaultLayer };
-      return { nodes: [...state.nodes, withLayer] };
+      return { nodes: reconcileArrowReferences([...state.nodes, withLayer]) };
     }),
 
   updateNode: (id, updates) =>
@@ -158,9 +208,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       useHistoryStore.getState().record();
       useWorkspaceStore.getState().markDirty();
       return {
-        nodes: state.nodes.map((n) =>
-          n.id === id ? syncImageMiniOnUpdate(n, updates) : n,
-        ),
+        nodes: followUpdatedNode(state.nodes, id, updates),
       };
     }),
 
@@ -168,11 +216,22 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     set((state) => {
       useWorkspaceStore.getState().markDirty();
       return {
-        nodes: state.nodes.map((n) =>
-          n.id === id ? { ...n, ...updates } : n,
-        ),
+        nodes: followUpdatedNode(state.nodes, id, updates),
       };
     }),
+
+  setArrowBinding: (id, endpoint, binding) => set((state) => {
+    const arrow = state.nodes.find((node) => node.id === id);
+    if (!arrow || !isArrow(arrow)) return {};
+    useHistoryStore.getState().record();
+    useWorkspaceStore.getState().markDirty();
+    const data = arrow.data as ShapeNodeData;
+    const key = endpoint === 'start' ? 'startBinding' : 'endBinding';
+    const nodes = state.nodes.map((node) => node.id === id
+      ? { ...node, data: { ...data, [key]: binding } }
+      : node);
+    return { nodes: reconcileArrowReferences(nodes) };
+  }),
 
   deleteNode: (id) => applyNodeDeletion(get, set, [id]),
 
@@ -181,7 +240,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   loadPageNodes: (nodes) => {
     // Reset shared history on page switch.
     useHistoryStore.getState().clear();
-    set({ nodes, selectedNodeIds: [], lightboxNodeId: null });
+    set({ nodes: reconcileArrowReferences(nodes), selectedNodeIds: [], lightboxNodeId: null });
   },
 
   getNodesSnapshot: () => get().nodes,
@@ -310,22 +369,27 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     const state = get();
     clipboard = state.nodes
       .filter((n) => state.selectedNodeIds.includes(n.id))
-      .map((n) => ({ ...n, data: { ...n.data } }));
+      .map((n) => ({ ...n, data: { ...n.data }, boundElements: undefined }));
   },
 
   pasteNodes: (offsetX = 20, offsetY = 20) => {
     if (clipboard.length === 0) return;
-    const newNodes = clipboard.map((n) => ({
-      ...n,
-      id: generateId(),
-      x: n.x + offsetX,
-      y: n.y + offsetY,
-      data: { ...n.data },
-    }));
+    const idMap = new Map(clipboard.map((node) => [node.id, generateId()]));
+    const copiedIds = new Set(idMap.keys());
+    const newNodes = clipboard.map((n) => {
+      const data = { ...n.data } as ShapeNodeData;
+      if (isArrow(n)) {
+        const remap = (binding: ArrowBinding | null | undefined) => binding && copiedIds.has(binding.elementId)
+          ? { ...binding, elementId: idMap.get(binding.elementId)! } : null;
+        data.startBinding = remap(data.startBinding);
+        data.endBinding = remap(data.endBinding);
+      }
+      return { ...n, id: idMap.get(n.id)!, x: n.x + offsetX, y: n.y + offsetY, data, boundElements: undefined };
+    });
     set((state) => {
       useHistoryStore.getState().record();
       return {
-        nodes: [...state.nodes, ...newNodes],
+        nodes: reconcileArrowReferences([...state.nodes, ...newNodes]),
         selectedNodeIds: newNodes.map((n) => n.id),
       };
     });

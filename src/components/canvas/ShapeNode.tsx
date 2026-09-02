@@ -12,6 +12,8 @@ import { multiDragStart, multiDragMove, multiDragEnd, multiDragBounds } from '..
 import { calculateObjectSnap, calculateScrollSnap, type SnapGuide } from './SnapGuides';
 import { columnLeft, columnWidth } from '../../utils/pageLayout';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
+import { useHistoryStore } from '../../stores/useHistoryStore';
+import { bindingCandidate, closestPointOnOutline, fixedPointFor } from '../../utils/arrowBinding';
 
 interface ShapeNodeProps {
   node: CanvasNode;
@@ -27,16 +29,25 @@ export function ShapeNode({ node, isSelected, onSelect, stageScale, onSnapChange
   const updateNode = useCanvasStore((s) => s.updateNode);
   const updateNodeSilent = useCanvasStore((s) => s.updateNodeSilent);
   const [hovered, setHovered] = useState(false);
+  const [bindingHintId, setBindingHintId] = useState<string | null>(null);
 
   const handleDragStart = (e: Konva.KonvaEventObject<DragEvent>) => {
-    // Ctrl+Alt+drag: duplicate the node at original position, drag the duplicate
-    if ((e.evt.ctrlKey || e.evt.metaKey) && e.evt.altKey) {
+    // Ctrl+drag duplicates shapes; duplicate arrows intentionally start free.
+    if (e.evt.ctrlKey || e.evt.metaKey) {
       const duplicate: CanvasNode = {
         ...node,
         id: generateId(),
-        data: { ...node.data },
+        data: data.shapeType === 'arrow' || data.shapeType === 'line'
+          ? { ...node.data, startBinding: null, endBinding: null }
+          : { ...node.data },
+        boundElements: undefined,
       };
       useCanvasStore.getState().addNode(duplicate);
+    }
+    if (data.shapeType === 'arrow' || data.shapeType === 'line') {
+      const canvas = useCanvasStore.getState();
+      if (data.startBinding) canvas.setArrowBinding(node.id, 'start', null);
+      if (data.endBinding) canvas.setArrowBinding(node.id, 'end', null);
     }
     multiDragStart(node.id, e.target.x(), e.target.y());
   };
@@ -291,6 +302,10 @@ export function ShapeNode({ node, isSelected, onSelect, stageScale, onSnapChange
             stroke="#2563eb"
             strokeWidth={2 / stageScale}
             draggable
+            onDragStart={(e) => {
+              e.cancelBubble = true;
+              useHistoryStore.getState().batchStart();
+            }}
             onMouseEnter={(e) => {
               const stage = e.target.getStage();
               if (stage) stage.container().style.cursor = 'grab';
@@ -305,20 +320,30 @@ export function ShapeNode({ node, isSelected, onSelect, stageScale, onSnapChange
               const dy = e.target.y();
               e.target.x(0);
               e.target.y(0);
-              // Live update: move start point, adjust direction vector
+              const current = useCanvasStore.getState().nodes.find((item) => item.id === node.id) ?? node;
+              const point = { x: current.x + dx, y: current.y + dy };
+              const candidate = bindingCandidate(useCanvasStore.getState().nodes, point, node.id, 12 / useCanvasStore.getState().viewport.scale);
+              setBindingHintId(candidate?.id ?? null);
+              // Live update: move start point, adjust direction vector.
               updateNodeSilent(node.id, {
-                x: node.x + dx,
-                y: node.y + dy,
-                width: node.width - dx,
-                height: node.height - dy,
+                x: point.x,
+                y: point.y,
+                width: current.width - dx,
+                height: current.height - dy,
               });
             }}
             onDragEnd={(e) => {
               e.cancelBubble = true;
               e.target.x(0);
               e.target.y(0);
-              // Final update with undo entry (already moved via onDragMove)
-              updateNode(node.id, { x: node.x, y: node.y, width: node.width, height: node.height });
+              const current = useCanvasStore.getState().nodes.find((item) => item.id === node.id) ?? node;
+              const candidate = bindingCandidate(useCanvasStore.getState().nodes, { x: current.x, y: current.y }, node.id, 12 / useCanvasStore.getState().viewport.scale);
+              const start = candidate ? closestPointOnOutline(candidate, { x: current.x, y: current.y }) : { x: current.x, y: current.y };
+              const end = { x: current.x + current.width, y: current.y + current.height };
+              updateNode(node.id, { x: start.x, y: start.y, width: end.x - start.x, height: end.y - start.y });
+              useCanvasStore.getState().setArrowBinding(node.id, 'start', candidate ? { elementId: candidate.id, fixedPoint: fixedPointFor(candidate, start) } : null);
+              useHistoryStore.getState().batchEnd();
+              setBindingHintId(null);
             }}
           />
 
@@ -331,6 +356,10 @@ export function ShapeNode({ node, isSelected, onSelect, stageScale, onSnapChange
             stroke="#2563eb"
             strokeWidth={2 / stageScale}
             draggable
+            onDragStart={(e) => {
+              e.cancelBubble = true;
+              useHistoryStore.getState().batchStart();
+            }}
             onMouseEnter={(e) => {
               const stage = e.target.getStage();
               if (stage) stage.container().style.cursor = 'grab';
@@ -341,7 +370,11 @@ export function ShapeNode({ node, isSelected, onSelect, stageScale, onSnapChange
             }}
             onDragMove={(e) => {
               e.cancelBubble = true;
-              // Live update: end point changes direction vector
+              const current = useCanvasStore.getState().nodes.find((item) => item.id === node.id) ?? node;
+              const point = { x: current.x + e.target.x(), y: current.y + e.target.y() };
+              const candidate = bindingCandidate(useCanvasStore.getState().nodes, point, node.id, 12 / useCanvasStore.getState().viewport.scale);
+              setBindingHintId(candidate?.id ?? null);
+              // Live update: end point changes direction vector.
               updateNodeSilent(node.id, {
                 width: e.target.x(),
                 height: e.target.y(),
@@ -349,14 +382,29 @@ export function ShapeNode({ node, isSelected, onSelect, stageScale, onSnapChange
             }}
             onDragEnd={(e) => {
               e.cancelBubble = true;
-              // Final update with undo entry
-              updateNode(node.id, { width: e.target.x(), height: e.target.y() });
-              e.target.x(node.width);
-              e.target.y(node.height);
+              const current = useCanvasStore.getState().nodes.find((item) => item.id === node.id) ?? node;
+              const point = { x: current.x + current.width, y: current.y + current.height };
+              const candidate = bindingCandidate(useCanvasStore.getState().nodes, point, node.id, 12 / useCanvasStore.getState().viewport.scale);
+              const end = candidate ? closestPointOnOutline(candidate, point) : point;
+              updateNode(node.id, { width: end.x - current.x, height: end.y - current.y });
+              useCanvasStore.getState().setArrowBinding(node.id, 'end', candidate ? { elementId: candidate.id, fixedPoint: fixedPointFor(candidate, end) } : null);
+              useHistoryStore.getState().batchEnd();
+              e.target.x(current.width);
+              e.target.y(current.height);
+              setBindingHintId(null);
             }}
           />
         </>
       )}
+      {bindingHintId && (() => {
+        const target = useCanvasStore.getState().nodes.find((item) => item.id === bindingHintId);
+        if (!target) return null;
+        return <Rect
+          x={target.x - node.x} y={target.y - node.y} width={target.width} height={target.height}
+          stroke="#2563eb" strokeWidth={1 / stageScale} dash={[5 / stageScale, 4 / stageScale]}
+          fill="transparent" listening={false}
+        />;
+      })()}
     </Group>
   );
 }

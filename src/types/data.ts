@@ -51,6 +51,15 @@ export interface ShapeNodeData {
   cornerRadius?: number;
   /** Degrees (v0.34+). Orients an arc's opening and directional triangles. */
   rotation?: number;
+  /** Endpoint attachment for arrows and lines. Absent keeps pre-v0.72 files valid. */
+  startBinding?: ArrowBinding | null;
+  endBinding?: ArrowBinding | null;
+}
+
+export interface ArrowBinding {
+  elementId: string;
+  /** Position on the target's unrotated box, expressed as [0..1, 0..1]. */
+  fixedPoint: [number, number];
 }
 
 // Gantt node — embeds a PowerPlanner chart document.
@@ -119,6 +128,8 @@ export interface CanvasNode {
   data: NodeData;
   /** Flat group membership (v0.27+). Same id = same group. */
   groupId?: string | null;
+  /** Arrows/lines attached to this node. Derived from their endpoint bindings. */
+  boundElements?: { id: string; type: 'arrow' }[];
 }
 
 // ── Drawing strokes ─────────────────────────────────────────

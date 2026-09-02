@@ -5,7 +5,8 @@ import { useToolStore } from '../stores/useToolStore';
 import { undoBatchEnd, undoBatchStart, useDrawStore } from '../stores/useDrawStore';
 import { generateId } from '../utils/ids';
 import { clampCanvasY, clampStageY, liveCeiling } from '../utils/scrollCeiling';
-import type { Stroke } from '../types/data';
+import type { ShapeNodeData, Stroke } from '../types/data';
+import { bindingCandidate, closestPointOnOutline, fixedPointFor } from '../utils/arrowBinding';
 import {
   STROKE_ERASER_SCREEN_RADIUS,
   boundsFromFlatPoints,
@@ -73,6 +74,7 @@ export function useShapeCreation(
 
   // Shape creation state
   const [shapePreview, setShapePreview] = useState<ShapePreview | null>(null);
+  const [bindingHintId, setBindingHintId] = useState<string | null>(null);
   const shapeStart = useRef<{ x: number; y: number } | null>(null);
 
   const getCanvasPoint = useCallback(() => {
@@ -572,6 +574,13 @@ export function useShapeCreation(
       if (shapeType === 'arrow' || shapeType === 'line') {
         // Arrows/lines: store start point and signed delta
         setShapePreview({ x: start.x, y: start.y, w, h });
+        const candidate = bindingCandidate(
+          useCanvasStore.getState().nodes,
+          pt,
+          undefined,
+          12 / useCanvasStore.getState().viewport.scale,
+        );
+        setBindingHintId(candidate?.id ?? null);
       } else {
         // Other shapes: normalize to positive width/height with top-left origin
         setShapePreview({
@@ -633,13 +642,24 @@ export function useShapeCreation(
       const minSize = isLine ? 5 : (Math.abs(shapePreview.w) > 5 && Math.abs(shapePreview.h) > 5);
 
       if (isLine ? dragDist > 5 : minSize) {
+        const nodes = useCanvasStore.getState().nodes;
+        const startPoint = { x: shapePreview.x, y: shapePreview.y };
+        const endPoint = { x: shapePreview.x + shapePreview.w, y: shapePreview.y + shapePreview.h };
+        const startTarget = isLine ? bindingCandidate(nodes, startPoint, undefined, 12 / useCanvasStore.getState().viewport.scale) : null;
+        const endTarget = isLine ? bindingCandidate(nodes, endPoint, undefined, 12 / useCanvasStore.getState().viewport.scale) : null;
+        const snappedStart = startTarget ? closestPointOnOutline(startTarget, startPoint) : startPoint;
+        const snappedEnd = endTarget ? closestPointOnOutline(endTarget, endPoint) : endPoint;
+        const arrowData: Partial<ShapeNodeData> = isLine ? {
+          startBinding: startTarget ? { elementId: startTarget.id, fixedPoint: fixedPointFor(startTarget, snappedStart) } : null,
+          endBinding: endTarget ? { elementId: endTarget.id, fixedPoint: fixedPointFor(endTarget, snappedEnd) } : null,
+        } : {};
         useCanvasStore.getState().addNode({
           id: generateId(),
           type: 'shape',
-          x: shapePreview.x,
-          y: shapePreview.y,
-          width: shapePreview.w,
-          height: shapePreview.h,
+          x: isLine ? snappedStart.x : shapePreview.x,
+          y: isLine ? snappedStart.y : shapePreview.y,
+          width: isLine ? snappedEnd.x - snappedStart.x : shapePreview.w,
+          height: isLine ? snappedEnd.y - snappedStart.y : shapePreview.h,
           layer: 3,
           data: {
             shapeType: shapeOpts.shapeType,
@@ -647,6 +667,7 @@ export function useShapeCreation(
             stroke: shapeOpts.stroke,
             strokeWidth: shapeOpts.strokeWidth,
             strokeDash: [...shapeOpts.strokeDash],
+            ...arrowData,
           },
         });
       }
@@ -697,6 +718,7 @@ export function useShapeCreation(
     setInProgressPressures(null);
     shapeStart.current = null;
     setShapePreview(null);
+    setBindingHintId(null);
     lassoStart.current = null;
     setLassoRect(null);
     const opts = useToolStore.getState().drawOptions;
@@ -735,6 +757,7 @@ export function useShapeCreation(
     penCursorPos,
     lassoRect,
     shapePreview,
+    bindingHintId,
     // Handlers
     handleDrawPointerDown,
     handleDrawPointerMove,
