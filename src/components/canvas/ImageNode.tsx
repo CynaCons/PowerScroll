@@ -113,11 +113,10 @@ export function ImageNode({ node, isSelected, onSelect, stageScale, onSnapChange
   return (
     <Group
       ref={groupRef}
+      nodeId={node.id}
       x={node.x}
       y={node.y}
       rotation={data.rotation || 0}
-      offsetX={data.rotation ? node.width / 2 : 0}
-      offsetY={data.rotation ? node.height / 2 : 0}
       draggable={isInteractive}
       listening={isInteractive}
       onDragStart={handleDragStart}

@@ -21,7 +21,7 @@ Allow users to create, style, select, move, resize, and delete geometric shapes 
 | REQ-SHAPE-007 | Shapes shall have configurable stroke dash pattern (solid, dashed, dotted) | Must | T52 |
 | REQ-SHAPE-008 | Clicking a shape shall select it; Ctrl+Click shall toggle multi-selection | Must | T51 |
 | REQ-SHAPE-009 | Selected shapes shall be draggable to reposition on the canvas | Must | T51 |
-| REQ-SHAPE-010 | Selected shapes shall be resizable via Transformer handles | Must | T51 |
+| REQ-SHAPE-010 | Selected shapes shall be resizable via Transformer handles | Must | T51, T191 |
 | REQ-SHAPE-011 | Delete/Backspace key shall delete the selected shape(s) | Must | T51 |
 | REQ-SHAPE-012 | The ShapeToolbar shall appear in the bottom toolbar when the shape tool is active or a shape node is selected, providing shape type selector, fill/stroke color controls, stroke width, and dash style controls | Must | T52 |
 | REQ-SHAPE-013 | Ctrl+C / Ctrl+V shall copy and paste selected shapes with a position offset | Must | T51 |

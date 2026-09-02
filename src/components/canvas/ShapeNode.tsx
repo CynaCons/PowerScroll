@@ -125,8 +125,10 @@ export function ShapeNode({ node, isSelected, onSelect, stageScale, onSnapChange
   return (
     <Group
       ref={groupRef}
+      nodeId={node.id}
       x={node.x}
       y={node.y}
+      rotation={data.rotation ?? 0}
       width={isLinear ? hitW : w}
       height={isLinear ? hitH : h}
       draggable={isInteractive}
@@ -172,7 +174,6 @@ export function ShapeNode({ node, isSelected, onSelect, stageScale, onSnapChange
           strokeWidth={strokeWidth}
           dash={dash}
           cornerRadius={data.cornerRadius ?? 0}
-          rotation={data.rotation ?? 0}
           listening={false}
         />
       )}
@@ -187,7 +188,6 @@ export function ShapeNode({ node, isSelected, onSelect, stageScale, onSnapChange
           innerRadius={Math.abs(w) / 2}
           outerRadius={Math.abs(w) / 2}
           angle={180}
-          rotation={data.rotation ?? 0}
           stroke={stroke}
           strokeWidth={strokeWidth}
           dash={dash}

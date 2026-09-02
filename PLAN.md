@@ -1437,14 +1437,22 @@
 - [x] SRS REQ-DRAW-020/021 and E2E T190 freehand outline spec; T135 stays green
 - [x] Typecheck, lint, full Playwright green, commit
 
-### v0.70.0 — Transformer completeness — multi-select resize, Shift/Alt modifiers, rotation, ink scales with the selection (ACTIVE)
+### v0.70.0 — Transformer completeness — multi-select resize, Shift/Alt modifiers, rotation, ink scales with the selection (2026-09-02 · 763/764 then 1/1 on rerun) (COMPLETE)
 > Multi-selection showed a dashed border but hid every anchor, so a group of shapes could not be resized together; Shift did not lock aspect ratio and Alt did not scale from the centre; rotation was disabled except the image toolbar's 90° steps; freehand strokes only ever translated, so resizing a lasso selection with ink scaled the shapes and left the ink behind. Excalidraw's resizeElements.ts gives the target semantics.
 **Goal:** Any selection — shapes, text, images, strokes, or a mix — resizes and rotates as one body with Excalidraw's modifier semantics, in one undo entry.
-- [ ] Multi-select resize: anchors shown, per-node scale→size conversion, text fontSize scales, one undo frame across both stores [agent: codex]
-- [ ] Shift keeps aspect ratio (forced with text/images in selection); Alt scales around the centre [agent: codex]
-- [ ] Rotation handle with 45° snaps for shapes and images, persisted on the node and round-tripped [agent: codex]
-- [ ] Selected strokes scale and rotate with the selection (proxy bbox + transformStrokes in the draw store) [agent: codex]
-- [ ] SRS REQ-CANVAS-031..035 and E2E T191; typecheck, lint, full Playwright green, commit [agent: codex]
+- [x] Multi-select resize: anchors shown, per-node scale→size conversion, text fontSize scales, one undo frame across both stores
+- [x] Shift keeps aspect ratio (forced with text/images in selection); Alt scales around the centre
+- [x] Rotation handle with 45° snaps for shapes and images, persisted on the node and round-tripped
+- [x] Selected strokes scale and rotate with the selection (proxy bbox + transformStrokes in the draw store)
+- [x] SRS REQ-CANVAS-031..035 and E2E T191; typecheck, lint, full Playwright green, commit
+
+### v0.70.1 — Object snapping on by default — Shift bypasses, screen-constant threshold, equal-gap guides (ACTIVE)
+> Alignment snapping existed but only while holding Shift, its 8px threshold was in canvas units so it vanished when zoomed out, and there was no equal-spacing snap. Excalidraw snaps by default at 8 screen px / zoom, lets a modifier bypass, and adds centre-in-gap and equal side-gap snaps with gap guides. Ctrl+drag already means duplicate here, so Shift becomes the bypass.
+**Goal:** Dragging anything lines up with its neighbours by default, at any zoom, including equal spacing, and one persisted setting turns it off.
+- [ ] snapToObjects setting (default on, persisted) with a settings-panel toggle; Shift during drag bypasses; single gate helper for all drag handlers [agent: codex]
+- [ ] Snap threshold = 8 screen px / viewport scale [agent: codex]
+- [ ] Equal-gap snaps (centre-in-gap, equal side gaps) with tick guides; pure helper [agent: codex]
+- [ ] SRS REQ-CANVAS-036..039 and E2E T192; typecheck, lint, full Playwright green, commit [agent: codex]
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.

@@ -21,6 +21,8 @@ interface DrawState {
     dy: number,
     startPoints: Map<string, number[]>,
   ) => void;
+  /** Apply an affine canvas transform to ink without changing pressure or width. */
+  transformStrokes: (ids: string[], matrix: StrokeTransformMatrix) => void;
   selectStrokes: (ids: string[]) => void;
   clearStrokeSelection: () => void;
   setStrokeGroupIds: (ids: string[], groupId: string | null) => void;
@@ -36,6 +38,9 @@ interface DrawState {
   canUndo: () => boolean;
   canRedo: () => boolean;
 }
+
+/** Konva-compatible affine matrix: [a, b, c, d, e, f]. */
+export type StrokeTransformMatrix = [number, number, number, number, number, number];
 
 let undoStack: Stroke[][] = [];
 let redoStack: Stroke[][] = [];
@@ -166,6 +171,26 @@ export const useDrawStore = create<DrawState>((set, get) => ({
             newPoints[i + 1] += dy;
           }
           return { ...s, points: newPoints };
+        }),
+      };
+    });
+  },
+
+  transformStrokes: (ids, [a, b, c, d, e, f]) => {
+    set((state) => {
+      const idSet = new Set(ids);
+      useWorkspaceStore.getState().markDirty();
+      return {
+        strokes: state.strokes.map((stroke) => {
+          if (!idSet.has(stroke.id)) return stroke;
+          const points = [...stroke.points];
+          for (let i = 0; i < points.length; i += 2) {
+            const x = points[i];
+            const y = points[i + 1];
+            points[i] = a * x + c * y + e;
+            points[i + 1] = b * x + d * y + f;
+          }
+          return { ...stroke, points };
         }),
       };
     });

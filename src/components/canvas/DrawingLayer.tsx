@@ -83,6 +83,20 @@ export function DrawingLayer({
 }: DrawingLayerProps) {
   const selectedSet = new Set(selectedStrokeIds);
   const pendingSet = new Set(pendingEraseIds);
+  const selectedStrokes = strokes.filter((stroke) => selectedSet.has(stroke.id));
+  const strokeBounds = selectedStrokes.reduce(
+    (bounds, stroke) => {
+      const pad = stroke.strokeWidth / 2;
+      for (let i = 0; i < stroke.points.length; i += 2) {
+        bounds.minX = Math.min(bounds.minX, stroke.points[i] - pad);
+        bounds.minY = Math.min(bounds.minY, stroke.points[i + 1] - pad);
+        bounds.maxX = Math.max(bounds.maxX, stroke.points[i] + pad);
+        bounds.maxY = Math.max(bounds.maxY, stroke.points[i + 1] + pad);
+      }
+      return bounds;
+    },
+    { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
+  );
 
   // Live ink uses the same outline but leaves the tail unfixed until pointerup.
   const inProgressOutline =
@@ -92,15 +106,28 @@ export function DrawingLayer({
 
   return (
     <>
+      {/* A transparent Transformer target lets selected ink share the same
+          selection box as nodes. It lives in canvas coordinates, not inside a
+          drawing group, so the end-of-gesture affine transform can be applied
+          directly to the stored points. */}
+      {selectedStrokes.length > 0 && Number.isFinite(strokeBounds.minX) && (
+        <Rect
+          id="__stroke-transform-proxy__"
+          x={strokeBounds.minX}
+          y={strokeBounds.minY}
+          width={Math.max(1, strokeBounds.maxX - strokeBounds.minX)}
+          height={Math.max(1, strokeBounds.maxY - strokeBounds.minY)}
+          opacity={0}
+          listening={false}
+        />
+      )}
       {/* Committed strokes */}
       {strokes.map((stroke) => (
         <CommittedStroke key={stroke.id} stroke={stroke} opacity={pendingSet.has(stroke.id) ? 0.2 : 1} />
       ))}
 
       {/* Selected stroke highlights */}
-      {strokes
-        .filter((s) => selectedSet.has(s.id))
-        .map((stroke) => (
+      {selectedStrokes.map((stroke) => (
           <Line
             key={`sel-${stroke.id}`}
             points={stroke.points}

@@ -1,167 +1,182 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { Transformer } from 'react-konva';
 import type Konva from 'konva';
-import { useCanvasStore } from '../../stores/useCanvasStore';
+import { useCanvasStore, undoBatchEnd, undoBatchStartFull } from '../../stores/useCanvasStore';
+import { useDrawStore, type StrokeTransformMatrix } from '../../stores/useDrawStore';
+import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
+import { MIN_TEXT_HEIGHT, MIN_TEXT_WIDTH } from '../../utils/pageLayout';
+import type { TextNodeData } from '../../types/data';
 
 interface SelectionTransformerProps {
   selectedNodeIds: string[];
+  selectedStrokeIds: string[];
   stageRef: React.RefObject<Konva.Stage | null>;
 }
 
-// Desktop anchor/padding values, unchanged from before touch support existed.
 const DESKTOP_ANCHOR_SIZE = 8;
 const DESKTOP_PADDING_SINGLE = 2;
 const DESKTOP_PADDING_MULTI = 6;
-
-// Finger-sized handles for touch devices (Apple HIG / Android touch guidance
-// call for ~24-44px targets; the 8px desktop anchor is unhittable with a
-// thumb). Extra padding keeps the bigger anchors clear of the shape's edge.
 const TOUCH_ANCHOR_SIZE = 24;
 const TOUCH_PADDING_SINGLE = 10;
 const TOUCH_PADDING_MULTI = 16;
+const STROKE_PROXY_ID = '__stroke-transform-proxy__';
 
-// Checked once at module load: a device's pointer class (mouse vs. touch)
-// doesn't change mid-session, so there's no need for a matchMedia listener
-// that reacts to it live.
-const isCoarsePointer =
-  typeof window !== 'undefined' && typeof window.matchMedia === 'function'
-    ? window.matchMedia('(pointer: coarse)').matches
-    : false;
+const isCoarsePointer = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+  ? window.matchMedia('(pointer: coarse)').matches
+  : false;
 
-export function SelectionTransformer({ selectedNodeIds, stageRef }: SelectionTransformerProps) {
+/** Selection transform for nodes and selected freehand ink. */
+export function SelectionTransformer({ selectedNodeIds, selectedStrokeIds, stageRef }: SelectionTransformerProps) {
   const transformerRef = useRef<Konva.Transformer>(null);
+  const strokeOriginRef = useRef<{ x: number; y: number } | null>(null);
   const nodes = useCanvasStore((s) => s.nodes);
-  const updateNode = useCanvasStore((s) => s.updateNode);
+  const strokes = useDrawStore((s) => s.strokes);
+  const [altDown, setAltDown] = useState(false);
 
-  // Check if any selected node is resizable (images and shapes)
-  const hasResizableSelected = selectedNodeIds.some((id) => {
-    const n = nodes.find((n) => n.id === id);
-    return n?.type === 'image' || n?.type === 'shape';
-  });
+  // Konva evaluates centeredScaling during a handle drag, so this is live.
+  useEffect(() => {
+    const down = (event: KeyboardEvent) => event.key === 'Alt' && setAltDown(true);
+    const up = (event: KeyboardEvent) => event.key === 'Alt' && setAltDown(false);
+    window.addEventListener('keydown', down);
+    window.addEventListener('keyup', up);
+    return () => {
+      window.removeEventListener('keydown', down);
+      window.removeEventListener('keyup', up);
+    };
+  }, []);
 
-  const resizeEnabled = hasResizableSelected;
+  const selected = selectedNodeIds
+    .map((id) => nodes.find((node) => node.id === id))
+    .filter((node): node is NonNullable<typeof node> => !!node);
+  const hasUnsupported = selected.some((node) => node.type === 'diagram' || node.type === 'gantt');
+  const hasResizableSelected = selectedStrokeIds.length > 0
+    || selected.some((node) => node.type === 'image' || node.type === 'shape' || node.type === 'text');
+  // Diagram and Gantt have bespoke internal layouts, so hiding anchors avoids
+  // advertising a resize operation whose semantics have not been defined.
+  const resizeEnabled = hasResizableSelected && !hasUnsupported;
+  const forceRatio = selected.some((node) => node.type === 'text' || node.type === 'image');
 
   useEffect(() => {
     const transformer = transformerRef.current;
     const stage = stageRef.current;
     if (!transformer || !stage) return;
-
-    if (selectedNodeIds.length === 0) {
+    if (selectedNodeIds.length === 0 && selectedStrokeIds.length === 0) {
+      transformer.nodes([]);
+      transformer.getLayer()?.batchDraw();
+      return;
+    }
+    // Single images retain their bespoke, aspect-locked widget.
+    const only = selectedNodeIds.length === 1 ? nodes.find((node) => node.id === selectedNodeIds[0]) : undefined;
+    if (selectedNodeIds.length === 1 && selectedStrokeIds.length === 0 && only?.type === 'image') {
       transformer.nodes([]);
       transformer.getLayer()?.batchDraw();
       return;
     }
 
-    // A single image draws its own aspect-locked corner handles; attaching the
-    // free-resize transformer as well gave two contradictory resize widgets
-    // (REQ-IMAGE-024). Multi-selections keep the transformer group border.
-    if (selectedNodeIds.length === 1) {
-      const only = nodes.find((n) => n.id === selectedNodeIds[0]);
-      if (only?.type === 'image') {
-        transformer.nodes([]);
-        transformer.getLayer()?.batchDraw();
-        return;
-      }
-    }
-
-    const selectedKonvaNodes: Konva.Node[] = [];
+    const targets: Konva.Node[] = [];
     for (const nodeId of selectedNodeIds) {
-      // Skip arrows/lines — they use custom vertex handles in ShapeNode
-      const storeNode = nodes.find((n) => n.id === nodeId);
+      const storeNode = nodes.find((node) => node.id === nodeId);
       if (storeNode?.type === 'shape') {
-        const shapeData = storeNode.data as any;
-        if (shapeData.shapeType === 'arrow' || shapeData.shapeType === 'line') {
-          continue;
-        }
+        const data = storeNode.data as { shapeType?: string };
+        if (data.shapeType === 'arrow' || data.shapeType === 'line') continue;
       }
-
-      const found: Konva.Node | undefined = stage.findOne(`#${nodeId}`);
-      if (found) {
-        const group: Konva.Node | null = found.parent;
-        if (group && group !== stage) {
-          selectedKonvaNodes.push(group);
-        }
-      }
+      const group: Konva.Node | null | undefined = stage.findOne(`#${nodeId}`)?.parent;
+      if (group && group !== stage) targets.push(group);
     }
-
-    transformer.nodes(selectedKonvaNodes);
+    if (selectedStrokeIds.length > 0) {
+      const proxy = stage.findOne(`#${STROKE_PROXY_ID}`);
+      if (proxy) targets.push(proxy);
+    }
+    transformer.nodes(targets);
     transformer.getLayer()?.batchDraw();
-    // The box is cached against transformer-initiated changes only; a store
-    // write that resizes a node from outside (Mini toggle, undo of a resize)
-    // leaves it stale. It cannot be recomputed here either: this effect can
-    // commit before react-konva applies the node's new size (measured — the
-    // group still reports the old clientRect at this point), so recompute on
-    // the next frame, when Konva props are guaranteed applied.
     const raf = requestAnimationFrame(() => {
+      // A delete/page switch can destroy a target between the effect and this
+      // deferred refresh. Konva's Transformer assumes every target survives.
+      if (!transformer.getStage() || transformer.nodes().some((node) => !node.getStage())) return;
       transformer.forceUpdate();
       transformer.getLayer()?.batchDraw();
     });
     return () => cancelAnimationFrame(raf);
-  }, [selectedNodeIds, stageRef, nodes]);
+  }, [selectedNodeIds, selectedStrokeIds, stageRef, nodes, strokes]);
 
-  // Handle resize end — update node dimensions in store
   const handleTransformEnd = () => {
     const transformer = transformerRef.current;
-    if (!transformer) return;
-
-    for (const konvaNode of transformer.nodes()) {
-      // Try to find the node ID from any child element
-      const id = (konvaNode as any).findOne('Rect')?.id()
-        || (konvaNode as any).findOne('Image')?.id()
-        || (konvaNode as any).findOne('Ellipse')?.id()
-        || (konvaNode as any).findOne('Line')?.id()
-        || (konvaNode as any).findOne('Arrow')?.id();
-      if (!id) continue;
-
-      // Get the actual pixel dimensions after transform
-      const scaleX = konvaNode.scaleX();
-      const scaleY = konvaNode.scaleY();
-      const width = konvaNode.width() * scaleX;
-      const height = konvaNode.height() * scaleY;
-
-      // Reset scale (dimensions are now baked in)
-      konvaNode.scaleX(1);
-      konvaNode.scaleY(1);
-
-      const storeNode = nodes.find((n) => n.id === id);
-      if (storeNode) {
-        updateNode(id, {
-          x: konvaNode.x(),
-          y: konvaNode.y(),
-          width,
-          height,
-        });
+    const stage = stageRef.current;
+    if (!transformer || !stage) return;
+    const canvas = useCanvasStore.getState();
+    const draw = useDrawStore.getState();
+    const scrolls = useWorkspaceStore.getState().getActivePage()?.scrolls ?? [];
+    undoBatchStartFull({ nodes: canvas.nodes, scrolls, strokes: draw.strokes });
+    try {
+      for (const konvaNode of transformer.nodes()) {
+        if (konvaNode.id() === STROKE_PROXY_ID) continue;
+        const id = konvaNode.getAttr('nodeId') as string | undefined;
+        const storeNode = id && canvas.nodes.find((node) => node.id === id);
+        if (!storeNode) continue;
+        const sx = Math.abs(konvaNode.scaleX());
+        const sy = Math.abs(konvaNode.scaleY());
+        const fontScale = forceRatio ? sx : Math.sqrt(sx * sy);
+        const updates: Record<string, unknown> = {
+          x: konvaNode.x(), y: konvaNode.y(),
+          width: Math.max(1, storeNode.width * sx),
+          height: Math.max(1, storeNode.height * sy),
+        };
+        if (storeNode.type === 'text') {
+          const data = storeNode.data as TextNodeData;
+          updates.width = Math.max(MIN_TEXT_WIDTH, storeNode.width * sx);
+          updates.height = Math.max(MIN_TEXT_HEIGHT, storeNode.height * sy);
+          updates.data = { ...data, fontSize: Math.max(1, data.fontSize * fontScale) };
+        }
+        if (storeNode.type === 'shape' || storeNode.type === 'image') {
+          updates.data = { ...storeNode.data, rotation: konvaNode.rotation() };
+        }
+        konvaNode.scaleX(1);
+        konvaNode.scaleY(1);
+        canvas.updateNodeSilent(id!, updates);
       }
+
+      const proxy = stage.findOne(`#${STROKE_PROXY_ID}`);
+      if (proxy && selectedStrokeIds.length > 0) {
+        // This transform is layer-relative, so viewport zoom/pan is excluded.
+        const [a, b, c, d, e, f] = proxy.getTransform().getMatrix();
+        const origin = strokeOriginRef.current ?? { x: proxy.x(), y: proxy.y() };
+        const matrix: StrokeTransformMatrix = [
+          a, b, c, d,
+          e - a * origin.x - c * origin.y,
+          f - b * origin.x - d * origin.y,
+        ];
+        draw.transformStrokes(selectedStrokeIds, matrix);
+        proxy.scaleX(1);
+        proxy.scaleY(1);
+        proxy.rotation(0);
+      }
+    } finally {
+      undoBatchEnd();
+      strokeOriginRef.current = null;
     }
   };
 
-  const isMultiSelect = selectedNodeIds.length > 1;
-
+  const isMultiSelect = selectedNodeIds.length + selectedStrokeIds.length > 1;
   const padding = isMultiSelect
     ? (isCoarsePointer ? TOUCH_PADDING_MULTI : DESKTOP_PADDING_MULTI)
     : (isCoarsePointer ? TOUCH_PADDING_SINGLE : DESKTOP_PADDING_SINGLE);
+  const anchorSize = resizeEnabled ? (isCoarsePointer ? TOUCH_ANCHOR_SIZE : DESKTOP_ANCHOR_SIZE) : 0;
+  const rotateEnabled = resizeEnabled && (selectedStrokeIds.length > 0
+    || selected.some((node) => node.type === 'shape' || node.type === 'image'));
 
-  const anchorSize = resizeEnabled && !isMultiSelect
-    ? (isCoarsePointer ? TOUCH_ANCHOR_SIZE : DESKTOP_ANCHOR_SIZE)
-    : 0;
-
-  return (
-    <Transformer
-      key={resizeEnabled ? 'resize' : 'no-resize'}
-      ref={transformerRef}
-      borderStroke="#2563eb"
-      borderStrokeWidth={isMultiSelect ? 2.5 : 1.5}
-      borderDash={isMultiSelect ? [8, 4] : undefined}
-      padding={padding}
-      resizeEnabled={resizeEnabled}
-      rotateEnabled={false}
-      anchorSize={anchorSize}
-      anchorFill="#ffffff"
-      anchorStroke="#2563eb"
-      anchorStrokeWidth={1}
-      anchorCornerRadius={2}
-      keepRatio={false}
-      onTransformEnd={handleTransformEnd}
-    />
-  );
+  return <Transformer
+    key={resizeEnabled ? 'resize' : 'no-resize'} ref={transformerRef}
+    borderStroke="#2563eb" borderStrokeWidth={isMultiSelect ? 2.5 : 1.5}
+    borderDash={isMultiSelect ? [8, 4] : undefined} padding={padding}
+    resizeEnabled={resizeEnabled} rotateEnabled={rotateEnabled}
+    rotationSnaps={[0, 45, 90, 135, 180, 225, 270, 315]} rotationSnapTolerance={5}
+    anchorSize={anchorSize} anchorFill="#ffffff" anchorStroke="#2563eb"
+    anchorStrokeWidth={1} anchorCornerRadius={2} keepRatio={forceRatio}
+    shiftBehavior="default" centeredScaling={altDown}
+    onTransformStart={() => {
+      const proxy = stageRef.current?.findOne(`#${STROKE_PROXY_ID}`);
+      strokeOriginRef.current = proxy ? { x: proxy.x(), y: proxy.y() } : null;
+    }}
+    onTransformEnd={handleTransformEnd}
+  />;
 }

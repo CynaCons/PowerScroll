@@ -458,7 +458,11 @@ export function InfiniteCanvas({ backgroundMode = 'pages', bgColor = '#ffffff' }
           {/* Selection handles live on the very top so resize/rotate
               handles remain visible and clickable above strokes. */}
           <Layer>
-            <SelectionTransformer selectedNodeIds={selectedNodeIds} stageRef={stageRef} />
+            <SelectionTransformer
+              selectedNodeIds={selectedNodeIds}
+              selectedStrokeIds={selectedStrokeIds}
+              stageRef={stageRef}
+            />
           </Layer>
         </Stage>
       )}

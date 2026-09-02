@@ -241,6 +241,7 @@ export function TextNode({ node, isSelected, onSelect, stageScale, autoEdit, onS
   return (
     <Group
       ref={groupRef}
+      nodeId={node.id}
       x={node.x}
       y={node.y}
       width={boxW}
