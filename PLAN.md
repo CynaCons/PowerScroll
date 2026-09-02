@@ -1481,15 +1481,15 @@
 - [x] Select-tool background drag = marquee; pan via Space+drag, middle button, hand tool (H), wheel, touch; REQ-CANVAS-002/013 rewritten and affected specs updated
 - [x] SRS REQ-CANVAS-043/044, REQ-SHAPE-026/027, E2E T195; typecheck, lint, full Playwright green, commit
 
-### v0.73.1 — Ship v0.73.0 — application release (GitHub release + Pages) (ACTIVE)
+### v0.73.1 — Ship v0.73.0 — application release (GitHub release + Pages) (2026-09-02 · v0.73.0 live on GitHub Releases + Pages) (COMPLETE)
 > Application-only release of the Excalidraw-parity program (v0.68.0–v0.73.0). MCP package unchanged, stays at powerscroll-mcp@0.67.1 on npm and the Registry. Follows docs/RELEASING.md: version bump, proportional checks, template rebuild, full local Playwright campaign, template smoke, commit, push, annotated tag, verify release assets and Pages, update the deployment ledger.
 **Goal:** v0.73.0 is downloadable from GitHub Releases with all three assets, Pages serves 0.73.0, the in-app update resolves the tag-pinned template, and DEPLOYMENTS.md reflects observed state.
 - [x] Classify: app-only (powernote-mcp unchanged since 6b0661f); bump src/version.ts + root package.json/lock to 0.73.0
 - [x] Proportional checks: typecheck, lint, build:template, MCP package tests, test:bridge
 - [x] Full local Playwright campaign on the release candidate + template and dev-app smoke (canvas, bridge, no console errors)
-- [ ] Commit dist-template + version + PLAN; push main; create and push annotated tag v0.73.0
-- [ ] Verify GitHub release (non-draft, 3 assets with digests), Pages from the release commit, live app reports 0.73.0, in-app update resolves the tag-pinned template
-- [ ] Update docs/DEPLOYMENTS.md from observed state; commit and push
+- [x] Commit dist-template + version + PLAN; push main; create and push annotated tag v0.73.0
+- [x] Verify GitHub release (non-draft, 3 assets with digests), Pages from the release commit, live app reports 0.73.0, in-app update resolves the tag-pinned template
+- [x] Update docs/DEPLOYMENTS.md from observed state; commit and push
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.
