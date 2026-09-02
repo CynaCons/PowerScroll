@@ -10,6 +10,7 @@ import type { CSSProperties } from 'react';
 import { marked } from 'marked';
 import type { TextNodeData } from '../types/data';
 import { preprocessMath, restoreMath } from './mathParser';
+import { normalizeListIndents } from './listIndent';
 import { MIN_TEXT_HEIGHT, MIN_TEXT_WIDTH } from './pageLayout';
 
 // Configure marked for GFM + task lists
@@ -67,11 +68,13 @@ export function markdownToHtml(text: string): string {
   if (!text) return '';
   // 1) Extract $$...$$ and $...$ math blocks, replace with placeholders
   const { text: textWithoutMath, blocks } = preprocessMath(text);
-  // 2) Run marked on the cleaned text
-  let html = marked.parse(textWithoutMath) as string;
-  // 3) Restore math placeholders with KaTeX-rendered HTML
+  // 2) Pad under-indented numbered children so Tab's 2-space habit still nests
+  const withNestedLists = normalizeListIndents(textWithoutMath);
+  // 3) Run marked on the cleaned text
+  let html = marked.parse(withNestedLists) as string;
+  // 4) Restore math placeholders with KaTeX-rendered HTML
   html = restoreMath(html, blocks);
-  // 4) Remove disabled attribute from task-list checkboxes so clicks work
+  // 5) Remove disabled attribute from task-list checkboxes so clicks work
   return html
     .replace(/<input\s+disabled=""\s+type="checkbox"/g, '<input type="checkbox"')
     .replace(/<input\s+checked=""\s+disabled=""\s+type="checkbox"/g, '<input checked="" type="checkbox"');

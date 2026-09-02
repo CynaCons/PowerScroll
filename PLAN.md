@@ -1338,6 +1338,16 @@
 - [x] Keep a screen-sized resize hit target and show live guide/width feedback while dragging [agent: codex]
 - [x] Extend T186 across pan/zoom and preview-before-commit; update SRS requirements [agent: codex]
 - [x] Run focused and full verification, smoke, showcase, then prepare the hotfix release [agent: codex]
+### v0.68.0 — Numbered list indentation (2026-08-25) (COMPLETE)
+> Numbered lists could not nest: Tab added 2 spaces, which CommonMark treats as the same list. List-aware indent (4-space step under a numbered parent, 2 under a bullet), renumber on nest/un-nest, renderer padding so old 2-space notes still nest, and nested ol markers (decimal / lower-alpha / lower-roman).
+**Goal:** Tab/Shift+Tab nest numbered list items the same way bullets already nest. CommonMark needs the child indented to the parent marker width (3+ spaces for `1. `); the editor currently inserts 2, so numbered children flatten. Nested ordered lists must render as child <ol>s, restart at 1, and use a distinct marker per depth.
+- [x] SRS: REQ-TEXT-033 (Tab/Shift+Tab nests numbered lists) + REQ-TEXT-034 (nested ol marker cycle)
+- [x] listIndent util: nest under previous sibling (4-space under numbered, 2 under bullets), un-nest to parent, renumber region
+- [x] TextEditor Tab/Shift+Tab uses list-aware indent
+- [x] Renderer pads under-indented numbered children so 2-space notes still nest
+- [x] Nested ol CSS: decimal / lower-alpha / lower-roman
+- [x] E2E T188 numbered list indent + nested render; existing T73/T75 stay green
+- [x] Showcase from real UI + smoke + Playwright green
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.
 

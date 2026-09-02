@@ -142,6 +142,18 @@ button:disabled {
   margin: 0 0 0.4em 0;
   padding-left: 1.4em;
 }
+.powernote-markdown ol {
+  list-style-type: decimal;
+}
+.powernote-markdown ol ol {
+  list-style-type: lower-alpha;
+}
+.powernote-markdown ol ol ol {
+  list-style-type: lower-roman;
+}
+.powernote-markdown ol ol ol ol {
+  list-style-type: decimal;
+}
 .powernote-markdown li {
   margin-bottom: 0.15em;
 }

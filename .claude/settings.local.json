@@ -12,7 +12,8 @@
       "Bash(npm install:*)",
       "Bash(npx playwright:*)",
       "WebSearch",
-      "WebFetch(domain:talk.tiddlywiki.org)"
+      "WebFetch(domain:talk.tiddlywiki.org)",
+      "mcp__powerplan__get_current_iteration"
     ]
   }
 }

@@ -3,6 +3,7 @@ import { Html } from 'react-konva-utils';
 import type { CanvasNode, TextNodeData } from '../../types/data';
 import { useEditorStore } from '../../stores/useEditorStore';
 import { FORMAT_MARKERS, toggleMarker, type FormatKind } from '../../utils/markdownToggle';
+import { applyListIndent } from '../../utils/listIndent';
 import { MIN_TEXT_WIDTH, MAX_TEXT_WIDTH } from '../../utils/pageLayout';
 
 /**
@@ -229,55 +230,16 @@ export function TextEditor({ node, stageScale: _stageScale, onFinish, onCancel }
       }
     }
 
-    // Tab / Shift+Tab: indent / unindent (supports single-line + multi-line selection)
+    // Tab / Shift+Tab: indent / unindent (list-aware; numbered items nest)
     if (e.key === 'Tab') {
       e.preventDefault();
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
-      const value = textarea.value;
-
-      // First line's start (at or before the cursor/selection anchor)
-      const firstLineStart = value.lastIndexOf('\n', start - 1) + 1;
-      // If selection spans multiple lines, we indent every line in the range
-      const selectionSpansLines = value.substring(firstLineStart, end).includes('\n');
-
-      if (!e.shiftKey) {
-        // ── INDENT (Tab) ─────────────────────────────────
-        if (selectionSpansLines) {
-          // Multi-line: prepend 2 spaces to every line in the selection range
-          const selected = value.substring(firstLineStart, end);
-          const indented = selected.replace(/^/gm, '  ');
-          replaceSelection(textarea, firstLineStart, end, indented);
-          textarea.selectionStart = firstLineStart;
-          textarea.selectionEnd = firstLineStart + indented.length;
-        } else {
-          // Single line: insert 2 spaces at line start
-          replaceSelection(textarea, firstLineStart, firstLineStart, '  ');
-          textarea.selectionStart = start + 2;
-          textarea.selectionEnd = end + 2;
-        }
-      } else {
-        // ── UNINDENT (Shift+Tab) ─────────────────────────
-        if (selectionSpansLines) {
-          const selected = value.substring(firstLineStart, end);
-          // Remove up to 2 leading spaces from every line
-          const unindented = selected.replace(/^( {1,2})/gm, '');
-          if (unindented !== selected) {
-            replaceSelection(textarea, firstLineStart, end, unindented);
-            textarea.selectionStart = firstLineStart;
-            textarea.selectionEnd = firstLineStart + unindented.length;
-          }
-        } else {
-          // Single line: remove up to 2 leading spaces from the current line
-          const lineContent = value.substring(firstLineStart);
-          const match = lineContent.match(/^( {1,2})/);
-          if (match) {
-            const removed = match[1].length;
-            replaceSelection(textarea, firstLineStart, firstLineStart + removed, '');
-            textarea.selectionStart = Math.max(firstLineStart, start - removed);
-            textarea.selectionEnd = Math.max(firstLineStart, end - removed);
-          }
-        }
+      const next = applyListIndent(textarea.value, start, end, e.shiftKey ? 'out' : 'in');
+      if (next.text !== textarea.value) {
+        replaceSelection(textarea, 0, textarea.value.length, next.text);
+        textarea.selectionStart = next.selStart;
+        textarea.selectionEnd = next.selEnd;
       }
       autoHeight(textarea);
       return;

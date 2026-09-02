@@ -1,8 +1,8 @@
 # SRS: Text Blocks
 
 **Project:** PowerScroll (formerly PowerNote)
-**Version:** 0.26.0
-**Date:** 2026-07-20
+**Version:** 0.68.0
+**Date:** 2026-08-25
 
 ## Purpose
 
@@ -44,3 +44,5 @@ Allow users to create, edit, move, and delete markdown-capable text blocks on th
 | REQ-TEXT-030 | Markdown headings shall render visually larger and heavier than body text — `#` at 1.6em/700, `##` at 1.3em/600, `###` at 1.1em/600 | Must | T58 |
 | REQ-TEXT-031 | Heading sizes shall be expressed relative to the block's own `fontSize`, so changing a block's font size scales its headings with it | Must | T58 |
 | REQ-TEXT-032 | Double-tapping an existing text block (touch) shall enter inline edit mode, matching double-click (REQ-TEXT-003) | Must | T139 |
+| REQ-TEXT-033 | Tab on a numbered list item shall nest it under the previous sibling as a child ordered list (CommonMark content-column indent, restarting at 1); Shift+Tab shall un-nest it and restore parent numbering. Bullet indent (2 spaces) is unchanged. | Must | T188 |
+| REQ-TEXT-034 | Nested ordered lists shall cycle marker style by depth: decimal, lower-alpha, lower-roman, then decimal again | Should | T188 |
