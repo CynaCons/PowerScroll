@@ -164,8 +164,7 @@ export function useCanvasKeyboard(
         useCanvasStore.setState({ selectedNodeIds: allIds });
       }
 
-      // Ctrl+Z: undo. Routed by tool — see undoOps, shared with the toolbar
-      // button so the two cannot disagree about which history to unwind.
+      // Ctrl+Z: all canvas domains share one chronological history.
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
         undoActive();

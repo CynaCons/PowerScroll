@@ -46,5 +46,8 @@ Provide an infinite, pannable, zoomable canvas as the primary workspace for plac
 | REQ-CANVAS-038 | Object snapping shall use an 8 screen-pixel threshold at every viewport zoom. | Must | T192 |
 | REQ-CANVAS-039 | Object snapping shall offer centre-in-gap and equal-side-gap placement with visible gap guides. | Must | T192 |
 | REQ-CANVAS-010 | A visible undo control shall sit in the top bar, immediately left of zoom-to-fit, disabled when there is nothing to undo and titled to say so. Shipped v0.41. | Must | T134 |
-| REQ-CANVAS-011 | The button and Ctrl+Z shall unwind the SAME history, routed by the active tool from one shared definition (`src/utils/undoOps.ts`) — there are two independent stacks (nodes in the canvas store, strokes in the draw store) and a second copy of the routing rule would eventually disagree with the first. Shipped v0.41. | Must | T134 |
+| REQ-CANVAS-011 | The top-bar undo button and Ctrl+Z shall use one shared history covering nodes, strokes and scrolls regardless of the active tool. | Must | T134, T193 |
+| REQ-CANVAS-040 | Ctrl+Z and the top-bar undo button shall undo the most recent node, stroke, or scroll change in reverse chronological order, regardless of the active tool. | Must | T193 |
+| REQ-CANVAS-041 | Redo shall replay shared-history changes; making a new change after undo shall clear the redo stack. | Must | T193 |
+| REQ-CANVAS-042 | Batched gestures, including multi-drag, zone erase, group/ungroup, and transform, shall each create one shared-history entry. | Must | T193 |
 

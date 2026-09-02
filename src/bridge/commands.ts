@@ -24,7 +24,8 @@ import type {
 } from '../types/data';
 import { notebookSettings, resolvePageSettings } from '../utils/pageSettings';
 import { useWorkspaceStore } from '../stores/useWorkspaceStore';
-import { useCanvasStore, undoBatchEnd, undoBatchStartFull } from '../stores/useCanvasStore';
+import { useCanvasStore } from '../stores/useCanvasStore';
+import { useHistoryStore } from '../stores/useHistoryStore';
 import { useDrawStore } from '../stores/useDrawStore';
 import { liveCeiling } from '../utils/scrollCeiling';
 import {
@@ -823,17 +824,12 @@ function livePageLike(page: { scrolls?: ScrollRecord[]; settings?: Partial<Works
 }
 
 function applyFlowInOneUndo(nextNodes: CanvasNode[], nextStrokes: Stroke[]): void {
-  const canvas = useCanvasStore.getState();
-  const scrolls = useWorkspaceStore.getState().getActivePage()?.scrolls ?? [];
-  undoBatchStartFull({
-    nodes: canvas.nodes,
-    scrolls,
-    strokes: useDrawStore.getState().strokes,
-  });
+  useHistoryStore.getState().batchStart();
+  useHistoryStore.getState().record();
   useCanvasStore.setState({ nodes: nextNodes });
   useDrawStore.setState({ strokes: nextStrokes });
   useWorkspaceStore.getState().markDirty();
-  undoBatchEnd();
+  useHistoryStore.getState().batchEnd();
 }
 
 function toBlockSummary(
@@ -1346,6 +1342,7 @@ function createScrollCmd(params: Record<string, unknown>): CreateScrollResult {
   const title = requireString(params, 'title');
   const { section, page } = resolvePage(optionalString(params, 'pageId'));
 
+  if (useWorkspaceStore.getState().activePageId === page.id) useHistoryStore.getState().record();
   const record = useWorkspaceStore.getState().createScroll(page.id, title);
   if (!record) {
     throw new BridgeCommandError('INTERNAL', `Could not create a scroll on page "${page.id}"`);
@@ -1375,6 +1372,7 @@ function renameScrollCmd(params: Record<string, unknown>): RenameScrollResult {
     for (const page of section.pages) {
       const scroll = scrollById(page.scrolls, scrollId);
       if (!scroll) continue;
+      if (useWorkspaceStore.getState().activePageId === page.id) useHistoryStore.getState().record();
       useWorkspaceStore.getState().renameScroll(page.id, scrollId, title);
       return { scrollId, title, previousTitle: scroll.title };
     }
@@ -1748,12 +1746,8 @@ function deleteDiagramCmd(params: Record<string, unknown>): DeleteDiagramResult 
       const members = diagramMembers(useCanvasStore.getState().nodes, diagramId);
       const groupStrokes = useDrawStore.getState().strokes.filter((s) => s.groupId === diagramId);
       const closed = removeBlockGap(live, diagramId);
-      const canvas = useCanvasStore.getState();
-      undoBatchStartFull({
-        nodes: canvas.nodes,
-        scrolls: useWorkspaceStore.getState().getActivePage()?.scrolls ?? [],
-        strokes: useDrawStore.getState().strokes,
-      });
+      useHistoryStore.getState().batchStart();
+      useHistoryStore.getState().record();
       if (closed.ok) {
         useCanvasStore.setState({ nodes: applyDisplacements(live.nodes, closed.displaced) });
         useDrawStore.setState({
@@ -1762,7 +1756,7 @@ function deleteDiagramCmd(params: Record<string, unknown>): DeleteDiagramResult 
         useWorkspaceStore.getState().markDirty();
       }
       useCanvasStore.getState().deleteNode(diagramId);
-      undoBatchEnd();
+      useHistoryStore.getState().batchEnd();
       flush();
 
       return { deletedMembers: members.length, deletedStrokes: groupStrokes.length };
@@ -1789,19 +1783,15 @@ function deleteBlockCmd(params: Record<string, unknown>): DeleteResult {
   if (live.columnFlow && isFlowItem(found.node, diagramFrameIds(found.page.nodes), true)) {
     const closed = removeBlockGap(live, blockId);
     if (closed.ok) {
-      const canvas = useCanvasStore.getState();
-      undoBatchStartFull({
-        nodes: canvas.nodes,
-        scrolls: useWorkspaceStore.getState().getActivePage()?.scrolls ?? [],
-        strokes: useDrawStore.getState().strokes,
-      });
+      useHistoryStore.getState().batchStart();
+      useHistoryStore.getState().record();
       useCanvasStore.setState({ nodes: applyDisplacements(live.nodes, closed.displaced) });
       useDrawStore.setState({
         strokes: applyStrokeDisplacements(live.strokes ?? [], closed.displaced),
       });
       useWorkspaceStore.getState().markDirty();
       useCanvasStore.getState().deleteNode(blockId);
-      undoBatchEnd();
+      useHistoryStore.getState().batchEnd();
       flush();
       return { deleted: 'block', id: blockId };
     }

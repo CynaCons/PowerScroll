@@ -5,6 +5,7 @@ import { getEmbeddedData, startAutoSave, extractDataFromHtml, clearLegacyAutoSav
 import { useWorkspaceStore } from './stores/useWorkspaceStore';
 import { useCanvasStore } from './stores/useCanvasStore';
 import { useDrawStore } from './stores/useDrawStore';
+import { useHistoryStore } from './stores/useHistoryStore';
 import { migrateWorkspace } from './utils/migrations';
 import { checkForUpdate } from './utils/updateChecker';
 import { isFSASupported, readFromHandle } from './utils/fileSystemAccess';
@@ -117,6 +118,7 @@ Promise.all([
     canvas: useCanvasStore,
     tool: useToolStore,
     draw: useDrawStore,
+    history: useHistoryStore,
     fileBinding: useFileBindingStore,
     group: useGroupStore,
   };

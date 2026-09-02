@@ -11,8 +11,9 @@
  */
 
 import { useWorkspaceStore } from '../stores/useWorkspaceStore';
-import { useCanvasStore, undoBatchStartFull, undoBatchEnd } from '../stores/useCanvasStore';
+import { useCanvasStore } from '../stores/useCanvasStore';
 import { useDrawStore } from '../stores/useDrawStore';
+import { useHistoryStore } from '../stores/useHistoryStore';
 import type { CanvasNode, ScrollRecord, Stroke } from '../types/data';
 import {
   A4_WIDTH,
@@ -60,10 +61,12 @@ function applyLiveGeometry(pageId: string): void {
 }
 
 export function createScroll(pageId: string, title: string): ScrollRecord | null {
+  if (useWorkspaceStore.getState().activePageId === pageId) useHistoryStore.getState().record();
   return useWorkspaceStore.getState().createScroll(pageId, title);
 }
 
 export function renameScroll(pageId: string, scrollId: string, title: string): void {
+  if (useWorkspaceStore.getState().activePageId === pageId) useHistoryStore.getState().record();
   useWorkspaceStore.getState().renameScroll(pageId, scrollId, title);
 }
 
@@ -100,11 +103,8 @@ export function deleteScroll(pageId: string, scrollId: string, withBlocks: boole
     // One undo restores the band, its nodes, and its ink. Must snapshot
     // before the store write, and must not go through loadPageNodes —
     // that clears history.
-    undoBatchStartFull({
-      nodes: useCanvasStore.getState().nodes,
-      scrolls: page.scrolls ?? [],
-      strokes: useDrawStore.getState().strokes,
-    });
+    useHistoryStore.getState().batchStart();
+    useHistoryStore.getState().record();
   }
 
   ws.deleteScroll(pageId, scrollId, withBlocks);
@@ -119,7 +119,7 @@ export function deleteScroll(pageId: string, scrollId: string, withBlocks: boole
       strokes: next?.strokes ?? [],
       selectedStrokeIds: [],
     });
-    undoBatchEnd();
+    useHistoryStore.getState().batchEnd();
   }
 }
 
@@ -141,18 +141,15 @@ function applyScrollReorder(pageId: string, scrollId: string, toIndex: number): 
 
   const isActive = ws.activePageId === pageId;
   if (isActive) {
-    undoBatchStartFull({
-      nodes: useCanvasStore.getState().nodes,
-      scrolls: page.scrolls ?? [],
-      strokes: useDrawStore.getState().strokes,
-    });
+    useHistoryStore.getState().batchStart();
+    useHistoryStore.getState().record();
   }
 
   ws.reorderScroll(pageId, scrollId, clamped);
 
   if (isActive) {
     applyLiveGeometry(pageId);
-    undoBatchEnd();
+    useHistoryStore.getState().batchEnd();
   }
   return true;
 }
@@ -330,7 +327,8 @@ export function applyBandWidth(
 
   const nodes = useCanvasStore.getState().nodes;
   const strokes = useDrawStore.getState().strokes;
-  undoBatchStartFull({ nodes, scrolls, strokes });
+  useHistoryStore.getState().batchStart();
+  useHistoryStore.getState().record();
 
   const nextNodes = nodes.map((node) => {
     if (!isRightOfScroll(
@@ -363,7 +361,7 @@ export function applyBandWidth(
   useCanvasStore.setState({ nodes: nextNodes });
   useDrawStore.setState({ strokes: nextStrokes });
   ws.replacePageScrolls(pageId, nextScrolls);
-  undoBatchEnd();
+  useHistoryStore.getState().batchEnd();
   return { delta, width: effectiveWidth };
 }
 

@@ -3,7 +3,8 @@
  * Planning stays in bridge/reflow.ts; this is the store-touching wrapper.
  */
 
-import { useCanvasStore, undoBatchStartFull, undoBatchEnd } from '../stores/useCanvasStore';
+import { useCanvasStore } from '../stores/useCanvasStore';
+import { useHistoryStore } from '../stores/useHistoryStore';
 import { useDrawStore } from '../stores/useDrawStore';
 import { useWorkspaceStore } from '../stores/useWorkspaceStore';
 import { resolvePageSettings } from './pageSettings';
@@ -44,16 +45,12 @@ export function reflowAfterHeightChange(nodeId: string, newHeight: number, opts?
     return false;
   }
   if (opts?.undo) {
-    const scrolls = useWorkspaceStore.getState().getActivePage()?.scrolls ?? [];
-    undoBatchStartFull({
-      nodes: useCanvasStore.getState().nodes,
-      scrolls,
-      strokes: useDrawStore.getState().strokes,
-    });
+    useHistoryStore.getState().batchStart();
+    useHistoryStore.getState().record();
   }
   useCanvasStore.setState({ nodes: plan.nextNodes });
   useDrawStore.setState({ strokes: plan.nextStrokes });
   useWorkspaceStore.getState().markDirty();
-  if (opts?.undo) undoBatchEnd();
+  if (opts?.undo) useHistoryStore.getState().batchEnd();
   return true;
 }

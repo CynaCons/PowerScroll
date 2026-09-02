@@ -7,7 +7,8 @@
  */
 
 import type { CanvasNode, DiagramNodeData, DiagramRenderSnapshot } from '../types/data';
-import { undoBatchStart, undoBatchEnd, undoBatchStartFull, useCanvasStore } from '../stores/useCanvasStore';
+import { undoBatchStart, undoBatchEnd, useCanvasStore } from '../stores/useCanvasStore';
+import { useHistoryStore } from '../stores/useHistoryStore';
 import { useWorkspaceStore } from '../stores/useWorkspaceStore';
 import { useDrawStore } from '../stores/useDrawStore';
 import { livePageLike } from '../utils/columnReflow';
@@ -325,15 +326,13 @@ export function fitExistingDiagram(frameId: string): FitExistingOutcome {
   });
 
   if (planned && planned.ok && planned.dy !== 0) {
-    undoBatchStartFull({
-      nodes,
-      scrolls: useWorkspaceStore.getState().getActivePage()?.scrolls ?? [],
-      strokes: useDrawStore.getState().strokes,
-    });
+    useHistoryStore.getState().batchStart();
+    useHistoryStore.getState().record();
     useCanvasStore.setState({ nodes: nextNodes });
     useDrawStore.setState({ strokes: planned.nextStrokes });
   } else {
     undoBatchStart(nodes);
+    useHistoryStore.getState().record();
     useCanvasStore.setState({ nodes: nextNodes });
   }
   useWorkspaceStore.getState().markDirty();

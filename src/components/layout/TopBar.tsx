@@ -2,8 +2,7 @@ import { ChevronRight, Download, FolderOpen, Maximize, ChevronDown, RotateCcw, L
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { useCanvasStore } from '../../stores/useCanvasStore';
 import { useDrawStore } from '../../stores/useDrawStore';
-import { useToolStore } from '../../stores/useToolStore';
-import { canUndoActive, undoActive } from '../../utils/undoOps';
+import { useHistoryStore } from '../../stores/useHistoryStore';
 import { extractDataFromHtml } from '../../utils/serialization';
 import { migrateWorkspace } from '../../utils/migrations';
 import { workspaceToMarkdown } from '../../utils/exportMarkdown';
@@ -16,7 +15,7 @@ import { useFileBindingStore } from '../../stores/useFileBindingStore';
 import { saveNotebook } from '../../utils/saveNotebook';
 import { canRevert, revertNotebook } from '../../utils/revertNotebook';
 import { scrollOf } from '../../utils/scrolls';
-import { useRef, useState, useEffect, useMemo } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { showToast } from './Toast';
 import './TopBar.css';
 
@@ -43,19 +42,8 @@ export function TopBar() {
   const selectedNodeIds = useCanvasStore((s) => s.selectedNodeIds);
   const canvasNodes = useCanvasStore((s) => s.nodes);
 
-  // The undo stacks are module-level and deliberately NOT store state — they
-  // hold node snapshots that must never be serialized into the notebook. That
-  // also makes them invisible to React, so the button's enabled state is
-  // derived on render and subscribed to indirectly: every undoable action
-  // replaces `nodes` or `strokes`, and the routing depends on the active tool,
-  // so those three subscriptions are what re-run this read at the right moment.
-  const drawStrokes = useDrawStore((s) => s.strokes);
-  const activeTool = useToolStore((s) => s.activeTool);
-  // The deps ARE the subscription — the answer itself comes from the stacks.
-  const undoEnabled = useMemo(
-    () => canUndoActive(),
-    [canvasNodes, drawStrokes, activeTool],
-  );
+  const undoEnabled = useHistoryStore((s) => s.canUndo);
+  const undo = useHistoryStore((s) => s.undo);
 
   const selectedScrollTitle =
     selectedNodeIds.length === 1
@@ -281,7 +269,7 @@ export function TopBar() {
       <div className="top-bar__actions">
         <button
           className="top-bar__action-btn"
-          onClick={undoActive}
+          onClick={undo}
           disabled={!undoEnabled}
           title={undoEnabled ? 'Undo (Ctrl+Z)' : 'Nothing to undo'}
           data-testid="undo-btn"

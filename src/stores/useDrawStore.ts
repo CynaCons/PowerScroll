@@ -1,8 +1,7 @@
 import { create } from 'zustand';
 import type { Stroke } from '../types/data';
 import { useWorkspaceStore } from './useWorkspaceStore';
-
-const MAX_HISTORY = 50;
+import { useHistoryStore } from './useHistoryStore';
 
 interface DrawState {
   strokes: Stroke[];
@@ -33,71 +32,32 @@ interface DrawState {
   loadPageStrokes: (strokes: Stroke[]) => void;
   getStrokesSnapshot: () => Stroke[];
 
+  /** @deprecated Use the shared history store. Kept for existing integrations. */
   undo: () => void;
   redo: () => void;
   canUndo: () => boolean;
   canRedo: () => boolean;
+
 }
 
 /** Konva-compatible affine matrix: [a, b, c, d, e, f]. */
 export type StrokeTransformMatrix = [number, number, number, number, number, number];
 
-let undoStack: Stroke[][] = [];
-let redoStack: Stroke[][] = [];
-let batchDepth = 0;
-let batchSnapshot: Stroke[] | null = null;
-let batchPushed = false;
-
-function pushUndo(strokes: Stroke[]) {
-  if (batchDepth > 0) {
-    if (batchPushed) return;
-    undoStack.push(deepCopy(batchSnapshot ?? strokes));
-    if (undoStack.length > MAX_HISTORY) undoStack.shift();
-    redoStack = [];
-    batchPushed = true;
-    return;
-  }
-  undoStack.push(deepCopy(strokes));
-  if (undoStack.length > MAX_HISTORY) undoStack.shift();
-  redoStack = [];
-}
-
 /** Start a draw-history batch. Its snapshot is only committed on mutation. */
-export function undoBatchStart(): void {
-  if (batchDepth === 0) {
-    batchSnapshot = deepCopy(useDrawStore.getState().strokes);
-    batchPushed = false;
-  }
-  batchDepth++;
-}
+export function undoBatchStart(): void { useHistoryStore.getState().batchStart(); }
 
 /** End a draw-history batch started by a multi-mutation gesture. */
-export function undoBatchEnd(): void {
-  if (batchDepth === 0) return;
-  batchDepth--;
-  if (batchDepth === 0) {
-    batchSnapshot = null;
-    batchPushed = false;
-  }
-}
+export function undoBatchEnd(): void { useHistoryStore.getState().batchEnd(); }
 
 /** Export for multi-drag / group ops that batch canvas+stroke history. */
-export function pushStrokeUndo(strokes: Stroke[]) {
-  pushUndo(strokes);
+export function pushStrokeUndo(_strokes: Stroke[]) {
+  useHistoryStore.getState().record();
 }
 
 /** Replace entire stroke list without undo (after pushStrokeUndo was called). */
 export function replaceStrokesSilent(strokes: Stroke[]) {
   useDrawStore.setState({ strokes });
   useWorkspaceStore.getState().markDirty();
-}
-
-function deepCopy(strokes: Stroke[]): Stroke[] {
-  return strokes.map((s) => ({
-    ...s,
-    points: [...s.points],
-    ...(s.pressures ? { pressures: [...s.pressures] } : {}),
-  }));
 }
 
 export const useDrawStore = create<DrawState>((set, get) => ({
@@ -107,7 +67,7 @@ export const useDrawStore = create<DrawState>((set, get) => ({
 
   addStroke: (stroke) => {
     set((state) => {
-      pushUndo(state.strokes);
+      useHistoryStore.getState().record();
       useWorkspaceStore.getState().markDirty();
       return { strokes: [...state.strokes, stroke] };
     });
@@ -115,7 +75,7 @@ export const useDrawStore = create<DrawState>((set, get) => ({
 
   deleteStroke: (id) => {
     set((state) => {
-      pushUndo(state.strokes);
+      useHistoryStore.getState().record();
       useWorkspaceStore.getState().markDirty();
       return {
         strokes: state.strokes.filter((s) => s.id !== id),
@@ -127,7 +87,7 @@ export const useDrawStore = create<DrawState>((set, get) => ({
 
   deleteStrokes: (ids) => {
     set((state) => {
-      pushUndo(state.strokes);
+      useHistoryStore.getState().record();
       useWorkspaceStore.getState().markDirty();
       const idSet = new Set(ids);
       return {
@@ -140,7 +100,7 @@ export const useDrawStore = create<DrawState>((set, get) => ({
 
   moveStrokes: (ids, dx, dy) => {
     set((state) => {
-      pushUndo(state.strokes);
+      useHistoryStore.getState().record();
       useWorkspaceStore.getState().markDirty();
       const idSet = new Set(ids);
       return {
@@ -212,7 +172,7 @@ export const useDrawStore = create<DrawState>((set, get) => ({
 
   setStrokeGroupIds: (ids, groupId) => {
     set((state) => {
-      pushUndo(state.strokes);
+      useHistoryStore.getState().record();
       useWorkspaceStore.getState().markDirty();
       const idSet = new Set(ids);
       return {
@@ -224,31 +184,15 @@ export const useDrawStore = create<DrawState>((set, get) => ({
   },
 
   loadPageStrokes: (strokes) => {
-    undoStack = [];
-    redoStack = [];
+    useHistoryStore.getState().clear();
     set({ strokes, selectedStrokeIds: [], pendingEraseIds: [] });
   },
 
   getStrokesSnapshot: () => get().strokes,
 
-  undo: () => {
-    const prev = undoStack.pop();
-    if (!prev) return;
-    set((state) => {
-      redoStack.push(deepCopy(state.strokes));
-      return { strokes: prev, pendingEraseIds: [] };
-    });
-  },
+  undo: () => useHistoryStore.getState().undo(),
+  redo: () => useHistoryStore.getState().redo(),
+  canUndo: () => useHistoryStore.getState().canUndo,
+  canRedo: () => useHistoryStore.getState().canRedo,
 
-  redo: () => {
-    const next = redoStack.pop();
-    if (!next) return;
-    set((state) => {
-      undoStack.push(deepCopy(state.strokes));
-      return { strokes: next, pendingEraseIds: [] };
-    });
-  },
-
-  canUndo: () => undoStack.length > 0,
-  canRedo: () => redoStack.length > 0,
 }));

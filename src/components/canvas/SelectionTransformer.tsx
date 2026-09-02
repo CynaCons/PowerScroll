@@ -1,9 +1,9 @@
 import { useRef, useEffect, useState } from 'react';
 import { Transformer } from 'react-konva';
 import type Konva from 'konva';
-import { useCanvasStore, undoBatchEnd, undoBatchStartFull } from '../../stores/useCanvasStore';
+import { useCanvasStore } from '../../stores/useCanvasStore';
+import { useHistoryStore } from '../../stores/useHistoryStore';
 import { useDrawStore, type StrokeTransformMatrix } from '../../stores/useDrawStore';
-import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { MIN_TEXT_HEIGHT, MIN_TEXT_WIDTH } from '../../utils/pageLayout';
 import type { TextNodeData } from '../../types/data';
 
@@ -105,8 +105,8 @@ export function SelectionTransformer({ selectedNodeIds, selectedStrokeIds, stage
     if (!transformer || !stage) return;
     const canvas = useCanvasStore.getState();
     const draw = useDrawStore.getState();
-    const scrolls = useWorkspaceStore.getState().getActivePage()?.scrolls ?? [];
-    undoBatchStartFull({ nodes: canvas.nodes, scrolls, strokes: draw.strokes });
+    useHistoryStore.getState().batchStart();
+    useHistoryStore.getState().record();
     try {
       for (const konvaNode of transformer.nodes()) {
         if (konvaNode.id() === STROKE_PROXY_ID) continue;
@@ -151,7 +151,7 @@ export function SelectionTransformer({ selectedNodeIds, selectedStrokeIds, stage
         proxy.rotation(0);
       }
     } finally {
-      undoBatchEnd();
+      useHistoryStore.getState().batchEnd();
       strokeOriginRef.current = null;
     }
   };
