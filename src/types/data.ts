@@ -147,11 +147,13 @@ export interface Stroke {
   groupId?: string | null;
   /**
    * Per-point pen pressure 0..1, parallel to `points` (pressures.length ===
-   * points.length / 2). Only recorded for stylus input (v0.42+). Absent —
-   * every mouse/finger stroke and every stroke saved before v0.42 — means
-   * constant width.
+   * points.length / 2). Baked strokes carry recorded stylus pressure or the
+   * simulated pressure used for mouse/finger ink. Absent legacy strokes are
+   * simulated at render time.
    */
   pressures?: number[];
+  /** Geometry is final; render with streamline 0 and recorded pressures. */
+  baked?: true;
   /** 0–1, default 1. Absent keeps pre-v0.73 files opaque. */
   opacity?: number;
 }

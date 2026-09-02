@@ -7,6 +7,7 @@ import { generateId } from '../utils/ids';
 import { clampCanvasY, clampStageY, liveCeiling } from '../utils/scrollCeiling';
 import type { ShapeNodeData, Stroke } from '../types/data';
 import { bindingCandidate, closestPointOnOutline, fixedPointFor } from '../utils/arrowBinding';
+import { bakeStroke } from '../utils/inkOutline';
 import {
   STROKE_ERASER_SCREEN_RADIUS,
   boundsFromFlatPoints,
@@ -196,7 +197,10 @@ export function useShapeCreation(
       return dx * dx + dy * dy <= r2;
     }
 
-    for (const stroke of strokes) {
+    for (const originalStroke of strokes) {
+      // Legacy strokes were saved as raw samples. Bake the whole parent before
+      // splitting it, so a fragment retains the geometry it had in place.
+      const stroke = originalStroke.baked ? originalStroke : bakeStroke(originalStroke, true);
       const pts = stroke.points;
       if (pts.length < 4) continue;
       const prs =
@@ -290,6 +294,7 @@ export function useShapeCreation(
           strokeWidth: stroke.strokeWidth,
           ...(stroke.groupId !== undefined ? { groupId: stroke.groupId } : {}),
           ...(run.prs ? { pressures: run.prs } : {}),
+          baked: true,
           ...(stroke.opacity !== undefined ? { opacity: stroke.opacity } : {}),
         });
       }
@@ -720,14 +725,14 @@ export function useShapeCreation(
         pressuresRef.current && pressuresRef.current.length * 2 === points.length
           ? pressuresRef.current
           : null;
-      useDrawStore.getState().addStroke({
+      useDrawStore.getState().addStroke(bakeStroke({
         id: generateId(),
         points,
         color: drawOpts.color,
         strokeWidth: drawOpts.strokeWidth,
         ...(pressures ? { pressures } : {}),
         ...(drawOpts.opacity < 1 ? { opacity: drawOpts.opacity } : {}),
-      });
+      }));
     } else if (tool === 'shape' && shapePreview) {
       // Commit shape node — different min size for shapes vs arrows/lines
       const shapeOpts = useToolStore.getState().shapeOptions;

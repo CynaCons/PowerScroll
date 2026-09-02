@@ -31,5 +31,8 @@ Allow users to draw freehand strokes on the canvas using a pen tool and erase st
 | REQ-DRAW-017 | Holding Alt while using the stroke eraser shall unmark touched pending strokes so they survive the gesture | Should | T189 |
 | REQ-DRAW-018 | One erase gesture shall create at most one draw undo entry in both stroke and zone modes | Must | T189 |
 | REQ-DRAW-019 | Zone eraser shall erase continuously along the swept path between pointer samples | Must | T189 |
-| REQ-DRAW-020 | All freehand strokes shall render through a perfect-freehand outline with thinning and streamlining; mouse and touch strokes shall simulate pressure so they taper at both ends | Must | T190 |
+| REQ-DRAW-020 | All freehand strokes shall render through a perfect-freehand outline with thinning and streamlining; mouse and touch strokes shall simulate pressure and use round, untapered caps | Must | T190 |
 | REQ-DRAW-021 | Strokes with recorded pressure shall use it directly; stored stroke data shall remain unchanged and legacy notebooks shall render without migration | Must | T190 |
+| REQ-DRAW-022 | Freehand ink width shall not depend on total stroke length: caps are round and no taper spans the stroke, so the start of a long stroke stays as wide as its middle. | Must | T196 |
+| REQ-DRAW-023 | Committed strokes shall store their final geometry (streamlined points and per-point pressures, marked `baked`) so rendering is a pure function of the stored points; strokes saved by earlier versions shall render unchanged. | Must | T196 |
+| REQ-DRAW-024 | Zone-erasing part of a stroke shall leave the surviving pieces' ink where it was: pieces are cut from baked geometry and coincide with the original rendering away from the cut. | Must | T196 |

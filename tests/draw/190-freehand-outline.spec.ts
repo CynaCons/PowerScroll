@@ -47,10 +47,10 @@ async function mouseStroke(page: import('@playwright/test').Page) {
 }
 
 test.describe('190 - Freehand outline (REQ-DRAW-020/021)', () => {
-  test('a pressure-less stroke is a closed, tapered perfect-freehand polygon', () => {
+  test('a pressure-less stroke is a closed, round-capped perfect-freehand polygon', () => {
     expect(INK_OPTIONS).toMatchObject({
       thinning: 0.5, smoothing: 0.5, streamline: 0.5,
-      start: { taper: true }, end: { taper: true },
+      start: { cap: true, taper: 0 }, end: { cap: true, taper: 0 },
     });
     const points = [0, 0, 25, 0, 50, 0, 75, 0, 100, 0];
     const outline = buildInkOutline(points, undefined, 10);
@@ -64,8 +64,8 @@ test.describe('190 - Freehand outline (REQ-DRAW-020/021)', () => {
     expect(outlineBounds.maxX).toBeLessThanOrEqual(110);
     expect(outlineBounds.minY).toBeGreaterThanOrEqual(-10);
     expect(outlineBounds.maxY).toBeLessThanOrEqual(10);
-    expect(widthAtX(outline!, 10)).toBeLessThan(widthAtX(outline!, 50));
-    expect(widthAtX(outline!, 90)).toBeLessThan(widthAtX(outline!, 50));
+    expect(widthAtX(outline!, 10)).toBeGreaterThan(0);
+    expect(widthAtX(outline!, 90)).toBeGreaterThan(0);
   });
 
   test('recorded pressure grows the outline without changing stored samples', () => {

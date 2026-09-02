@@ -132,7 +132,7 @@ test.describe('135 - Pen pressure drawing (REQ-DRAW-010/011/014)', () => {
     expect(outline!.some((node: any) => node.kind === 'Shape' && node.hasFill)).toBe(true);
   });
 
-  test('a mouse stroke records no pressures', async ({ page }) => {
+  test('a mouse stroke bakes its simulated pressures', async ({ page }) => {
     await pointerStroke(page, {
       pointerType: 'mouse',
       from: { x: 300, y: 300 },
@@ -142,10 +142,17 @@ test.describe('135 - Pen pressure drawing (REQ-DRAW-010/011/014)', () => {
 
     const result = await page.evaluate(() => {
       const strokes = (window as any).__POWERNOTE_STORES__.draw.getState().strokes;
-      return { count: strokes.length, pressures: strokes[0]?.pressures ?? null };
+      return {
+        count: strokes.length,
+        baked: strokes[0]?.baked,
+        pressures: strokes[0]?.pressures ?? null,
+        pointCount: strokes[0]?.points.length ?? 0,
+      };
     });
     expect(result.count).toBe(1);
-    expect(result.pressures).toBeNull();
+    expect(result.baked).toBe(true);
+    expect(result.pressures).not.toBeNull();
+    expect(result.pressures!.length * 2).toBe(result.pointCount);
   });
 
   test('a stray compatibility mousedown does not start a second stroke', async ({ page }) => {

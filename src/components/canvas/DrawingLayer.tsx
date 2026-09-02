@@ -60,8 +60,8 @@ function FreehandOutline({
 /** One committed outline. Strokes are immutable between edits, so memoise it. */
 function CommittedStroke({ stroke, opacity = 1 }: { stroke: Stroke; opacity?: number }) {
   const outline = useMemo(
-    () => buildInkOutline(stroke.points, stroke.pressures, stroke.strokeWidth),
-    [stroke.points, stroke.pressures, stroke.strokeWidth],
+    () => buildInkOutline(stroke.points, stroke.pressures, stroke.strokeWidth, stroke.baked),
+    [stroke.points, stroke.pressures, stroke.strokeWidth, stroke.baked],
   );
 
   return outline ? <FreehandOutline points={outline} color={stroke.color} opacity={opacity} /> : null;

@@ -1491,6 +1491,41 @@
 - [x] Verify GitHub release (non-draft, 3 assets with digests), Pages from the release commit, live app reports 0.73.0, in-app update resolves the tag-pinned template
 - [x] Update docs/DEPLOYMENTS.md from observed state; commit and push
 
+### v0.74.0 — Ink integrity — no full-length taper, stable geometry through zone erase (2026-09-02) (COMPLETE)
+> User feedback 2026-09-02: the start of a freehand stroke fades away the longer it gets (perfect-freehand `taper: true` spans the whole stroke), and zone-erasing part of a stroke deforms the survivors (re-tapered, re-streamlined from raw points). Fix the taper, bake stroke geometry at commit, cut baked geometry.
+
+- [x] Remove the full-length taper from INK_OPTIONS (round caps, taper 0) so a long stroke's start stays as wide as its middle — REQ-DRAW-022
+- [x] Bake stroke geometry at commit (streamlined points + per-point pressures, `baked` flag); legacy strokes render unchanged — REQ-DRAW-023
+- [x] Zone eraser cuts baked geometry so survivors coincide with the original ink away from the cut — REQ-DRAW-024
+- [x] T196 tests/draw/196-ink-integrity.spec.ts + SRS_DRAW rows 022–024
+- [x] Coordinator: typecheck, lint, affected specs, commit
+
+### v0.74.1 — Shape tool flow — digit shortcuts on the shape bar, back to select after creation
+> User feedback 2026-09-02: Excalidraw's "keyboard digit = tool" on the floating shape bar, and returning to the select tool (new shape selected) as soon as a shape is drawn, because the next thing people do is move it or label it.
+
+- [ ] Digits 1–6 select shape types in bar order (global, not while typing or with modifiers); digit badges on the bar buttons — REQ-SHAPE-028
+- [ ] Committing a shape returns to the select tool with the new shape selected — REQ-SHAPE-029
+- [ ] T197 tests/shapes/197-shape-tool-flow.spec.ts + SRS_SHAPES rows 028/029; update specs that chained shape creations
+- [ ] Coordinator: typecheck, lint, affected specs, commit
+
+### v0.75.0 — Shape labels — centered text inside closed shapes
+> User feedback 2026-09-02: double-click a shape to edit centered text inside it. Plain-text label stored in the shape's data, rendered centered and word-wrapped in the shape's inner box, edited through a textarea overlay, shape grows in height when the text needs it.
+
+- [ ] `label` on ShapeNodeData; Konva label centered and word-wrapped in the inner box per shape type, in the shape's stroke colour/opacity/rotation — REQ-SHAPE-031
+- [ ] ShapeLabelEditor textarea overlay: double-click or Enter opens, TextEditor key semantics, empty text removes, one history entry — REQ-SHAPE-030
+- [ ] Shape grows in height when the committed label overflows its inner box; never shrinks — REQ-SHAPE-032
+- [ ] T198 tests/shapes/198-shape-labels.spec.ts + SRS_SHAPES rows 030–032
+- [ ] Coordinator: typecheck, lint, affected specs, commit
+
+### v0.75.1 — Arrow binding controls — Ctrl bypass and anchor-point preview
+> User feedback 2026-09-02: a modifier to place arrow endpoints without binding (Ctrl/Cmd, Excalidraw parity) and a live preview of the exact anchor point the endpoint will snap to.
+
+- [ ] Ctrl/Cmd held while placing or dragging an endpoint suppresses binding (no hint, no binding, exact placement) — REQ-SHAPE-033
+- [ ] BindingHint component: dashed target outline plus live anchor-point dot at the exact attach point, used by creation and endpoint drag — REQ-SHAPE-034
+- [ ] T199 tests/shapes/199-binding-controls.spec.ts + SRS_SHAPES rows 033/034
+- [ ] Coordinator: typecheck, lint, affected specs, commit
+- [ ] Round-2 wrap-up: full Playwright campaign, template smoke test, showcase artifact with real captures
+
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.
 
