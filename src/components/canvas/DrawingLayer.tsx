@@ -123,7 +123,11 @@ export function DrawingLayer({
       )}
       {/* Committed strokes */}
       {strokes.map((stroke) => (
-        <CommittedStroke key={stroke.id} stroke={stroke} opacity={pendingSet.has(stroke.id) ? 0.2 : 1} />
+        <CommittedStroke
+          key={stroke.id}
+          stroke={stroke}
+          opacity={(stroke.opacity ?? 1) * (pendingSet.has(stroke.id) ? 0.2 : 1)}
+        />
       ))}
 
       {/* Selected stroke highlights */}

@@ -867,6 +867,7 @@ test.describe('153 - stress pass v0.46–v0.52', () => {
         { id: 's-rect', shapeType: 'rect', x: 40, y: 40, w: 40, h: 30 },
         { id: 's-circle', shapeType: 'circle', x: 100, y: 40, w: 36, h: 36 },
         { id: 's-tri', shapeType: 'triangle', x: 160, y: 40, w: 40, h: 36 },
+        { id: 's-diamond', shapeType: 'diamond', x: 180, y: 96, w: 40, h: 36 },
         { id: 's-arrow', shapeType: 'arrow', x: 220, y: 50, w: 50, h: 0 },
         { id: 's-line', shapeType: 'line', x: 40, y: 100, w: 60, h: 10 },
         { id: 's-arc', shapeType: 'arc', x: 120, y: 96, w: 24, h: 24 },

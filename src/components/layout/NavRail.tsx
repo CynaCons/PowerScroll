@@ -1,4 +1,4 @@
-import { Layers, Library, MousePointer2, Type, Pen, ImageIcon, BoxSelect, Shapes, Settings, GanttChartSquare, Workflow } from 'lucide-react';
+import { Layers, Library, MousePointer2, Hand, Type, Pen, ImageIcon, Shapes, Settings, GanttChartSquare, Workflow } from 'lucide-react';
 import { useToolStore } from '../../stores/useToolStore';
 import './NavRail.css';
 
@@ -54,6 +54,16 @@ export function NavRail({
         </button>
 
         <button
+          className={`nav-rail__btn ${activeTool === 'hand' ? 'nav-rail__btn--active' : ''}`}
+          title="Hand tool (H)"
+          aria-label="Hand tool"
+          data-testid="nav-hand-tool"
+          onClick={() => setTool(activeTool === 'hand' ? 'select' : 'hand')}
+        >
+          <Hand size={20} />
+        </button>
+
+        <button
           className={`nav-rail__btn ${activeTool === 'text' ? 'nav-rail__btn--active' : ''}`}
           title="Text tool (T)"
           aria-label="Text tool"
@@ -91,16 +101,6 @@ export function NavRail({
           onClick={() => setTool(activeTool === 'shape' ? 'select' : 'shape')}
         >
           <Shapes size={20} />
-        </button>
-
-        <button
-          className={`nav-rail__btn ${activeTool === 'lasso' ? 'nav-rail__btn--active' : ''}`}
-          title="Lasso select (L)"
-          aria-label="Lasso select"
-          data-testid="nav-lasso-tool"
-          onClick={() => setTool(activeTool === 'lasso' ? 'select' : 'lasso')}
-        >
-          <BoxSelect size={20} />
         </button>
 
         <button

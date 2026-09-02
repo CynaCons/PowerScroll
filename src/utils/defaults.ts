@@ -57,4 +57,5 @@ export const defaultShapeOptions: ShapeOptions = {
   stroke: '#1a1a1a',
   strokeWidth: 2,
   strokeDash: [],
+  opacity: 1,
 };

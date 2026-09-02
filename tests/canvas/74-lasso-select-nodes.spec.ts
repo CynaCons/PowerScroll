@@ -1,6 +1,7 @@
 /**
- * Test 74: Lasso Tool Selects Nodes
- * Covers: lasso selection of text/shapes/images within a rectangle
+ * Test 74: Lasso / marquee intersection selects nodes
+ * Covers: REQ-CANVAS-013, REQ-CANVAS-014 — intersecting a rectangle selects
+ * nodes. The L tool remains an alias; select-tool background drag is T195.
  */
 import { test, expect } from '@playwright/test';
 import { waitForCanvasReady, getCanvasStore } from '../helpers';

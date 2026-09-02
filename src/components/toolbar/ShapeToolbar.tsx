@@ -1,8 +1,9 @@
-import { Square, Circle, Triangle, ArrowUpRight, Minus, Ban } from 'lucide-react';
+import { Square, Circle, Triangle, Diamond, ArrowUpRight, Minus, Ban } from 'lucide-react';
 import type { ShapeOptions, ShapeType } from '../../types/data';
 import { useToolStore } from '../../stores/useToolStore';
 import { ColorPopover } from './ColorPopover';
 import { SizePopover } from './SizePopover';
+import { OpacitySlider } from './OpacitySlider';
 import './BottomToolbar.css';
 
 interface ShapeToolbarProps {
@@ -15,6 +16,7 @@ const SHAPE_TYPES: { type: ShapeType; icon: typeof Square; label: string }[] = [
   { type: 'rect', icon: Square, label: 'Rectangle' },
   { type: 'circle', icon: Circle, label: 'Circle' },
   { type: 'triangle', icon: Triangle, label: 'Triangle' },
+  { type: 'diamond', icon: Diamond, label: 'Diamond' },
   { type: 'arrow', icon: ArrowUpRight, label: 'Arrow' },
   { type: 'line', icon: Minus, label: 'Line' },
 ];
@@ -94,6 +96,13 @@ export function ShapeToolbar({ options, onChange, hasSelectedShape: _hasSelected
         label="Stroke Width"
         icon="stroke"
         unit="px"
+      />
+
+      <div className="text-toolbar__divider" />
+
+      <OpacitySlider
+        value={options.opacity ?? 1}
+        onChange={(opacity) => onChange({ opacity })}
       />
 
       <div className="text-toolbar__divider" />

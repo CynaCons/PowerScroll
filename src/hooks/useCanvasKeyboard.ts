@@ -3,13 +3,68 @@ import { useCanvasStore } from '../stores/useCanvasStore';
 import { useToolStore } from '../stores/useToolStore';
 import { useDrawStore } from '../stores/useDrawStore';
 import { useGroupStore } from '../stores/useGroupStore';
+import { useHistoryStore } from '../stores/useHistoryStore';
+import { useWorkspaceStore } from '../stores/useWorkspaceStore';
 import { groupSelection, ungroupSelection } from '../utils/groupOps';
 import { getGroupMembers } from '../utils/groups';
 import { redoActive, undoActive } from '../utils/undoOps';
+import { recomputeBoundArrows } from '../utils/arrowBinding';
+
+/** Holding an arrow key coalesces repeats into one undo entry. */
+const NUDGE_COALESCE_MS = 300;
+let lastNudgeAt = 0;
+
+function isTypingTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  const tag = target.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable;
+}
+
+function nudgeSelection(dx: number, dy: number, recordHistory: boolean): boolean {
+  const canvas = useCanvasStore.getState();
+  const draw = useDrawStore.getState();
+  const nodeIds = canvas.selectedNodeIds;
+  const strokeIds = draw.selectedStrokeIds;
+  if (nodeIds.length === 0 && strokeIds.length === 0) return false;
+
+  if (recordHistory) useHistoryStore.getState().record();
+
+  if (nodeIds.length > 0) {
+    const selected = new Set(nodeIds);
+    let nodes = canvas.nodes.map((node) =>
+      selected.has(node.id) ? { ...node, x: node.x + dx, y: node.y + dy } : node,
+    );
+    const followed = recomputeBoundArrows(nodes, selected);
+    if (followed.length > 0) {
+      const byId = new Map(followed.map((arrow) => [arrow.id, arrow]));
+      nodes = nodes.map((node) => byId.get(node.id) ?? node);
+    }
+    useCanvasStore.setState({ nodes });
+  }
+
+  if (strokeIds.length > 0) {
+    const idSet = new Set(strokeIds);
+    useDrawStore.setState({
+      strokes: draw.strokes.map((stroke) => {
+        if (!idSet.has(stroke.id)) return stroke;
+        const points = stroke.points.slice();
+        for (let i = 0; i < points.length; i += 2) {
+          points[i] += dx;
+          points[i + 1] += dy;
+        }
+        return { ...stroke, points };
+      }),
+    });
+  }
+
+  useWorkspaceStore.getState().markDirty();
+  return true;
+}
 
 /**
  * Hook for all keyboard event handlers on the canvas.
- * Handles: Delete, Escape, T, D, S, E, L shortcuts,
+ * Handles: Delete, Escape, V/H/T/D/S/E/L shortcuts,
+ * arrow-key nudge, Space (pan modifier),
  * Ctrl+Z (undo), Ctrl+Shift+Z/Ctrl+Y (redo),
  * Ctrl+C (copy), Ctrl+V (paste), Ctrl+A (select all).
  */
@@ -18,8 +73,13 @@ export function useCanvasKeyboard(
 ) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement).tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (isTypingTarget(e.target)) return;
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (!e.repeat) useToolStore.getState().setSpaceHeld(true);
+        return;
+      }
 
       // Delete / Backspace: delete selected nodes
       if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -28,6 +88,7 @@ export function useCanvasKeyboard(
           e.preventDefault();
           store.deleteSelectedNodes();
         }
+        return;
       }
 
       // Escape: exit isolation first, else return to select + clear
@@ -91,48 +152,72 @@ export function useCanvasKeyboard(
         return;
       }
 
-      // V: select tool
-      if (e.key === 'v' || e.key === 'V') {
-        if (!e.ctrlKey && !e.metaKey) {
-          useToolStore.getState().setTool('select');
+      // Arrow keys nudge the selection (nodes + strokes). Shift = 10.
+      if (
+        (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown')
+        && !e.ctrlKey && !e.metaKey && !e.altKey
+      ) {
+        const step = e.shiftKey ? 10 : 1;
+        const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
+        const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
+        const now = Date.now();
+        const coalesce = e.repeat && now - lastNudgeAt < NUDGE_COALESCE_MS;
+        if (nudgeSelection(dx, dy, !coalesce)) {
+          e.preventDefault();
+          lastNudgeAt = now;
         }
+        return;
       }
 
-      // T: toggle text tool
-      if (e.key === 't' || e.key === 'T') {
-        const toolStore = useToolStore.getState();
-        toolStore.setTool(toolStore.activeTool === 'text' ? 'select' : 'text');
-      }
+      // Letter shortcuts never fire with Ctrl/Meta (Ctrl+T/D/E/L must not switch tools).
+      if (!e.ctrlKey && !e.metaKey) {
+        const letter = e.key.length === 1 ? e.key.toLowerCase() : '';
 
-      // D: toggle draw tool
-      if (e.key === 'd' || e.key === 'D') {
-        const toolStore = useToolStore.getState();
-        toolStore.setTool(toolStore.activeTool === 'draw' ? 'select' : 'draw');
-      }
+        if (letter === 'v') {
+          useToolStore.getState().setTool('select');
+          return;
+        }
 
-      // S: toggle shape tool
-      if (e.key === 's' || e.key === 'S') {
-        if (!e.ctrlKey && !e.metaKey) {
+        if (letter === 'h') {
+          const toolStore = useToolStore.getState();
+          toolStore.setTool(toolStore.activeTool === 'hand' ? 'select' : 'hand');
+          return;
+        }
+
+        if (letter === 't') {
+          const toolStore = useToolStore.getState();
+          toolStore.setTool(toolStore.activeTool === 'text' ? 'select' : 'text');
+          return;
+        }
+
+        if (letter === 'd') {
+          const toolStore = useToolStore.getState();
+          toolStore.setTool(toolStore.activeTool === 'draw' ? 'select' : 'draw');
+          return;
+        }
+
+        if (letter === 's') {
           const toolStore = useToolStore.getState();
           toolStore.setTool(toolStore.activeTool === 'shape' ? 'select' : 'shape');
+          return;
         }
-      }
 
-      // E: toggle eraser mode in draw tool
-      if (e.key === 'e' || e.key === 'E') {
-        const toolStore = useToolStore.getState();
-        if (toolStore.activeTool === 'draw') {
-          toolStore.setDrawOptions({ isErasing: !toolStore.drawOptions.isErasing });
-        } else {
-          toolStore.setTool('draw');
-          toolStore.setDrawOptions({ isErasing: true });
+        if (letter === 'e') {
+          const toolStore = useToolStore.getState();
+          if (toolStore.activeTool === 'draw') {
+            toolStore.setDrawOptions({ isErasing: !toolStore.drawOptions.isErasing });
+          } else {
+            toolStore.setTool('draw');
+            toolStore.setDrawOptions({ isErasing: true });
+          }
+          return;
         }
-      }
 
-      // L: toggle lasso
-      if (e.key === 'l' || e.key === 'L') {
-        const toolStore = useToolStore.getState();
-        toolStore.setTool(toolStore.activeTool === 'lasso' ? 'select' : 'lasso');
+        if (letter === 'l') {
+          const toolStore = useToolStore.getState();
+          toolStore.setTool(toolStore.activeTool === 'lasso' ? 'select' : 'lasso');
+          return;
+        }
       }
 
       // Ctrl+C: copy
@@ -177,7 +262,18 @@ export function useCanvasKeyboard(
       }
     };
 
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space') useToolStore.getState().setSpaceHeld(false);
+    };
+    const handleBlur = () => useToolStore.getState().setSpaceHeld(false);
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', handleBlur);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', handleBlur);
+    };
   }, [clearSelection]);
 }

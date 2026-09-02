@@ -60,6 +60,7 @@ export function InfiniteCanvas({ backgroundMode = 'pages', bgColor = '#ffffff' }
   const setViewport = useCanvasStore((s) => s.setViewport);
 
   const activeTool = useToolStore((s) => s.activeTool);
+  const spaceHeld = useToolStore((s) => s.spaceHeld);
 
   // Scroll records live on the workspace page, not the canvas store — subscribe
   // so a rename or a new scroll repaints without waiting for a node change.
@@ -91,6 +92,7 @@ export function InfiniteCanvas({ backgroundMode = 'pages', bgColor = '#ffffff' }
     handleDrawPointerMove,
     handleDrawPointerUp,
     handleDrawPointerCancel,
+    handlePanCapture,
     cancelInProgress,
     isPenGestureActive,
   } = useShapeCreation(stageRef);
@@ -337,8 +339,9 @@ export function InfiniteCanvas({ backgroundMode = 'pages', bgColor = '#ffffff' }
 
   // ── Tool config ────────────────────────────────
   const toolConfig = getToolConfig(activeTool);
-  const isDrawTool = !toolConfig.allowNodeSelection || activeTool === 'shape';
-  const cursorClass = toolConfig.cursorClass;
+  const cursorClass = spaceHeld || activeTool === 'hand'
+    ? 'infinite-canvas--grab'
+    : toolConfig.cursorClass;
 
   // Get current stage scale for text editor positioning
   const currentScale = stageRef.current?.scaleX() ?? 1;
@@ -353,28 +356,40 @@ export function InfiniteCanvas({ backgroundMode = 'pages', bgColor = '#ffffff' }
       // sees the event (it remaps cancel → pointerup on a hit, swallows a
       // miss). Running before Konva means a later synthetic pointerup finds
       // activePointer already cleared and does not commit a half-stroke.
-      onPointerCancelCapture={isDrawTool ? (e) => handleDrawPointerCancel(e) : undefined}
+      onPointerCancelCapture={(e) => handleDrawPointerCancel(e)}
+      onPointerDownCapture={(e) => handlePanCapture(e.nativeEvent)}
     >
       {dimensions.width > 0 && dimensions.height > 0 && (
         <Stage
           ref={stageRef}
           width={dimensions.width}
           height={dimensions.height}
-          draggable={!isDrawTool}
+          draggable={false}
           dragBoundFunc={dragBoundFunc}
           onWheel={handleWheel}
           onDragEnd={handleDragEnd}
           onClick={(e) => { closeContextMenu(); handleStageClick(e); }}
           onTap={handleStageClick}
           onContextMenu={handleContextMenu}
-          // Draw/shape/lasso own touch for drawing/panning; every other tool
-          // gets the long-press path instead (REQ-CANVAS-028) — it no-ops
-          // for mouse and for anything but the select tool, so this never
-          // collides with node dragging or the other tools' own handlers.
-          onPointerDown={isDrawTool ? handleDrawPointerDown : handleLongPressPointerDown}
-          onPointerMove={isDrawTool ? handleDrawPointerMove : handleLongPressPointerMove}
-          onPointerUp={isDrawTool ? handleDrawPointerUp : handleLongPressPointerUp}
-          onPointerCancel={isDrawTool ? handleDrawPointerCancel : handleLongPressPointerCancel}
+          // Select-tool marquee, draw/shape/lasso, and touch pan share the
+          // creation pointer pipeline. Long-press still runs for select+touch
+          // on a node (it no-ops for mouse and other tools).
+          onPointerDown={(e) => {
+            handleLongPressPointerDown(e);
+            handleDrawPointerDown(e);
+          }}
+          onPointerMove={(e) => {
+            handleLongPressPointerMove(e);
+            handleDrawPointerMove(e);
+          }}
+          onPointerUp={(e) => {
+            handleLongPressPointerUp(e);
+            handleDrawPointerUp(e);
+          }}
+          onPointerCancel={(e) => {
+            handleLongPressPointerCancel(e);
+            handleDrawPointerCancel(e);
+          }}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
@@ -399,6 +414,7 @@ export function InfiniteCanvas({ backgroundMode = 'pages', bgColor = '#ffffff' }
               if (opts.shapeType === 'rect') return <KonvaRect x={sp.x} y={sp.y} width={sp.w} height={sp.h} {...commonProps} />;
               if (opts.shapeType === 'circle') return <Ellipse x={sp.x + sp.w / 2} y={sp.y + sp.h / 2} radiusX={Math.abs(sp.w) / 2} radiusY={Math.abs(sp.h) / 2} {...commonProps} />;
               if (opts.shapeType === 'triangle') return <KonvaLine points={[sp.x + sp.w / 2, sp.y, sp.x + sp.w, sp.y + sp.h, sp.x, sp.y + sp.h]} closed {...commonProps} />;
+              if (opts.shapeType === 'diamond') return <KonvaLine points={[sp.x + sp.w / 2, sp.y, sp.x + sp.w, sp.y + sp.h / 2, sp.x + sp.w / 2, sp.y + sp.h, sp.x, sp.y + sp.h / 2]} closed {...commonProps} />;
               // Arrow/line: start at (sp.x, sp.y), end at (sp.x+sp.w, sp.y+sp.h) — matches ShapeNode's [0,0,w,h] offset by Group position
               if (opts.shapeType === 'arrow') return <KonvaLine points={[sp.x, sp.y, sp.x + sp.w, sp.y + sp.h]} stroke={opts.stroke} strokeWidth={opts.strokeWidth} opacity={0.6} listening={false} />;
               if (opts.shapeType === 'line') return <KonvaLine points={[sp.x, sp.y, sp.x + sp.w, sp.y + sp.h]} stroke={opts.stroke} strokeWidth={opts.strokeWidth} lineCap="round" opacity={0.6} listening={false} />;

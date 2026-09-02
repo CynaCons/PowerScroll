@@ -39,6 +39,14 @@
   cursor: none !important;
 }
 
+.infinite-canvas--grab canvas {
+  cursor: grab !important;
+}
+
+.infinite-canvas--grabbing canvas {
+  cursor: grabbing !important;
+}
+
 .infinite-canvas--paper {
   background-image:
     repeating-linear-gradient(

@@ -32,6 +32,7 @@ const defaultDrawOptions: DrawOptions = {
   isErasing: false,
   touchDraw: loadTouchDraw(),
   snapToObjects: loadSnapToObjects(),
+  opacity: 1,
 };
 
 interface ToolState {
@@ -45,12 +46,15 @@ interface ToolState {
    * panning — the pen proves palms will be landing on the screen.
    */
   penDetected: boolean;
+  /** Space is held — pointer drags pan instead of marquee/draw. */
+  spaceHeld: boolean;
 
   setTool: (tool: ToolType) => void;
   setTextOptions: (options: Partial<TextOptions>) => void;
   setDrawOptions: (options: Partial<DrawOptions>) => void;
   setShapeOptions: (options: Partial<ShapeOptions>) => void;
   setPenDetected: (detected: boolean) => void;
+  setSpaceHeld: (held: boolean) => void;
 }
 
 export const useToolStore = create<ToolState>((set) => ({
@@ -59,6 +63,7 @@ export const useToolStore = create<ToolState>((set) => ({
   drawOptions: { ...defaultDrawOptions },
   shapeOptions: { ...defaultShapeOptions },
   penDetected: false,
+  spaceHeld: false,
 
   setTool: (tool) => set({ activeTool: tool }),
 
@@ -93,4 +98,5 @@ export const useToolStore = create<ToolState>((set) => ({
     })),
 
   setPenDetected: (detected) => set({ penDetected: detected }),
+  setSpaceHeld: (held) => set({ spaceHeld: held }),
 }));

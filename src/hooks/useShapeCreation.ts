@@ -27,6 +27,15 @@ export interface ShapePreview {
 /** Stylus eraser end: bit 32 of PointerEvent.buttons (S Pen, Surface pen). */
 const ERASER_BUTTON = 32;
 
+/** Set when a marquee commits so the trailing Stage click does not clear it. */
+let skipNextBackgroundClick = false;
+
+export function consumeMarqueeClickGuard(): boolean {
+  if (!skipNextBackgroundClick) return false;
+  skipNextBackgroundClick = false;
+  return true;
+}
+
 /**
  * Touch is distrusted for this long after the last pen contact — a palm
  * stays on the glass after the pen lifts, and must not pan, pinch or draw.
@@ -281,6 +290,7 @@ export function useShapeCreation(
           strokeWidth: stroke.strokeWidth,
           ...(stroke.groupId !== undefined ? { groupId: stroke.groupId } : {}),
           ...(run.prs ? { pressures: run.prs } : {}),
+          ...(stroke.opacity !== undefined ? { opacity: stroke.opacity } : {}),
         });
       }
     }
@@ -369,6 +379,86 @@ export function useShapeCreation(
     return !useToolStore.getState().penDetected;
   };
 
+  const applyPanClient = useCallback((clientX: number, clientY: number) => {
+    const stage = stageRef.current;
+    if (!stage || !panLast.current) return;
+    const dx = clientX - panLast.current.x;
+    const dy = clientY - panLast.current.y;
+    panLast.current = { x: clientX, y: clientY };
+    stage.position({ x: stage.x() + dx, y: stage.y() + dy });
+    const y = clampStageY(stage, liveCeiling());
+    if (y !== stage.y()) stage.position({ x: stage.x(), y });
+    useCanvasStore.getState().setViewport({ x: stage.x(), y: stage.y() });
+  }, [stageRef]);
+
+  /**
+   * Capture-phase pan: Space+drag, middle-button, and the hand tool.
+   * Runs on the canvas container so it wins over node dragging.
+   * Returns true when the gesture was claimed.
+   */
+  const handlePanCapture = useCallback((evt: PointerEvent) => {
+    if (activePointer.current !== null) return false;
+    const tool = useToolStore.getState().activeTool;
+    const middle = evt.button === 1 || (evt.buttons & 4) !== 0;
+    const space = useToolStore.getState().spaceHeld;
+    const hand = tool === 'hand';
+    if (!middle && !space && !hand) return false;
+    if (!middle && evt.button !== 0) return false;
+
+    evt.preventDefault();
+    evt.stopPropagation();
+    activePointer.current = { id: evt.pointerId, type: evt.pointerType || 'mouse', mode: 'pan' };
+    panLast.current = { x: evt.clientX, y: evt.clientY };
+
+    const move = (ev: PointerEvent) => {
+      if (ev.pointerId !== evt.pointerId) return;
+      applyPanClient(ev.clientX, ev.clientY);
+    };
+    const up = (ev: PointerEvent) => {
+      if (ev.pointerId !== evt.pointerId) return;
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+      activePointer.current = null;
+      panLast.current = null;
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+    return true;
+  }, [stageRef, applyPanClient]);
+
+  const commitLasso = (rect: { x: number; y: number; w: number; h: number }, switchToSelect: boolean) => {
+    const allStrokes = useDrawStore.getState().strokes;
+    const selectedStrokes = allStrokes.filter((s) => {
+      for (let i = 0; i < s.points.length; i += 2) {
+        if (s.points[i] >= rect.x && s.points[i] <= rect.x + rect.w &&
+            s.points[i + 1] >= rect.y && s.points[i + 1] <= rect.y + rect.h) {
+          return true;
+        }
+      }
+      return false;
+    });
+    useDrawStore.getState().selectStrokes(selectedStrokes.map((s) => s.id));
+
+    const allNodes = useCanvasStore.getState().nodes;
+    const selectedNodeIds = allNodes.filter((n) => {
+      const nx1 = Math.min(n.x, n.x + n.width);
+      const ny1 = Math.min(n.y, n.y + n.height);
+      const nx2 = Math.max(n.x, n.x + n.width);
+      const ny2 = Math.max(n.y, n.y + n.height);
+      return !(nx2 < rect.x || nx1 > rect.x + rect.w ||
+               ny2 < rect.y || ny1 > rect.y + rect.h);
+    }).map((n) => n.id);
+
+    useCanvasStore.setState({ selectedNodeIds });
+    skipNextBackgroundClick = true;
+
+    if (switchToSelect && (selectedNodeIds.length > 0 || selectedStrokes.length > 0)) {
+      useToolStore.getState().setTool('select');
+    }
+  };
+
   const handleDrawPointerDown = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
     const evt = e.evt;
     const tool = useToolStore.getState().activeTool;
@@ -395,9 +485,20 @@ export function useShapeCreation(
       return;
     }
 
+    const onStage = e.target === stageRef.current;
+    const creationTool = tool === 'draw' || tool === 'shape' || tool === 'lasso';
+
+    // Touch drag on empty background pans (select and other non-creation tools).
+    // Creation tools keep their own gestures; draw-mode finger pan is below.
+    if (evt.pointerType === 'touch' && onStage && !creationTool) {
+      activePointer.current = { id: evt.pointerId, type: 'touch', mode: 'pan' };
+      panLast.current = { x: evt.clientX, y: evt.clientY };
+      return;
+    }
+
     // For shape tool: allow clicks on background elements (PageGuides, Stage)
-    // For draw/erase/lasso: only trigger on Stage itself
-    if (tool !== 'shape' && e.target !== stageRef.current) return;
+    // For draw/erase/lasso/select-marquee: only trigger on Stage itself
+    if (tool !== 'shape' && !onStage) return;
     // For shape tool: don't start if clicking on an interactive node
     if (tool === 'shape') {
       let target: Konva.Node | null = e.target;
@@ -412,7 +513,7 @@ export function useShapeCreation(
 
     // A finger that doesn't draw pans instead — in draw mode the stage isn't
     // draggable, so the pan is driven here (REQ-DRAW-012).
-    if (evt.pointerType === 'touch' && !touchDraws()) {
+    if (tool === 'draw' && evt.pointerType === 'touch' && !touchDraws()) {
       activePointer.current = { id: evt.pointerId, type: 'touch', mode: 'pan' };
       panLast.current = { x: evt.clientX, y: evt.clientY };
       return;
@@ -464,7 +565,7 @@ export function useShapeCreation(
       activePointer.current = { id: evt.pointerId, type: evt.pointerType, mode: 'shape' };
       shapeStart.current = pt;
       setShapePreview({ x: pt.x, y: pt.y, w: 0, h: 0 });
-    } else if (tool === 'lasso') {
+    } else if (tool === 'lasso' || (tool === 'select' && evt.pointerType !== 'touch')) {
       activePointer.current = { id: evt.pointerId, type: evt.pointerType, mode: 'lasso' };
       lassoStart.current = pt;
       setLassoRect({ x: pt.x, y: pt.y, w: 0, h: 0 });
@@ -484,17 +585,9 @@ export function useShapeCreation(
     // Touch that isn't drawing never paints hover cursors.
     if (!activePointer.current && evt.pointerType === 'touch') return;
 
-    // Finger pan (draw mode, non-drawing finger)
+    // Finger pan (draw mode, non-drawing finger) and select-tool touch pan
     if (activePointer.current?.mode === 'pan') {
-      const stage = stageRef.current;
-      if (!stage || !panLast.current) return;
-      const dx = evt.clientX - panLast.current.x;
-      const dy = evt.clientY - panLast.current.y;
-      panLast.current = { x: evt.clientX, y: evt.clientY };
-      stage.position({ x: stage.x() + dx, y: stage.y() + dy });
-      const y = clampStageY(stage, liveCeiling());
-      if (y !== stage.y()) stage.position({ x: stage.x(), y });
-      useCanvasStore.getState().setViewport({ x: stage.x(), y: stage.y() });
+      applyPanClient(evt.clientX, evt.clientY);
       return;
     }
 
@@ -592,7 +685,7 @@ export function useShapeCreation(
       }
     }
 
-    if (tool === 'lasso' && lassoStart.current) {
+    if (activePointer.current?.mode === 'lasso' && lassoStart.current) {
       const start = lassoStart.current;
       setLassoRect({
         x: Math.min(start.x, pt.x),
@@ -601,7 +694,7 @@ export function useShapeCreation(
         h: Math.abs(pt.y - start.y),
       });
     }
-  }, [getCanvasPoint, clientToCanvas, stageRef, eraseStrokeAlong, eraseZoneAlong]);
+  }, [getCanvasPoint, clientToCanvas, stageRef, eraseStrokeAlong, eraseZoneAlong, applyPanClient]);
 
   const handleDrawPointerUp = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
     const evt = e.evt;
@@ -633,6 +726,7 @@ export function useShapeCreation(
         color: drawOpts.color,
         strokeWidth: drawOpts.strokeWidth,
         ...(pressures ? { pressures } : {}),
+        ...(drawOpts.opacity < 1 ? { opacity: drawOpts.opacity } : {}),
       });
     } else if (tool === 'shape' && shapePreview) {
       // Commit shape node — different min size for shapes vs arrows/lines
@@ -667,46 +761,13 @@ export function useShapeCreation(
             stroke: shapeOpts.stroke,
             strokeWidth: shapeOpts.strokeWidth,
             strokeDash: [...shapeOpts.strokeDash],
+            ...(shapeOpts.opacity < 1 ? { opacity: shapeOpts.opacity } : {}),
             ...arrowData,
           },
         });
       }
-    } else if (tool === 'lasso' && lassoRect && lassoRect.w > 5 && lassoRect.h > 5) {
-      const rect = lassoRect;
-
-      // Find strokes within lasso rect
-      const allStrokes = useDrawStore.getState().strokes;
-      const selectedStrokes = allStrokes.filter((s) => {
-        for (let i = 0; i < s.points.length; i += 2) {
-          if (s.points[i] >= rect.x && s.points[i] <= rect.x + rect.w &&
-              s.points[i + 1] >= rect.y && s.points[i + 1] <= rect.y + rect.h) {
-            return true;
-          }
-        }
-        return false;
-      });
-      useDrawStore.getState().selectStrokes(selectedStrokes.map((s) => s.id));
-
-      // Find nodes (text/shape/image) whose bounding box intersects the lasso rect
-      const allNodes = useCanvasStore.getState().nodes;
-      const selectedNodeIds = allNodes.filter((n) => {
-        // For arrows/lines, width/height can be negative (direction vector)
-        const nx1 = Math.min(n.x, n.x + n.width);
-        const ny1 = Math.min(n.y, n.y + n.height);
-        const nx2 = Math.max(n.x, n.x + n.width);
-        const ny2 = Math.max(n.y, n.y + n.height);
-        // Intersection check with lasso rect
-        return !(nx2 < rect.x || nx1 > rect.x + rect.w ||
-                 ny2 < rect.y || ny1 > rect.y + rect.h);
-      }).map((n) => n.id);
-
-      // Replace node selection with lassoed ones
-      useCanvasStore.setState({ selectedNodeIds });
-
-      // After lasso, switch to select mode so the user can move/duplicate
-      if (selectedNodeIds.length > 0 || selectedStrokes.length > 0) {
-        useToolStore.getState().setTool('select');
-      }
+    } else if (activePointer.current?.mode === 'lasso' && lassoRect && lassoRect.w > 5 && lassoRect.h > 5) {
+      commitLasso(lassoRect, tool === 'lasso');
     }
 
     activePointer.current = null;
@@ -763,6 +824,7 @@ export function useShapeCreation(
     handleDrawPointerMove,
     handleDrawPointerUp,
     handleDrawPointerCancel,
+    handlePanCapture,
     // Pinch/palm coordination
     cancelInProgress,
     isPenGestureActive,

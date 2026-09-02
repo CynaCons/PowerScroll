@@ -37,3 +37,5 @@ Allow users to create, style, select, move, resize, and delete geometric shapes 
 | REQ-SHAPE-023 | Dragging an endpoint away shall unbind it; dragging an arrow body shall unbind both endpoints. | Must | T194 |
 | REQ-SHAPE-024 | Deleting either side shall clean up the other, and bindings shall round-trip through save/load. | Must | T194 |
 | REQ-SHAPE-025 | Pasted or duplicated arrows shall carry no bindings to nodes outside the copied set. | Must | T194 |
+| REQ-SHAPE-026 | The app shall support a diamond shape type, created and Shift-constrained like a rectangle, rendered as a four-point closed polygon, bindable on its four edges, and persisted through save/load. | Must | T195 |
+| REQ-SHAPE-027 | Shapes, images and strokes shall support opacity 0–1 (default 1), editable from the shape, image and draw toolbars, rendered on the Konva node, and persisted through save/load. | Must | T195 |

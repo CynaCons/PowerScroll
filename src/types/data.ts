@@ -33,13 +33,15 @@ export interface ImageNodeData {
   fullWidth?: number;
   /** Stashed full-size display height while mini is on. */
   fullHeight?: number;
+  /** 0–1, default 1. Absent keeps pre-v0.73 files opaque. */
+  opacity?: number;
 }
 
 /**
  * `arc` is a stroked half-circle (v0.34+). It exists because a UML required
  * interface is a socket, and no combination of the other five can produce one.
  */
-export type ShapeType = 'rect' | 'circle' | 'triangle' | 'arrow' | 'line' | 'arc';
+export type ShapeType = 'rect' | 'circle' | 'triangle' | 'diamond' | 'arrow' | 'line' | 'arc';
 
 export interface ShapeNodeData {
   shapeType: ShapeType;
@@ -54,6 +56,8 @@ export interface ShapeNodeData {
   /** Endpoint attachment for arrows and lines. Absent keeps pre-v0.72 files valid. */
   startBinding?: ArrowBinding | null;
   endBinding?: ArrowBinding | null;
+  /** 0–1, default 1. Absent keeps pre-v0.73 files opaque. */
+  opacity?: number;
 }
 
 export interface ArrowBinding {
@@ -148,6 +152,8 @@ export interface Stroke {
    * constant width.
    */
   pressures?: number[];
+  /** 0–1, default 1. Absent keeps pre-v0.73 files opaque. */
+  opacity?: number;
 }
 
 /** Optional group index entry (derived membership is canonical). */
@@ -171,6 +177,8 @@ export interface DrawOptions {
   touchDraw: 'auto' | 'always' | 'never';
   /** Device preference for magnetic alignment and equal-gap object snaps. */
   snapToObjects: boolean;
+  /** 0–1, default 1. Applied to new strokes and to the selected strokes. */
+  opacity: number;
 }
 
 // ── Hierarchy types ─────────────────────────────────────────
@@ -252,7 +260,7 @@ export interface WorkspaceData {
 
 // ── Tool types ──────────────────────────────────────────────
 
-export type ToolType = 'select' | 'text' | 'draw' | 'lasso' | 'shape' | 'image' | 'gantt' | 'diagram';
+export type ToolType = 'select' | 'hand' | 'text' | 'draw' | 'lasso' | 'shape' | 'image' | 'gantt' | 'diagram';
 
 export interface ShapeOptions {
   shapeType: ShapeType;
@@ -260,6 +268,8 @@ export interface ShapeOptions {
   stroke: string;
   strokeWidth: number;
   strokeDash: number[];
+  /** 0–1, default 1. Applied to new shapes and to the selected shape. */
+  opacity: number;
 }
 
 export interface TextOptions {

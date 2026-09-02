@@ -13,12 +13,12 @@ Provide an infinite, pannable, zoomable canvas as the primary workspace for plac
 | ID | Description | Priority | Test Ref |
 |----|-------------|----------|----------|
 | REQ-CANVAS-001 | The app shall display an infinite canvas that fills the available viewport area | Must | T00 |
-| REQ-CANVAS-002 | The user shall be able to pan the canvas by clicking and dragging the background | Must | T01 |
+| REQ-CANVAS-002 | The user shall be able to pan the canvas via Space+drag, middle-button drag, the hand tool, wheel, or a single-finger touch drag on the background | Must | T01, T195 |
 | REQ-CANVAS-003 | The user shall be able to zoom in/out using Ctrl+scroll wheel, centered on the cursor position | Must | T02 |
 | REQ-CANVAS-004 | Zoom level shall be clamped between 0.1x and 5.0x | Must | T02 |
 | REQ-CANVAS-005 | The canvas shall resize responsively when the browser window is resized | Should | T00 |
 | REQ-CANVAS-006 | Clicking the background with the select tool shall deselect any selected node | Must | T03 |
-| REQ-CANVAS-013 | With the select tool active, dragging on the canvas background shall draw a lasso selection rectangle | Must | T74 |
+| REQ-CANVAS-013 | With the select tool active, dragging on the canvas background with the primary pointer shall draw a marquee selection rectangle that selects intersecting nodes and strokes, then remain in select | Must | T74, T195 |
 | REQ-CANVAS-014 | Releasing the lasso shall select every node whose bounding box intersects the lasso rectangle (text, shapes, images) | Must | T74 |
 | REQ-CANVAS-015 | Dragging any node in a multi-selection shall move all selected nodes (and selected strokes) together | Must | T74, T93 |
 | REQ-CANVAS-016 | Pressing Escape or clicking the background shall clear the multi-selection | Must | T74 |
@@ -50,4 +50,6 @@ Provide an infinite, pannable, zoomable canvas as the primary workspace for plac
 | REQ-CANVAS-040 | Ctrl+Z and the top-bar undo button shall undo the most recent node, stroke, or scroll change in reverse chronological order, regardless of the active tool. | Must | T193 |
 | REQ-CANVAS-041 | Redo shall replay shared-history changes; making a new change after undo shall clear the redo stack. | Must | T193 |
 | REQ-CANVAS-042 | Batched gestures, including multi-drag, zone erase, group/ungroup, and transform, shall each create one shared-history entry. | Must | T193 |
+| REQ-CANVAS-043 | Arrow keys shall nudge the current selection (nodes and selected strokes) by 1 canvas unit, or 10 with Shift, and shall not fire while a text field or the textarea editor has focus. Each key press is one undo entry; held-key repeats within 300 ms coalesce into one entry. | Must | T195 |
+| REQ-CANVAS-044 | The hand tool (H) shall pan on drag; Space+drag and middle-button drag shall pan from any tool. | Must | T195 |
 

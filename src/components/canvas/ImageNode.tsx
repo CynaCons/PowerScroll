@@ -118,6 +118,7 @@ export function ImageNode({ node, isSelected, onSelect, stageScale, onSnapChange
       x={node.x}
       y={node.y}
       rotation={data.rotation || 0}
+      opacity={data.opacity ?? 1}
       draggable={isInteractive}
       listening={isInteractive}
       onDragStart={handleDragStart}

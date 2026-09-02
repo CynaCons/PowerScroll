@@ -13,6 +13,8 @@ interface DrawState {
   deleteStroke: (id: string) => void;
   deleteStrokes: (ids: string[]) => void;
   moveStrokes: (ids: string[], dx: number, dy: number) => void;
+  /** Patch committed strokes (opacity/colour/width). One history entry. */
+  updateStrokes: (ids: string[], patch: Partial<Pick<Stroke, 'opacity' | 'color' | 'strokeWidth'>>) => void;
   /** Move strokes to absolute positions from a start snapshot (no undo). */
   moveStrokesSilent: (
     ids: string[],
@@ -113,6 +115,17 @@ export const useDrawStore = create<DrawState>((set, get) => ({
           }
           return { ...s, points: newPoints };
         }),
+      };
+    });
+  },
+
+  updateStrokes: (ids, patch) => {
+    set((state) => {
+      useHistoryStore.getState().record();
+      useWorkspaceStore.getState().markDirty();
+      const idSet = new Set(ids);
+      return {
+        strokes: state.strokes.map((s) => idSet.has(s.id) ? { ...s, ...patch } : s),
       };
     });
   },

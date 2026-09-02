@@ -23,8 +23,8 @@ export function BottomToolbar() {
   const updateNode = useCanvasStore((s) => s.updateNode);
   const hasGroupControls = useGroupControls() !== null;
 
-  // Track last creation tool (not select/lasso)
-  if (activeTool !== 'select' && activeTool !== 'lasso') {
+  // Track last creation tool (not select/lasso/hand)
+  if (activeTool !== 'select' && activeTool !== 'lasso' && activeTool !== 'hand') {
     lastToolbarTool = activeTool;
   }
 
@@ -82,6 +82,7 @@ export function BottomToolbar() {
           stroke: (selectedShapeNode.data as ShapeNodeData).stroke,
           strokeWidth: (selectedShapeNode.data as ShapeNodeData).strokeWidth,
           strokeDash: (selectedShapeNode.data as ShapeNodeData).strokeDash,
+          opacity: (selectedShapeNode.data as ShapeNodeData).opacity ?? 1,
         }
       : shapeOptions;
 

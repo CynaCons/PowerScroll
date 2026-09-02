@@ -1471,14 +1471,14 @@
 - [x] Cleanup on delete either side; copy/paste and Ctrl+drag duplicate drop bindings to nodes outside the copied set; save/load round trip
 - [x] SRS REQ-SHAPE-021..025 and E2E T194; typecheck, lint, full Playwright green, commit
 
-### v0.73.0 — Whiteboard small wins — keyboard nudge, diamond, opacity, marquee on select + hand tool (ACTIVE)
+### v0.73.0 — Whiteboard small wins — keyboard nudge, diamond, opacity, marquee on select + hand tool (2026-09-02 · 779/779 green (grok-4.6 build, coordinator run)) (COMPLETE)
 > Four small Excalidraw parity gaps: no arrow-key nudging (and Ctrl+T/D/E/L switched tools), no diamond shape, no opacity on shapes/images/strokes, and region selection needed the separate L tool because select-tool background drag panned. Excalidraw and every mainstream whiteboard use background drag for marquee and Space / middle button / hand tool for pan. DECISION TO VETO: this rewrites REQ-CANVAS-002 (pan) — left-drag on empty canvas now marquee-selects; pan via Space+drag, middle button, hand tool (H), wheel, touch drag.
 **Goal:** The select tool behaves like Excalidraw's: drag to marquee, arrows to nudge, and the shape palette gains diamond and opacity.
-- [ ] Arrow keys nudge nodes and strokes by 1 (Shift 10), one history entry per press; Ctrl+T/D/E/L no longer switch tools [agent: codex]
-- [ ] Diamond shape type: toolbar, render + hit rect, binding outline, round trip [agent: codex]
-- [ ] Opacity (0–100) on shapes, images and strokes via their toolbars, rendered as Konva opacity, persisted [agent: codex]
-- [ ] Select-tool background drag = marquee; pan via Space+drag, middle button, hand tool (H), wheel, touch; REQ-CANVAS-002/013 rewritten and affected specs updated [agent: codex]
-- [ ] SRS REQ-CANVAS-043/044, REQ-SHAPE-026/027, E2E T195; typecheck, lint, full Playwright green, commit [agent: codex]
+- [x] Arrow keys nudge nodes and strokes by 1 (Shift 10), one history entry per press; Ctrl+T/D/E/L no longer switch tools
+- [x] Diamond shape type: toolbar, render + hit rect, binding outline, round trip
+- [x] Opacity (0–100) on shapes, images and strokes via their toolbars, rendered as Konva opacity, persisted
+- [x] Select-tool background drag = marquee; pan via Space+drag, middle button, hand tool (H), wheel, touch; REQ-CANVAS-002/013 rewritten and affected specs updated
+- [x] SRS REQ-CANVAS-043/044, REQ-SHAPE-026/027, E2E T195; typecheck, lint, full Playwright green, commit
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.

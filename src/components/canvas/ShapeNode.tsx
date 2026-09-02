@@ -136,6 +136,7 @@ export function ShapeNode({ node, isSelected, onSelect, stageScale, onSnapChange
       x={node.x}
       y={node.y}
       rotation={data.rotation ?? 0}
+      opacity={data.opacity ?? 1}
       width={isLinear ? hitW : w}
       height={isLinear ? hitH : h}
       draggable={isInteractive}
@@ -219,6 +220,18 @@ export function ShapeNode({ node, isSelected, onSelect, stageScale, onSnapChange
       {data.shapeType === 'triangle' && (
         <Line
           points={[w / 2, 0, w, h, 0, h]}
+          closed
+          fill={fill}
+          stroke={stroke}
+          strokeWidth={strokeWidth}
+          dash={dash}
+          listening={false}
+        />
+      )}
+
+      {data.shapeType === 'diamond' && (
+        <Line
+          points={[w / 2, 0, w, h / 2, w / 2, h, 0, h / 2]}
           closed
           fill={fill}
           stroke={stroke}

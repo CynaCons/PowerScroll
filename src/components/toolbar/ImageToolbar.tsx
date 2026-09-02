@@ -6,6 +6,7 @@ import { imageMiniTogglePatch } from '../../utils/imageMini';
 import { embedImage, embedImageFromUrl, imageNodeFromEmbed } from '../../utils/imageEmbed';
 import { currentViewportCentre } from '../../hooks/useCanvasDragDrop';
 import { showToast } from '../layout/Toast';
+import { OpacitySlider } from './OpacitySlider';
 import './BottomToolbar.css';
 
 interface ImageToolbarProps {
@@ -317,6 +318,13 @@ export function ImageToolbar({ node }: ImageToolbarProps) {
           >
             <Type size={16} />
           </button>
+
+          <div className="text-toolbar__divider" />
+
+          <OpacitySlider
+            value={data.opacity ?? 1}
+            onChange={(opacity) => updateNode(node.id, { data: { ...data, opacity } })}
+          />
 
           <div className="text-toolbar__divider" />
 

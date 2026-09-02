@@ -327,6 +327,8 @@ function vertexStyle(data: ShapeNodeData): string {
   } else if (data.shapeType === 'triangle') {
     bits.push('triangle');
     bits.push('direction=north');
+  } else if (data.shapeType === 'diamond') {
+    bits.push('rhombus');
   } else {
     const radius = data.cornerRadius ?? 0;
     if (radius > 0) {

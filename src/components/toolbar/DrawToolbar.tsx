@@ -3,6 +3,8 @@ import { useToolStore } from '../../stores/useToolStore';
 import { ColorPopover } from './ColorPopover';
 import { SizePopover } from './SizePopover';
 import { EraserPopover } from './EraserPopover';
+import { OpacitySlider } from './OpacitySlider';
+import { useDrawStore } from '../../stores/useDrawStore';
 import './BottomToolbar.css';
 
 export function DrawToolbar() {
@@ -22,6 +24,17 @@ export function DrawToolbar() {
     if (!isDrawActive) setTool('draw');
   };
 
+  const applyDrawStyle = (updates: Partial<typeof drawOptions>) => {
+    setDrawOptions(updates);
+    const ids = useDrawStore.getState().selectedStrokeIds;
+    if (ids.length === 0) return;
+    const patch: { color?: string; strokeWidth?: number; opacity?: number } = {};
+    if (updates.color !== undefined) patch.color = updates.color;
+    if (updates.strokeWidth !== undefined) patch.strokeWidth = updates.strokeWidth;
+    if (updates.opacity !== undefined) patch.opacity = updates.opacity;
+    if (Object.keys(patch).length > 0) useDrawStore.getState().updateStrokes(ids, patch);
+  };
+
   return (
     <div className="text-toolbar" data-testid="draw-toolbar">
       {/* Pen section */}
@@ -38,7 +51,7 @@ export function DrawToolbar() {
         <>
           <SizePopover
             value={drawOptions.strokeWidth}
-            onChange={(strokeWidth) => setDrawOptions({ strokeWidth })}
+            onChange={(strokeWidth) => applyDrawStyle({ strokeWidth })}
             min={1}
             max={24}
             step={1}
@@ -51,8 +64,13 @@ export function DrawToolbar() {
 
           <ColorPopover
             value={drawOptions.color}
-            onChange={(color) => setDrawOptions({ color })}
+            onChange={(color) => applyDrawStyle({ color })}
             label="Pen Color"
+          />
+
+          <OpacitySlider
+            value={drawOptions.opacity ?? 1}
+            onChange={(opacity) => applyDrawStyle({ opacity })}
           />
         </>
       )}

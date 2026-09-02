@@ -5,6 +5,7 @@ import { useToolStore } from '../stores/useToolStore';
 import { generateId } from '../utils/ids';
 import { DEFAULT_TEXT_WIDTH } from '../utils/pageLayout';
 import { clampCanvasY, liveCeiling } from '../utils/scrollCeiling';
+import { consumeMarqueeClickGuard } from './useShapeCreation';
 import { applyDiagramScrollFit, rebuildDiagram, STARTER_DIAGRAM, FRAME_MIN_W, FRAME_MIN_H } from '../diagram/canvasOps';
 import type { CanvasNode as CanvasNodeType } from '../types/data';
 
@@ -162,6 +163,7 @@ export function useTextPlacement(
         // Same as the gantt branch: an unclosed batch silently disables undo.
         undoBatchEnd();
       } else {
+        if (consumeMarqueeClickGuard()) return;
         clearSelection();
       }
     },
