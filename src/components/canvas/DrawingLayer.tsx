@@ -6,6 +6,7 @@ import { buildInkOutline } from '../../utils/inkOutline';
 interface DrawingLayerProps {
   strokes: Stroke[];
   selectedStrokeIds: string[];
+  pendingEraseIds: string[];
   inProgressPoints: number[] | null;
   inProgressPressures: number[] | null;
   inProgressColor: string;
@@ -24,7 +25,7 @@ interface DrawingLayerProps {
  * constant-width Line it always was. The outline is memoised: strokes are
  * immutable between edits, so it computes once, not per frame.
  */
-function CommittedStroke({ stroke }: { stroke: Stroke }) {
+function CommittedStroke({ stroke, opacity = 1 }: { stroke: Stroke; opacity?: number }) {
   const outline = useMemo(
     () =>
       stroke.pressures
@@ -44,6 +45,7 @@ function CommittedStroke({ stroke }: { stroke: Stroke }) {
         lineJoin="round"
         listening={false}
         perfectDrawEnabled={false}
+        opacity={opacity}
       />
     );
   }
@@ -57,6 +59,7 @@ function CommittedStroke({ stroke }: { stroke: Stroke }) {
       lineJoin="round"
       globalCompositeOperation="source-over"
       listening={false}
+      opacity={opacity}
     />
   );
 }
@@ -64,6 +67,7 @@ function CommittedStroke({ stroke }: { stroke: Stroke }) {
 export function DrawingLayer({
   strokes,
   selectedStrokeIds,
+  pendingEraseIds,
   inProgressPoints,
   inProgressPressures,
   inProgressColor,
@@ -75,6 +79,7 @@ export function DrawingLayer({
   lassoRect,
 }: DrawingLayerProps) {
   const selectedSet = new Set(selectedStrokeIds);
+  const pendingSet = new Set(pendingEraseIds);
 
   // Live stylus ink previews with the same ribbon it will commit as —
   // pressure feedback that only appears on lift teaches nothing.
@@ -89,7 +94,7 @@ export function DrawingLayer({
     <>
       {/* Committed strokes */}
       {strokes.map((stroke) => (
-        <CommittedStroke key={stroke.id} stroke={stroke} />
+        <CommittedStroke key={stroke.id} stroke={stroke} opacity={pendingSet.has(stroke.id) ? 0.2 : 1} />
       ))}
 
       {/* Selected stroke highlights */}

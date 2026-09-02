@@ -7,6 +7,8 @@ const MAX_HISTORY = 50;
 interface DrawState {
   strokes: Stroke[];
   selectedStrokeIds: string[];
+  /** Ephemeral stroke-eraser preview; intentionally not persisted or undoable. */
+  pendingEraseIds: string[];
 
   addStroke: (stroke: Stroke) => void;
   deleteStroke: (id: string) => void;
@@ -22,6 +24,9 @@ interface DrawState {
   selectStrokes: (ids: string[]) => void;
   clearStrokeSelection: () => void;
   setStrokeGroupIds: (ids: string[], groupId: string | null) => void;
+  markPendingErase: (ids: string[]) => void;
+  unmarkPendingErase: (ids: string[]) => void;
+  clearPendingErase: () => void;
 
   loadPageStrokes: (strokes: Stroke[]) => void;
   getStrokesSnapshot: () => Stroke[];
@@ -34,11 +39,41 @@ interface DrawState {
 
 let undoStack: Stroke[][] = [];
 let redoStack: Stroke[][] = [];
+let batchDepth = 0;
+let batchSnapshot: Stroke[] | null = null;
+let batchPushed = false;
 
 function pushUndo(strokes: Stroke[]) {
+  if (batchDepth > 0) {
+    if (batchPushed) return;
+    undoStack.push(deepCopy(batchSnapshot ?? strokes));
+    if (undoStack.length > MAX_HISTORY) undoStack.shift();
+    redoStack = [];
+    batchPushed = true;
+    return;
+  }
   undoStack.push(deepCopy(strokes));
   if (undoStack.length > MAX_HISTORY) undoStack.shift();
   redoStack = [];
+}
+
+/** Start a draw-history batch. Its snapshot is only committed on mutation. */
+export function undoBatchStart(): void {
+  if (batchDepth === 0) {
+    batchSnapshot = deepCopy(useDrawStore.getState().strokes);
+    batchPushed = false;
+  }
+  batchDepth++;
+}
+
+/** End a draw-history batch started by a multi-mutation gesture. */
+export function undoBatchEnd(): void {
+  if (batchDepth === 0) return;
+  batchDepth--;
+  if (batchDepth === 0) {
+    batchSnapshot = null;
+    batchPushed = false;
+  }
 }
 
 /** Export for multi-drag / group ops that batch canvas+stroke history. */
@@ -63,6 +98,7 @@ function deepCopy(strokes: Stroke[]): Stroke[] {
 export const useDrawStore = create<DrawState>((set, get) => ({
   strokes: [],
   selectedStrokeIds: [],
+  pendingEraseIds: [],
 
   addStroke: (stroke) => {
     set((state) => {
@@ -79,6 +115,7 @@ export const useDrawStore = create<DrawState>((set, get) => ({
       return {
         strokes: state.strokes.filter((s) => s.id !== id),
         selectedStrokeIds: state.selectedStrokeIds.filter((sid) => sid !== id),
+        pendingEraseIds: state.pendingEraseIds.filter((sid) => sid !== id),
       };
     });
   },
@@ -91,6 +128,7 @@ export const useDrawStore = create<DrawState>((set, get) => ({
       return {
         strokes: state.strokes.filter((s) => !idSet.has(s.id)),
         selectedStrokeIds: state.selectedStrokeIds.filter((sid) => !idSet.has(sid)),
+        pendingEraseIds: state.pendingEraseIds.filter((sid) => !idSet.has(sid)),
       };
     });
   },
@@ -136,6 +174,17 @@ export const useDrawStore = create<DrawState>((set, get) => ({
   selectStrokes: (ids) => set({ selectedStrokeIds: ids }),
   clearStrokeSelection: () => set({ selectedStrokeIds: [] }),
 
+  markPendingErase: (ids) => set((state) => {
+    const pending = new Set(state.pendingEraseIds);
+    ids.forEach((id) => pending.add(id));
+    return { pendingEraseIds: [...pending] };
+  }),
+  unmarkPendingErase: (ids) => set((state) => {
+    const idsToRestore = new Set(ids);
+    return { pendingEraseIds: state.pendingEraseIds.filter((id) => !idsToRestore.has(id)) };
+  }),
+  clearPendingErase: () => set({ pendingEraseIds: [] }),
+
   setStrokeGroupIds: (ids, groupId) => {
     set((state) => {
       pushUndo(state.strokes);
@@ -152,7 +201,7 @@ export const useDrawStore = create<DrawState>((set, get) => ({
   loadPageStrokes: (strokes) => {
     undoStack = [];
     redoStack = [];
-    set({ strokes, selectedStrokeIds: [] });
+    set({ strokes, selectedStrokeIds: [], pendingEraseIds: [] });
   },
 
   getStrokesSnapshot: () => get().strokes,
@@ -162,7 +211,7 @@ export const useDrawStore = create<DrawState>((set, get) => ({
     if (!prev) return;
     set((state) => {
       redoStack.push(deepCopy(state.strokes));
-      return { strokes: prev };
+      return { strokes: prev, pendingEraseIds: [] };
     });
   },
 
@@ -171,7 +220,7 @@ export const useDrawStore = create<DrawState>((set, get) => ({
     if (!next) return;
     set((state) => {
       undoStack.push(deepCopy(state.strokes));
-      return { strokes: next };
+      return { strokes: next, pendingEraseIds: [] };
     });
   },
 

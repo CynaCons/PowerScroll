@@ -574,6 +574,7 @@
 ---
 
 - [x] AUDIT 2026-08-11: pinch requirements reallocated — the planned REQ-CANVAS-013..015 had been spent on lasso/multi-drag. Pinch is now REQ-CANVAS-025/026 (implemented, covered by T106); two-finger pan and long-press select are recorded as REQ-CANVAS-027/028 under "Not implemented" in SRS_CANVAS
+
 ## v0.12 — File Management
 > Open files, recent files, file system integration (shipped as part of v0.22.0 FSA work)
 
@@ -611,6 +612,7 @@
 - [x] SRS: REQ-TEXT-023..025
 
 - [x] AUDIT 2026-08-11: heading requirements reallocated — the planned REQ-TEXT-023..025 had been spent on inline bold/italic/strike. Heading sizing is now REQ-TEXT-030/031, covered by T58. Shipped values are relative (1.6/1.3/1.1em ≈ 25.6/20.8/17.6px at a 16px block), not the fixed 28/22/18px originally written — relative scaling was kept deliberately so headings track the block's font size
+
 ### v0.13.1 — Clickable Links on Canvas
 - [x] External links clickable in rendered markdown (commit `def02e8`)
 - [x] Internal page links navigate to linked page
@@ -935,6 +937,7 @@
 - [x] Tests: T98 (11 cases) + powernote-mcp `npm test` displacement suite; stubBridgeUrl helper makes bridge tests hermetic; 323 pass / 1 pre-existing failure (85-settings-persist, predates this work)
 - [x] docs/SRS_AGENT.md REQ-AGENT-016..025 + README columns/displacement sections
 - [x] Version bump 0.28.0, tag v0.28.0
+
 ### v0.28.1 — Floating zoom control bar (2026-08-11) (COMPLETE)
 **Goal:** Give the canvas a visible zoom readout and mouse-only zoom controls. Ctrl+wheel and pinch already work, but there is no % indicator, no click-to-zoom, and no reset-to-100%.
 - [x] Visual prototypes: 4 variants (A compact pill, B slider bar, C dropdown pill, D auto-hide rail) mounted live in the app behind ?zoomproto=1 (src/components/canvas/ZoomBarPrototypes.tsx — throwaway)
@@ -945,6 +948,7 @@
 - [x] Fix latent stage-ref race: InfiniteCanvas registered the Konva stage on a 100ms setTimeout keyed on dimensions, so for ~100ms after mount/resize zoomToFit silently no-oped and centre-anchored zoom fell back to the origin — now registered synchronously in the post-commit effect
 - [x] setZoom action on useCanvasStore (centre-anchored, clamped) + MIN_SCALE/MAX_SCALE exported from the store and reused by InfiniteCanvas wheel/pinch instead of local duplicates
 - [x] Version bump 0.28.1 (package.json + src/version.ts), dist-template rebuilt so the in-app updater serves 0.28.1, tag v0.28.1
+
 ### v0.29.0 — Agent bridge — notebook management + update control (2026-08-11) (COMPLETE)
 **Goal:** The agent can create and fill pages but cannot manage the notebook around them: no rename, no reorganising, no way to persist to disk, no visibility of app updates. Add rename_page, move_page, rename_notebook, save_notebook, check_update and run_update.
 - [x] protocol.ts — 6 new BridgeCommandNames + result payload types
@@ -961,6 +965,7 @@
 - [x] saveNotebook gains an existingFileOnly option + SaveOutcome return, so the bridge reuses the real save path instead of duplicating revision stamping
 - [x] Longer request budget for the network-bound tools (POWERNOTE_BRIDGE_SLOW_TIMEOUT_MS, default 120s) — a 2.4MB update download does not fit the 10s default
 - [x] Version bump 0.29.0 (package.json, src/version.ts, powernote-mcp package + server + lockfile, SRS_AGENT header), dist-template rebuilt, tag v0.29.0
+
 ### v0.30.0 — Scroll guide style + agent-controlled canvas look (2026-08-11) (COMPLETE)
 **Goal:** Agents can read and change the notebook's canvas look (guide style + background colour) over the bridge, and a new "Scroll" guide style renders the page column as one continuous vertical sheet with light page separators instead of detached A4 cards. Notebook-level settings persistence (v0.26) and agent-triggered save_notebook (v0.29) already exist — this iteration verifies them against the new surface rather than rebuilding them.
 - [x] Add `scroll` to the `BackgroundMode` union and to `VALID_BG_MODES` in migrations so older/newer files validate it
@@ -977,6 +982,7 @@
 - [x] SRS_AGENT: requirement for `get_background` / `set_background` + note that agent-set look persists through the normal auto-save/save path
 - [x] Bump APP_VERSION to 0.30.0, full `npx playwright test` green, dev smoke test with no console errors
 - [x] Fix flaky T85 "settings round-trip through save → open": the fixed `waitForTimeout(500)` after `setInputFiles` is too tight on slower machines (FileReader + hydrate). Wait on the "Notebook opened" toast / poll the store instead
+
 ### v0.31.0 — Named scrolls — identity for parallel columns (PROPOSED) (2026-08-11) (COMPLETE)
 **Goal:** Agents can already write into parallel columns via append_block(column:N), but a column has no identity: no id, no title, no defined start, and no way to discover what scrolls a page holds. Give each scroll a stable id, a title rendered at its top, and a bridge API to list/create/rename/target them — so two agents (or an agent and the user) can work side by side on one page without colliding. Design pending sign-off.
 - [x] `ScrollRecord { id, title, column }` in types/data.ts + `Page.scrolls?: ScrollRecord[]` — records own identity, membership stays derived from geometry
@@ -992,6 +998,7 @@
 - [x] T105 — two agent sessions append to different scrollIds on one page concurrently; neither's blocks land in the other's band
 - [x] New `docs/SRS_SCROLL.md` (REQ-SCROLL-001..) covering identity, titles, derived membership and the agent surface; cross-reference from SRS_AGENT
 - [x] Surface scroll names to the user beyond the canvas header: list a page's scrolls under it in the hierarchy panel, and show the active scroll name in the TopBar breadcrumb
+
 ### v0.32.0 — Resizable hierarchy panel (2026-08-11) (COMPLETE)
 **Goal:** The sidebar is locked at 240px, so pages and sections with longer names are ellipsised with no way to read them. Add a drag handle on its right edge so the panel can be widened, with the width held for the session (not persisted, by explicit choice).
 - [x] Drag handle on the hierarchy panel's right edge (`data-testid="hierarchy-resize-handle"`), using pointer capture so the drag survives the cursor leaving the strip
@@ -1001,6 +1008,7 @@
 - [x] SRS_HIERARCHY: REQ-HIER-012..014 (resizable panel, clamping, session-only width)
 - [x] T107 — E2E: drag widens the panel, clamps at both bounds, double-click resets, keyboard steps, and a long page title shows more text once widened
 - [x] Bump APP_VERSION to 0.32.0, full suite green, rebuild dist-template, commit, tag and publish the GitHub release
+
 ### v0.33.0 — Document outline, active scroll, and agent deletes (2026-08-11) (COMPLETE)
 **Goal:** Promote the outline prototype into the sidebar as a real feature, scoped to one active scroll rather than the whole page. Introduce an explicit active-scroll concept set by clicking — in the sidebar or on the canvas header — which also drives navigation: clicking a scroll opens its page and moves the viewport to its start. Separately, give agents the delete verbs the bridge has never had: an agent can create pages, sections, scrolls and blocks but cannot remove any of them.
 - [x] `activeScrollId` runtime state on the workspace store (alongside activeSectionId/activePageId — not serialized), defaulting to the leftmost scroll and re-resolving on page change
@@ -1013,6 +1021,7 @@
 - [x] T109 — agent deletes: each verb removes the right thing, refuses without confirm, and reports the guard when the last page/section/scroll would go
 - [x] SRS: new REQ-OUTLINE ids in a docs/SRS_OUTLINE.md, active-scroll requirements in SRS_SCROLL, delete verbs in SRS_AGENT
 - [x] Bump APP_VERSION to 0.33.0, full suite green, rebuild dist-template, commit, tag and publish the GitHub release
+
 ### v0.33.1 — Test suite timeout hardening (2026-08-11) (COMPLETE)
 **Goal:** A cluster of text tests (26, 58, 59, 73, 83, 92) failed intermittently across three full-suite runs and passed serially every time. Cause: 41 hand-written `{ timeout: 2000 }` assertion waits, all BELOW Playwright's 5000ms default, which fail correct-but-slow runs when the machine is busy. Raise the ceilings so load costs time rather than green.
 - [x] Remove all 41 sub-default `{ timeout: 2000 }` assertion overrides across 20 files so they inherit one config-level `expect.timeout`
@@ -1020,6 +1029,7 @@
 - [x] Retries deliberately left at 0 — a retry converts an intermittent bug into a green run, which defeats the suite's purpose
 - [x] Drop the one `.click().catch(() => {})` in T104 — a swallowed action timeout is the only pattern a raised ceiling can slow, and it was hiding whether the assertions ran at all
 - [x] Verified under the failing condition: 414 passed with a dev server, preview browser and a build running alongside (6.4m — heavier than any run that previously failed)
+
 ### v0.34.0 — Diagram frames and the layout pipeline
 **Goal:** Agents can write markdown but cannot draw. Give them a diagram frame: a bounded, titled region that sits in a scroll like any other block, inside which a spec of entities and relationships becomes ordinary ShapeNodes and TextNodes — the same objects the user creates by hand, draggable the moment they land. The agent never supplies coordinates. It names entities and edges; the app measures the label text, runs dagre, materialises the result and returns geometric warnings in the same response, so a clean diagram costs one round trip. Frames grow when re-laid out, which means blocks below them must move — PowerNote has never had reflow, and `nextBlockY` only positions at append time. That is the gate for this iteration. Rendering follows the weighted-ink tokens chosen 2026-08-13: #EEF1F0 fill, 1.6px ink stroke, white hairline containers, one accent (#B4552D) reserved for faults.
 - [x] `ShapeNodeData`: add `cornerRadius` and `rotation` (UML states are rounded rects; gain triangles point along the signal path and Konva triangles point up). Renderers honour both, save/load round-trips both, existing shapes default to 0
@@ -1040,6 +1050,7 @@
 - [ ] T112 — pin and membership: a dragged child survives re-layout in place, a child dragged out of the frame leaves the spec, and a deleted child drops its entity
 - [ ] SRS: `docs/SRS_DIAGRAM.md` with REQ-DIAG ids and test refs; add the two new shape fields to SRS_SHAPES as REQ-SHAPE-021..022
 - [ ] Bump APP_VERSION to 0.34.0, full suite green, rebuild dist-template, commit, tag and publish the GitHub release
+
 ### v0.34.1 — Sequence and state machine layouts
 **Goal:** Two more layout strategies over the SAME entity-and-relationship spec, so the agent learns no new vocabulary. A sequence diagram is not a graph layout at all: participants become lifeline columns and messages become rows in edge-array order, which is deterministic and needs no dagre. State machines are dagre plus two routing special cases — self-loops where `from === to`, and back-edges routed below the row rather than through it. Both render in the weighted-ink tokens from v0.34.0.
 - [ ] `sequence` layout strategy: entities become lifeline columns, relationships become message rows in edge-array order. No dagre — the ordering is already in the spec
@@ -1051,6 +1062,7 @@
 - [ ] T113 — sequence: message order follows the edge array, activation bars span call to reply, replies render dashed with an open head
 - [ ] T114 — state machine: self-loop renders as a stub without overlapping its state, a back-edge routes below the row, and initial/final pseudostates render correctly
 - [ ] SRS: REQ-DIAG ids for both strategies; bump APP_VERSION to 0.34.1, full suite green, rebuild dist-template, commit, tag and release
+
 ### v0.34.2 — Deployment and block diagram layouts
 **Goal:** The last two families, and the two that stretch the model. Deployment needs nesting, which falls out of the Measure stage rather than needing a bigger engine: a container's intrinsic size IS the bounding box of its laid-out children, so layout recurses and dagre still suffices. It also needs one new render token, because once shapes nest the container and its children cannot both carry the tint — containers drop to white with a hairline so the deployed artifacts stay the figure. Block diagrams are the opposite problem: no layout at all. The agent positions them, they are born pinned, and floating text anchors to nothing.
 - [ ] `parent` field on spec entities, giving nesting without a second spec shape
@@ -1062,6 +1074,7 @@
 - [ ] T115 — deployment: children nest inside their container, the container sizes to its contents, containers render white against tinted children, and communication paths carry no arrowheads
 - [ ] T116 — block diagram: `at:` entities land where the agent put them and survive re-layout, floating text renders unanchored, and a rotated triangle points along the signal path
 - [ ] SRS: REQ-DIAG ids for nesting and free placement; bump APP_VERSION to 0.34.2, full suite green, rebuild dist-template, commit, tag and release
+
 ### v0.34.3 — Component and composite structure diagrams
 **Goal:** UML 2 treats these as two families, not one, and the composite view is the one worth getting right — it is where a design is actually specified rather than sketched. A component diagram says what depends on what: components, ports, provided and required interfaces, dependencies. A composite structure diagram opens a classifier up: parts labelled `role : Type` with a multiplicity, ports straddling the boundary, assembly connectors wiring one part's required interface to another's provided one, and delegation connectors carrying an outer port inward to the part that implements it. The design consequence worth naming: UML derives connector kind from a rule — a connector with an end on a port that is neither on a part nor a behavior port is a delegation, otherwise an assembly — so the agent names endpoints and the app decides what it drew, exactly like the rest of the pipeline. Needs one new primitive: sockets are half-circles and no arc shape exists.
 - [x] `arc` shape type backed by `Konva.Arc`, oriented by the `rotation` field from v0.34.0. Required-interface sockets are half-circles and none of rect/circle/triangle/arrow/line can fake one
@@ -1087,6 +1100,7 @@
 - [x] Shipped 2026-08-13: `create_diagram` bridge command + MCP tool — agents pass PlantUML and get back the diagram id, element count, frame size and the diagnostics in one response. Placed below existing content in its column like `append_block`. A source that draws nothing is a PRECONDITION error rather than an empty frame. T121 covers it
 - [x] Fixed 2026-08-13: pressing and dragging a grouped node in one motion tore the group apart — Konva starts dragging on mousedown, before any click selects, so `multiDragStart` fell back to the dragged node alone and a diagram frame moved without its contents. Group membership now decides what travels together when nothing is selected. General fix, not diagram-specific. T120 covers it
 - [x] Descoped by the user 2026-08-13: frame resize reflowing its contents, and the pin loop — redrawing replacing all contents is acceptable, so pinned positions are not needed
+
 ### v0.35.0 — Scrolls you can see, make and keep
 **Goal:** Scrolls have had identity since v0.31 but almost no affordances: only an agent can create one, the sidebar marks them with `Columns2` (which says "two panes", not "a named column of this page"), the title scrolls out of view the moment you read past it, and nothing helps content line up with the band it belongs to. Four fixes, validated as a prototype on 2026-08-13: the `ScrollText` icon; a "New scroll" row with inline naming; titles that pin to the top of the viewport while their band scrolls underneath; and a magnetic snap to scroll edges. The snap is deliberately NOT gated behind Shift the way node-to-node snapping is — lining up with the column you are writing in is the common case, and it stays a magnet rather than a constraint so a deliberate off-band placement still works by pulling past it.
 - [x] Sidebar scroll entries use the `ScrollText` icon instead of `Columns2`
@@ -1095,6 +1109,7 @@
 - [x] Magnetic snap to scroll edges when dragging a node: pulls to the band's left or right edge within a threshold, draws a guide while held, releases when pulled past — ungated, unlike the Shift-gated node-to-node snap in `calculateSnap`
 - [ ] T122 sidebar icon + create, T123 pinned titles, T124 scroll snap; SRS_SCROLL REQ ids with test refs; bump APP_VERSION to 0.35.0, full suite green, rebuild dist-template, commit, tag and release
 - [x] Fixed during the iteration: the "New scroll" row was rendered under EVERY page, which dropped the old `named.length === 0` early return and shifted the sidebar DOM — 3 page-navigation tests failed on it. The row is now offered on the open page only, which is also the right call: under every page it is noise and it is ambiguous which page a click adds to. Second fix: it reused the `.hierarchy-scroll` class, so scroll-count assertions saw an extra entry
+
 ### v0.35.1 — Swimlane activity diagrams
 **Goal:** A second PlantUML grammar. Activity syntax (`start`, `:action;`, `if/then/else`, `|Lane|`) is a different language from the component one, so it gets its own parser rather than being bolted onto the existing regexes; `buildDiagram` sniffs which one a source is and routes. A swimlane chart is a flowchart plus a partition: the flow runs top to bottom in source order and the lane fixes the column, which means no graph engine is needed because the source already states the order. Decisions render as diamonds — a square turned 45 degrees, so the `rotation` field added for arcs pays for a third thing.
 - [x] `src/diagram/activity.ts` — parser, lane layout and materializer for the activity grammar, with `looksLikeActivity` routing from `buildDiagram`
@@ -1102,13 +1117,16 @@
 - [x] MCP `create_diagram` description rewritten to document BOTH grammars, the lane syntax, that coordinates cannot be supplied, and what is refused — so an agent can use it without guessing
 - [x] T125 — 6 tests: grammar routing (and that component sources are not misrouted), lane partition, decision guards, refusal of fork/while/repeat, an agent drawing a swimlane over the bridge, and styling directives skipped in activity sources
 - [ ] Known limitation, documented in the MCP description and the SRS rather than hidden: `if/else` branches render in source order, not as parallel paths that rejoin. True branching needs a merge point and sub-columns within a lane — that is where a graph layout would finally earn its place
+
 ### v0.36.0 — Multiple agents, one notebook
 **Goal:** Several agents may connect at once but must not operate at once, and a blocked agent must be told who is holding the notebook. One MCP server process is spawned per agent session, so they race for the port: the winner becomes the HUB and owns the single app connection, the losers become PEERS and forward their tool calls to it. That keeps exactly one socket to the notebook — so the app needs no changes at all — and gives one obvious place for the lock. The hub hands out a lease held for the duration of a command and a short idle grace after it, released on idle, on agent disconnect, or when the notebook goes away.
+
 ### v0.36.1 — Fix in-app update, and gate releases on an upgrade test
 **Goal:** In-app update has been silently broken. GitHub sends no CORS header on release-asset downloads: `browser_download_url` 302s to objects.githubusercontent.com and so does the API's octet-stream asset endpoint, so both fail from a page with a bare "TypeError: Failed to fetch" — and PowerNote is only ever a page. A third strategy using raw.githubusercontent.com did work, but it ran last, after two guaranteed failures, and fetched `main` rather than the release tag, so a successful update could install an unreleased build. Reordered so the CORS-clean path is first and pinned to the tag. Separately, nothing ran the tests on push at all: no CI workflow existed, only the release one. Added CI, gated the release on it, and added an upgrade regression test that loads a legacy-schema notebook into the real built artifact — the failure it guards against is silent and expensive.
 - [x] `fetchAssetHtml` reordered: raw.githubusercontent.com at the RELEASE TAG first (the only CORS-clean route), release asset second as a fallback if GitHub ever adds the header, `main` last with a warning that it may be ahead of the release. `UpdateInfo` carries `tag`; `performUpdate` defaults it to `v{version}`
 - [x] T131 — upgrade regression: a legacy-schema notebook (no scrolls, no settings, pre-v0.31) injected into the real `dist-template/index.html` must open with its content intact, hydrate the fields added since, and still edit and re-save. Served via route interception so no file is written to the repo
 - [x] New `.github/workflows/ci.yml` — typecheck, lint, build the template, Playwright, and `test:bridge` on every push and PR. `release.yml` now runs the same suite before tagging, because a release that cannot be upgraded to is worse than no release. Note: the template is built BEFORE the tests, since T131 loads that exact artifact
+
 ### v0.37.0 — SVG imported as native canvas nodes
 **Goal:** Turn a documented subset of SVG into ordinary ShapeNode/TextNode members of one group, so an imported drawing can be taken apart with the tools that already exist rather than sitting on the page as an opaque picture. Fidelity is the thing traded away for that, which is why the subset is small and everything outside it is refused BY NAME instead of being approximated: a polyline standing in for a bezier is a lie no later edit can undo.
 - [x] `src/diagram/svg.ts` — pure `transpileSvg(source, {groupId, origin, measureText})`. Understands `<svg>` (viewBox/width/height, preserveAspectRatio "meet"), `<g transform>` with translate and uniform scale, `<rect>` (rx to cornerRadius), `<circle>`, `<ellipse>`, `<line>` (marker-end becomes an arrow node), `<polyline>`, `<polygon>`, and `<text>` with `<tspan>`; fill/stroke/stroke-width/stroke-dasharray from presentation OR `style` attributes, inherited down the tree [agent: svg-transpiler]
@@ -1117,6 +1135,7 @@
 - [x] T130 — 17 tests over the module directly (pure function, no canvas needed): geometry and paint of every supported element, viewBox scaling, nested translate/scale composition, style-over-attribute precedence, baseline and text-anchor placement, positioned vs restyling-only tspans, each refusal by name, malformed input, diagnostic line numbers, the DOMParser guard, and the node budget [agent: svg-transpiler]
 - [x] Known losses, stated in diagnostics rather than hidden: a polygon is drawn edge by edge so its fill is dropped; opacity has no canvas equivalent; per-run styling inside `<text>` is folded into the line; elliptical `rx`/`ry` corners collapse to one radius; `font-family` is replaced by the app's own so imports do not arrive in a foreign font [agent: svg-transpiler]
 - [ ] Not wired to anything yet — `transpileSvg` is exported from its own module and is not reachable from `buildDiagram`, the dialog or the MCP. Routing it (and deciding whether an SVG import is a diagram frame or a plain group) is owned elsewhere [agent: svg-transpiler]
+
 ### v0.38.0 — Mermaid as a second diagram language
 > **Goal:** Name the diagram tool after the format it takes, and add Mermaid as a second language. `create_diagram` became `create_diagram_plantuml` — the two PlantUML dialects stay sniffed apart INSIDE it, because component and activity are one language with two grammars, while Mermaid is a different language and a model choosing between two named tools is choosing the thing it actually knows. Only the PARSER differs: `src/diagram/mermaid.ts` produces the same spec types, so measure, layout and materialize are shared and a Mermaid flowchart looks like it belongs in the same notebook as a PlantUML component diagram. The subset is documented and everything outside it is refused by name, on the same principle as the SVG transpiler: a shape approximated is a lie no later edit can undo.
 - [x] MCP `create_diagram` renamed to `create_diagram_plantuml`, description narrowed to PlantUML's two dialects. New `TOOL_ROUTES` in `server.js` maps both diagram tools onto the one `create_diagram` app command carrying a `format` — the tool is named for the language, the command is one because after parsing the language is just which parser ran [agent: mermaid]
@@ -1125,6 +1144,7 @@
 - [x] `buildDiagram` takes an optional `format`; absent it sniffs, and Mermaid's header-line sniff runs first because it is a read rather than a guess. A DECLARED format contradicted by the source is refused — PlantUML would otherwise render an entity literally named `A[Read sensor]`. Bridge `create_diagram` gained the `format` param and returns which grammar drew it; the redraw dialog leaves it off so the grammar follows what the user typed [agent: mermaid]
 - [x] T126 — 10 tests: header detection (and that neither PlantUML grammar is misrouted), the spec types a flowchart parses into, chains and bare ids, the direction notice, every refusal by name, a labelled flow edge staying an arrow, an agent drawing a flowchart and a sequence over the bridge, and the declared format being enforced rather than a hint. `test:bridge` gained 5 checks that the tools are named for their language and route with the format. SRS REQ-DIAG-090..099 [agent: mermaid]
 - [ ] Known limitations, stated in the tool description, the README and the SRS rather than hidden: direction is not honoured (the shared layout is one left-to-right row, so `flowchart TD` reports its direction as skipped); a sequence renders as participants side by side with NUMBERED messages, not lifelines, so two messages between the same pair share a line; `{decision}` renders as a box stereotyped «decision» because the shared layout has one box shape. Subgraphs are refused — mapping them onto containers is the obvious next win [agent: mermaid]
+
 ### v0.39.0 — Group edit you can find, and a toolbar for diagrams
 **Goal:** Isolation mode already exists but is reachable only by double-click, Ctrl+Enter or the context menu, so nothing on screen says it is there. Meanwhile the bottom toolbar has no 'diagram' context at all and renders nothing when a diagram is selected, and the one control the frame does carry is a button hardcoded to read "plantuml" — wrong for every SVG and Mermaid diagram. Give the selection toolbar a group segment: a way IN when the selection belongs to a group, a way OUT whenever isolation is active regardless of what is selected inside it, and for a diagram the source-format label derived from the source rather than assumed.
 - [x] `BottomToolbar` gains a group segment rendered independently of the node-type contexts, so it also shows for a diagram (which matched no context and therefore rendered nothing at all). Enter is offered when the single selection carries a `groupId` or is a diagram frame; Done is offered whenever `editingGroupId` is set, whatever member is selected inside
@@ -1133,6 +1153,7 @@
 - [x] E2E: entering and leaving isolation from the toolbar, the button appearing for a diagram where the bar was previously empty, Done showing while a MEMBER (not the frame) is selected, and the format label reading mermaid/svg/plantuml for each. SRS_SHAPES REQ-GROUP ids + SRS_DIAGRAM
 - [x] A diagram had NO context menu, so no layer control: `useContextMenu` walks up from the click looking for a `Rect` carrying the node id, and `DiagramNode`'s frame Rect never set one. Added `id={node.id}`, which is what ShapeNode, ImageNode and GanttNode all already do
 - [x] Layer changes on a diagram move the WHOLE drawing, via a group-aware paint order (`src/utils/zOrder.ts`) rather than by rewriting member layers. A diagram's marks already use all five layers among themselves — containers at 2 behind entities at 3, links at 4 under text at 5 — so there is nowhere to shift them to, and flattening them would let a later entity's box paint over an earlier entity's label. The frame's layer is therefore a BAND its members sort inside, with the frame itself pinned to the back of it
+
 ### v0.40.0 — Background per page, with a notebook default
 **Goal:** Guide style and canvas colour are notebook-wide (WorkspaceSettings on WorkspaceData), so a notebook cannot hold a grid page next to a scroll page. Make them an optional per-page override resolved at read time: absent means inherit the notebook default, which is what every existing page already is, so no migration and no behaviour change on load. The settings panel gains a scope switch and a way to drop a page back to the default. The MCP surface keeps defaulting to notebook scope — agents already call set_background expecting notebook-wide, and quietly re-pointing a shipped tool at the current page is the same break we made renaming create_diagram.
 - [x] `Page.settings?: Partial<WorkspaceSettings>` — an override, not a copy. A `resolvePageSettings(page, workspace)` helper is the ONLY read path, so inheritance cannot be forgotten at one call site
@@ -1140,11 +1161,13 @@
 - [x] Settings panel: scope switch (This page / All pages) plus "Use notebook default" to drop an override, shown only when one exists. `AppShell` reads through the resolver so switching pages repaints the canvas
 - [x] MCP `get_background` / `set_background` gain `scope: 'notebook' | 'page'`, DEFAULTING TO NOTEBOOK so existing agent calls keep their current meaning. `get_background` reports the effective values and where each came from
 - [x] E2E: a page override surviving save/load, a page WITHOUT one following a changed notebook default, switching pages repainting, clearing an override, and the MCP default staying notebook-scoped. SRS_SETTINGS new REQ ids
+
 ### v0.41.0 — An undo button, and one definition of which history to unwind
 **Goal:** Undo existed only on Ctrl+Z, which is invisible. Add a button in the top bar left of zoom-to-fit. Two things made this more than a button: the routing rule (Ctrl+Z unwinds STROKES while a drawing tool is active and NODES otherwise) existed once inside the keyboard handler and would have been copied a second time into the button, and the undo stacks are module-level rather than store state — correctly so, since they hold node snapshots that must never be serialized into the notebook — which means React cannot see them change and a naive button would be permanently stuck in whatever state it first rendered.
 - [x] `src/utils/undoOps.ts` — `undoActive`/`redoActive`/`canUndoActive`/`canRedoActive`, the tool-routing rule stated once. `useCanvasKeyboard` now calls it instead of carrying its own copy, so the button and Ctrl+Z cannot drift apart about which of the two stacks to unwind
 - [x] Enabled state derived on render, subscribed indirectly through `nodes`, `strokes` and the active tool. The stacks stay module-level — putting them in the store to make them reactive would risk snapshots reaching the saved file, which is a far worse bug than a stale button
 - [x] T134 — 5 tests. The load-bearing ones are that it starts disabled, ENABLES ITSELF after an action (the assertion that fails if the state is read only once), disables again when history runs out, and that button and Ctrl+Z unwind one shared history. SRS REQ-CANVAS-010, REQ-CANVAS-011
+
 ### v0.42.0 — Mobile & Pen Input (S Pen / Surface Pro) (2026-08-17) (COMPLETE)
 **Goal:** Drawing works like Samsung Notes / Surface: pen draws with pressure and palm rejection, the pen's eraser end erases, fingers draw or pan/pinch depending on a touch-draw mode, and the shell behaves on a touch device — no browser zoom/scroll fighting the canvas, and toolbar targets reachable with a finger.
 - [x] Pointer-event drawing pipeline: Stage draw handlers move from mouse events to pointer events so pen, finger and mouse all reach the draw/erase/shape/lasso tools; `pointerType` and per-point `pressure` are captured at the source
@@ -1153,6 +1176,7 @@
 - [x] Pen eraser end: holding the stylus eraser (buttons bit 32, S Pen / Surface eraser tip) erases while held using the current eraser settings, and returns to inking on lift — no toolbar round-trip
 - [x] Mobile shell: `touch-action: none` + `overscroll-behavior: none` on the canvas so the browser never scrolls/zooms the page out from under a stroke; viewport meta pinned (`maximum-scale=1, user-scalable=no, viewport-fit=cover`); coarse-pointer media query grows toolbar targets to ≥44px and lets the bottom toolbar scroll horizontally on narrow screens
 - [x] E2E T135–T137 (pen pointer drawing with pressure, touch modes & palm rejection, mobile shell) + SRS_DRAW REQ-DRAW-010..014; full Playwright suite green; showcase artifact published
+
 ### v0.43.0 — Touch UX round 2 — selection, editing and toolbar on touch
 **Goal:** v0.42 made ink and gestures work; this round makes EDITING work without a mouse: long-press replaces right-click (REQ-CANVAS-028, open since v0.11.4), double-tap replaces double-click for text editing, transform handles grow to finger size, and the bottom toolbar's popovers learn to escape their box so the narrow-screen fix deferred from v0.42 (T11 clipping) can land properly.
 - [x] Long-press on a node (select tool, touch) selects it and opens the context menu — the touch replacement for right-click (REQ-CANVAS-028, T138); verify first whether Chromium's native long-press contextmenu already reaches the existing handler under touch-action:none
@@ -1160,63 +1184,79 @@
 - [x] Transformer resize/rotate anchors grow to finger size on coarse pointers (T140) — 36px-precise anchors are unhittable with a thumb
 - [x] Bottom toolbar popovers escape the toolbar box (fixed-position or portal), then the toolbar itself may scroll on narrow screens — properly landing what T11 forced v0.42 to revert (T141)
 - [x] Full Playwright suite green (513 existing + new T138–T141); SRS updated (REQ-CANVAS-028 implemented, toolbar/canvas additions); showcase artifact updated with the new records
+
 ### v0.44.0 — Phone-width chrome — the bars stop fighting for the bottom edge
 **Goal:** T141's screenshots caught the ZoomBar sitting ON the bottom toolbar at 390px (both bottom:16px, z-index:30 — the ZoomBar steals the toolbar's taps). Fix that collision properly, then audit the rest of the chrome (TopBar, HierarchyPanel) at phone widths and fix what is actually unusable — reachable buttons, no overflow, panels that overlay instead of squeezing the canvas.
 - [x] ZoomBar and bottom toolbar share the bottom edge without overlap at any viewport width; every toolbar button receives real coordinate taps (T142) — the T141 workaround of DOM-level clicks becomes unnecessary and is removed
 - [x] Phone-width chrome audit at 390x844: TopBar and HierarchyPanel usable — no overflow, no unreachable controls; minimal fixes only, with findings reported for anything bigger (T143)
 - [x] Full suite green; SRS_TOOLBAR/SRS_CANVAS updated as touched; showcase artifact appended with the collision fix shown at 390px
+
 ### v0.45.0 — A notebook in your pocket — hierarchy drawer and home-screen install
 **Goal:** The last structural phone-width gap from the v0.44 audit: the hierarchy sidebar's fixed 240px leaves ~100px of canvas on a phone, so below the 768px breakpoint it becomes an overlay drawer instead of a grid neighbour. And since the app now behaves on tablets, let it install like an app: a web manifest and icons so Android/Windows offer add-to-home-screen (service worker offline support deliberately deferred).
 - [x] Below 768px the HierarchyPanel opens as an overlay drawer (slides over the canvas with a backdrop; closes on outside tap, Escape, or picking a page) instead of sharing the grid; at ≥768px nothing changes (T144)
 - [x] Web app manifest + icons: installable to the home screen on Android/Windows tablets; service worker / offline explicitly deferred and documented (T145)
 - [x] Full suite green; SRS_HIERARCHY (drawer) + SRS_SETTINGS or new SRS row for install; showcase artifact appended
+
 ### v0.46.0 — draw.io I — the mxGraph transpiler
 **Goal:** draw.io becomes the fourth DiagramFormat, following the SVG precedent exactly (see docs/DESIGN_DRAWIO.md): transpileDrawio in src/diagram/drawio.ts parses mxfile/mxGraphModel/mxCell into ordinary ShapeNode/TextNode members of a DiagramNode frame, with deflate-compressed pages normalized via the browser-native DecompressionStream, parent-relative geometry resolved, containers flattened to shared-groupId siblings, and everything outside the documented subset refused BY NAME. Sniffing order is load-bearing: mxGraph XML also starts with <?xml, so the mxfile check must precede the SVG check.
 - [x] `src/diagram/drawio.ts` — transpileDrawio with the transpileSvg contract (same options, {nodes, diagnostics}, never throws, node/diagnostic budgets): mxfile/diagram/mxGraphModel parse, async deflate normalization at ingestion (stored source is always readable XML), first page imported with skipped pages named in a diagnostic
 - [x] Vertex subset per DESIGN_DRAWIO mapping table: rect (+rounded→cornerRadius, rotation), ellipse→circle, rhombus→rotated rect, triangle, labels/text cells→TextNode, swimlane/container flattened; style parsing (fillColor/strokeColor/strokeWidth/dashed/dashPattern); REFUSED map with why-messages (stencils, images, gradients, rich HTML labels, rotation on non-rects)
 - [x] sniffFormat learns 'drawio' (<mxfile/<mxGraphModel checked BEFORE the SVG <?xml test); buildDiagram routes format 'drawio' past measure/layout like SVG; T146 transpile tests (subset, refusals by name, compression, page skip, sniff ordering); SRS REQ-DIAG-110..119
+
 ### v0.47.0 — draw.io II — edges, and agents can draw it
 **Goal:** Edges complete the transpiler: straight edges become arrow/line ShapeNodes, orthogonal edges with explicit waypoints decompose into faithful straight segments (the emitPolyline precedent), edge labels land at the longest segment's midpoint — and router-bent edges WITHOUT waypoints are refused by name, because their bends live in draw.io's router, not the file. Then the bridge: create_diagram_drawio in TOOL_ROUTES onto the one create_diagram command, tool description documenting subset and refusals verbatim, 'draw.io' in formatLabels, and the stale "PlantUML source" doc comment on DiagramNodeData.source corrected.
 - [x] Edge mapping: straight→arrow/line (signed vector), waypointed orthogonal→2-point segment decomposition, endArrow/dashed/labels; refusals: curved=1, router-bent edges without mxPoints (diagnostic suggests making waypoints explicit in draw.io)
 - [x] MCP tool create_diagram_drawio (TOOL_ROUTES + house-style description), formatLabels 'draw.io' badge, DiagramSourceDialog redraw sniffs drawio, stale source doc comment fixed; T147 (transpile edges + bridge round trip); SRS REQ-DIAG-120..126
+
 ### v0.48.0 — draw.io III — files land on the canvas
 **Goal:** Ingestion. useCanvasDragDrop's image/* gate currently EATS dropped .svg files (image/svg+xml matches, so a real SVG becomes an opaque picture and never reaches the transpiler). The fix and the feature are one change: an extension/MIME gate ahead of the image check — .drawio/.xml-sniffing-as-mxGraph drops become a diagram frame at the drop point, .svg drops route to the existing SVG transpiler (behaviour change, flagged in DESIGN_DRAWIO decisions), everything else falls through to the image path unchanged.
 - [x] Drop/paste gate ahead of image/*: .drawio → diagram frame at drop point (async deflate normalization); .svg → native nodes via transpileSvg; regression: raster images unchanged; T148; SRS REQ-DIAG-127..129 + SRS_CANVAS ingestion row
+
 ### v0.49.0 — draw.io IV — round-trip export
 **Goal:** A diagram leaves the way it came. Tier 1: a frame imported from draw.io and untouched since exports its stored XML verbatim — trivially lossless. Tier 2: any diagram frame or flat group exports by reverse mapping (rect→rectangle+rounded/rotation, circle→ellipse, triangle, line/arrow→edges, TextNode→text cells, styles back to key=value strings). The contract is closure: exported XML re-imported through our own transpileDrawio yields the same node set, plus a manual open-in-app.diagrams.net check per release. The arc socket's export treatment is decided here with a real file, not guessed.
 - [x] src/diagram/drawioExport.ts + "Export as .drawio" in the diagram frame context menu / selection toolbar; verbatim tier for unedited imports; mapped tier for any frame or group; round-trip closure test T149; SRS REQ-DIAG-130..135; showcase updated with a draw.io file surviving the loop
+
 ### v0.50.0 — Scrolls share a ceiling — aligned titles and a horizontal overview
 **Goal:** On a page with at least one scroll, the top is y=0 BY CONVENTION, stored nowhere: scroll titles render as one uniform header row at the ceiling, the camera refuses to pan above it, and placement clamps to it (a drop "above" lands at the top rather than being refused). The ceiling is DERIVED as min(0, topmost existing content y − padding) so legacy pages with blocks at negative y stay reachable instead of being stranded. Pages without scrolls keep the fully infinite canvas. Panning horizontally along the aligned title row is the scroll overview — no new UI in v1.
 - [x] Derived ceiling helper (min(0, topmost content y − padding), per page, recomputed not stored) + camera clamp: wheel pan, stage drag, pinch and finger pan all stop at the ceiling on pages with ≥1 scroll; pages without scrolls unchanged
 - [x] Placement clamp: block drops, text placement, shape drags and pen strokes aimed above the ceiling land AT the ceiling rather than being refused; scroll titles render as one aligned row at the ceiling (ScrollHeaders rest position), pinning behaviour from v0.35 unchanged when scrolled
 - [x] E2E T150 (ceiling derivation incl. legacy negative-y content, camera clamp across input methods, placement clamp, aligned title row, no-scroll pages unaffected); SRS_HIERARCHY + SRS_CANVAS rows; full suite green; showcase record
+
 ### v0.51.0 — Diagrams fit the scroll they land in
 **Goal:** A diagram placed into a scroll band today keeps whatever width dagre produced and spills sideways into the neighbouring band — where derived membership makes it half-belong to the wrong column. Fix at placement, not in the layout engine: when a diagram is created into or redrawn inside a scroll, the materialized geometry scales down to the band width minus padding, with a 0.45× floor below which it stops shrinking and says so instead. The report rides the v0.34 contract — geometric warnings return in the same response, so an agent hears "scaled to 0.6× to fit scroll 'Backend'" in-band. Manual band-widening ("Fit scroll to content" on the header) is the explicit v2 action, deliberately not automatic: silently reflowing OTHER columns to make room is the kind of surprise the scroll model exists to avoid.
 - [x] Post-materialize fit pass: diagram created into / redrawn inside a scroll band scales to band width − padding (geometry multiply incl. fontSize), 0.45× floor; below the floor the diagram places at floor scale and the response carries a warning naming the scroll and the scale; diagrams outside any band unchanged
 - [x] "Fit scroll to content" action on the scroll header: widens THIS band to its widest member and shifts the scrolls to its right — explicit, never automatic; E2E T151 (fit-at-placement, floor warning, redraw refit, no-scroll placement untouched, header action); SRS_DIAGRAM + SRS_HIERARCHY rows; full suite green; showcase record
+
 ### v0.52.0 — Scroll titles read as titles — and shrink into wayfinding when you scroll
 **Goal:** Two states for one scroll title. AT REST at the top of the scroll (on the v0.50 ceiling row), the title looks like an actual title — heading-weight type you'd put at the top of a column of notes. SCROLLED DOWN, the pinned overlay stops pretending to be a heading and becomes wayfinding: vertically compact, smaller type, on a nearly-opaque white strip so it stays legible over any content — just enough to know which scroll you are in. The transition between states follows the existing v0.35 pin logic; no new scroll state is stored.
 - [x] Resting state: title rendered heading-like on the ceiling row (larger/semibold Konva text, same data, no new fields); pinned state: compact strip — reduced height and font, background white at ~0.92 opacity with a hairline bottom edge; state switch driven by the existing pin threshold in ScrollHeaders
 - [x] E2E T152 (resting size vs pinned size, pinned background opacity, threshold switch, rename input unaffected in both states); SRS_HIERARCHY REQ-HIER-019; visual capture of both states for the showcase; full suite green
+
 ### v0.52.1 — Stress pass — the new features meet hostile input
 **Goal:** A dedicated adversarial pass over everything shipped since v0.46, run by a worker whose brief is to BREAK things and report honestly: real-world draw.io files (large, deeply nested, compressed, malformed, stencil-heavy), pathological diagrams into narrow scrolls (fit floor), ceiling behaviour at extreme zoom and with thousands of strokes, export closure on edited-heavy pages, rapid pen input during pinch. Findings become fixes in this same iteration; anything structural gets recorded in PLAN rather than hot-patched.
 - [x] Stress harness + findings: draw.io corpus (compressed/malformed/stencil-heavy/1000-cell), fit-floor abuse, ceiling at 0.1x/5x zoom with heavy pages, export closure after heavy edits, input-pipeline races; every finding either fixed + regression-tested or recorded in PLAN with reasoning; honest report of what was NOT tested
+
 ### v0.52.4 — Release hardening — the gate caught three, the update test caught a fourth
 **Goal:** Shipping v0.52.x surfaced what only clean-room runners and real end-to-end paths expose. T142b pinned a Windows machine's pixels (fixed: pin the anchoring contract). CI never installed powernote-mcp's own deps, so test:bridge died on 'ws' against a clean runner while passing locally against a stale install (fixed: npm ci --prefix powernote-mcp in both workflows). T98 flaked once on CI (rerun, green). And the v0.37.5→v0.52.3 update test — real release artifact, real GitHub API, production download path — found the update embedding a STALE workspace: handleUpdate saved the canvas into the store and then read the pre-save snapshot, so unsaved edits vanished from the updated notebook (fixed + T154, which goes through the real UI precisely because every older update test injected its workspace and could never see this).
 - [x] Stale-workspace update fix in SettingsPanel handleUpdate (re-read store after saves) + T154 through the real UI + REQ-UPDATE-030; T142b contract pin; CI installs powernote-mcp deps; v0.52.4 released and the 0.37.5→latest update test green with content preserved
+
 ### v0.53.0 — Field feedback I — deleting things stops leaving corpses
 **Goal:** The two painful ones. Diagram deletion has no cascade ANYWHERE — the context menu's Delete calls deleteNode on the frame alone and the bridge has nothing at all, so every path strands the members; the fix is the primitive (frame deletion cascades to groupId members and strokes, one undo), with delete_diagram as the agent-facing wrapper. Scroll deletion already has withBlocks + column compaction, but it filters nodes per-x (a diagram straddling the band edge loses its frame and keeps its overhang), never touches strokes, and the painful default was keep — content resolves group-aware, strokes are included, and the bridge exposes content: delete|keep with delete as the documented default. Plus the policy knot: rename_scroll accepts an empty title (an untitled scroll draws no header and disarms the ceiling — a plain page IS one untitled scroll), while last-scroll deletion stays refused because the append-target invariant is load-bearing.
 - [x] Frame-deletion cascade in the canvas primitive (members by groupId + group strokes, one undo batch); delete_block on a frame id cascades; delete_diagram MCP tool returns the member count; UI delete key + context menu inherit the fix (T155)
 - [x] delete_scroll made whole: strokes deleted with the band, membership group-aware (the frame's band owns the whole diagram), bridge param content: delete|keep defaulting to delete (T156); rename_scroll accepts '' and the header/ceiling disarm follows (T157); SRS_AGENT + SRS_HIERARCHY + SRS_DIAGRAM rows
+
 ### v0.54.0 — Field feedback II — reorganizing and reading without pain
 **Goal:** move_scroll(scrollId, direction|toColumn) with members and widths travelling — PRECONDITION from the deep pass: the group-aware membership test (nodeBelongsToScroll/strokeBelongsToScroll, scrollOps.ts) must be generalized INTO compactColumns itself, which still filters per-node x; without that, move_scroll ships the same straddling-diagram tearing delete_scroll had. read_page overhaul with the deep-pass findings folded in: (1) the label-leak is a TODAY-bug, not just bloat — every diagram label is a type:'text' node that leaks into blocks[] indistinguishable from content (~35 tokens of noise per label, scrolls misattributed from the label's own x), first scoped in v0.34.0 and never shipped; excluding groupId-owned text from blocks is a correctness fix independent of pagination; (2) a real diagrams[] array with ids/titles/format/memberCount — delete_diagram is otherwise uncallable on anything the agent didn't just create; (3) an explicit diagrams-only fetch mode (the feedback asked to GET diagrams conveniently, not merely exclude them) plus read_diagram(id) for one diagram's full detail; (4) limit/cursor in y-order and a response-size cap that truncates with a notice instead of failing the call. fit_diagram DECISION: unlike the deliberately shrink-only placement-time fitter, the on-demand action scales in BOTH directions — up to fill the band when the diagram sits under-width, down with the same 0.45 floor when over — because fit-to-width means fill the column. Riding along: get_block(blockId) (cheap re-fetch once read_page is capped) and member-targeting guards so delete_block/update_block refuse diagram-member ids by name, pointing at delete_diagram / the redraw path.
 - [x] move_scroll + header Move left/right, widths travel, one undo (T158); read_page collapse/filters/pagination/size-cap + read_diagram (T159); fit_diagram + UI Fit-to-width (T160); SRS_AGENT rows + tool descriptions marking the read_page default change
+
 ### v0.55.0 — Field feedback III — blocks stop being append-only
 **Goal:** insert_block(scrollId, after|index) and move_block(blockId, after: blockId — id-relative addressing, per the codebase's own scrollId-over-column precedent in resolveColumn). CORRECTED PREMISE (deep-pass finding): reflow does NOT exist anywhere — it was explicitly descoped 2026-08-13 (PLAN v0.34.0, SRS_DIAGRAM 'Not built'), and redraw resizes the frame in place without moving anything below. This iteration builds vertical within-column reflow FROM SCRATCH on a codebase whose save/load, undo and agent suite assume block y is write-once. Estimate accordingly; own stress cases mandatory; blocks are packed at BLOCK_GAP=12 so insertion categorically displaces siblings.
 - [x] Generalized reflow + insert_block + move_block with batched undo (T161) and reflow stress cases in T153's harness; SRS_AGENT rows
+
 ### v0.54.1 — Token-budget hardening — no read can exceed the budget, period
 **Goal:** The v0.54 budget fixed the common case; four holes remained, found by re-reading the shipped implementation: read_diagram's members[] was unbounded (the explosion just moved there), opt-in sources could escape read_page's trimming (which only dropped blocks), a single giant block was returned whole even when it alone busted the budget (an over-limit response fails the ENTIRE call, serving the agent worse than an honest partial), and the MCP server pretty-printed every response at ~30% pure token overhead. After this: every read response is within budget by construction, enforced by an assertion that fails loudly in tests, with truncation always carrying a notice and a path to the rest (cursor, read_diagram, export).
 - [x] read_diagram member paging; source-then-diagrams trimming order in read_page; oversized single blocks truncated with fullLength notices (read_page + get_block, one helper); compact MCP serialization; budget invariant asserted (INTERNAL on violation); tests + SRS rows; full suite green
+
 ### v0.56.0 — Docs + PLAN truth (2026-08-17) (COMPLETE)
 > Review follow-up, first slice. No product code.
 **Goal:** The map matches the app. PLAN current is this iteration, README/CLAUDE/SRS headers stop lying, and check_plan is clean of complete-with-open-tasks.
@@ -1227,6 +1267,7 @@
 - [x] SRS_DIAGRAM: stop citing T111/T112 as if they were files; T110 lands in v0.57
 - [x] PLAN graveyards: v0.14.x complete-with-open-tasks; leftover open boxes that mislead get_current_iteration
 - [x] Stamp PLAN footer off 2026-07-21 / v0.27.0
+
 ### v0.57.0 — Column reflow (2026-08-17) (COMPLETE)
 > Implements REQ-DIAG-002..005. Inverts T161. Writes T110.
 **Goal:** On a column page (scroll guide style, or any titled scroll) the band packs like a column: every occupant — text, diagram frames (members and group ink ride the frame), images, shapes, ungrouped ink — moves as one stack. Pages / grid / none with only the default untitled scroll stay freeform: insert still packs text, but diagrams and other marks do not move. Human drag never reflows.
@@ -1234,16 +1275,19 @@
 - [x] Height-change reflow on text edit, diagram place/redraw/fit; human drag stays freeform
 - [x] Invert T161; write T110 (REQ-DIAG-002..005); text-height test + REQ-TEXT row
 - [x] Column-flow predicate: backgroundMode===scroll OR any titled scroll; otherwise keep text-only reflow (T161 on a pages page stays)
+
 ### v0.56.1 — Welcome page on a new workbook
 > Depends on v0.57.0 so the diagram sits in the column instead of overlapping.
 **Goal:** A brand-new workspace opens on a short Welcome / Start here page that showcases notes, checklists, math, a link, and one native diagram. Opening an existing notebook never injects it.
 - [ ] createWelcomeWorkspace: Welcome / Start here, two scrolls, one PlantUML, Scroll guides
 - [ ] Fresh-boot only (no embedded data, no FSA); suite stays blank via config; T163 + REQ-FILE-024
+
 ### v0.58.0 — Export PNG + print
 > Closes the three Future export bullets.
 **Goal:** The Export menu can save the current page as a content-bounded PNG, and Print (Ctrl+P) hides chrome and prints that page. PDF is the browser Save-as-PDF path. No jsPDF.
 - [ ] Export page as PNG (content-bounded Stage.toDataURL) + Print page / Ctrl+P hides chrome
 - [ ] SRS_EXPORT + T164/T165; move PDF/PNG/print off Future backlog
+
 ### v0.59.0 — draw.io for component notebooks (2026-08-17) (COMPLETE)
 > Prototype in diagrams.net, keep the record here. Orthogonal connectors, ports, UML components, and a file-first import UI.
 **Goal:** A .drawio component diagram — boxes, ports on their edges, orthogonal arrows between them — lands as native marks. Router-bent edges without waypoints are routed, not refused. Ports honour relative geometry + offset. UML module/component/port shapes draw as boxes (tabs on module). Drop/paste/dialog can open a .drawio file and report what was understood. AWS/cisco/mscae stencils stay refused.
@@ -1252,12 +1296,14 @@
 - [x] Map module/component/port and box-like mxgraph.uml/basic shapes; strip simple HTML labels; keep AWS/cisco/mscae refused
 - [x] Import UX: .drawio/.dio/.drawio.xml drop, dialog file picker, toast + diagnostics summary; update create_diagram_drawio description
 - [x] T166 + update T146/T147; SRS REQ-DIAG-143..148
+
 ### v0.60.0 — Delete a scroll from the UI (2026-08-18) (COMPLETE)
 > The agent can delete_scroll; a human has no button. Same primitive, same last-scroll guard, same keep/delete choice.
 **Goal:** A human can delete a named scroll from the header menu and the sidebar. Empty bands vanish. A non-empty band asks keep-notes vs delete-notes. The last scroll stays undeletable. One undo restores.
 - [x] Header menu Delete scroll: empty vanishes, non-empty asks keep vs delete notes, last scroll disabled
 - [x] Sidebar hover X on named scrolls (hidden on the last scroll)
 - [x] T167 + REQ-HIER-023; wire deleteScroll primitive (one undo)
+
 ### v0.60.1 — Ship v0.60.0 (2026-08-18) (COMPLETE)
 > Bundle the unreleased v0.56–v0.60 work (docs truth, column reflow, draw.io components, human scroll delete) as GitHub release v0.60.0. Welcome page (v0.56.1) and PNG/print (v0.58.0) stay backlog.
 **Goal:** APP_VERSION 0.60.0, full suite green, dist-template rebuilt, tagged and pushed so release.yml publishes PowerNote.html.
@@ -1265,28 +1311,33 @@
 - [x] Rebuild dist-template
 - [x] typecheck + full Playwright + test:bridge green
 - [x] Commit product/docs/tests only; tag v0.60.0; push main + tag
+
 ### v0.61.0 — insert/move pack diagrams on every scroll (2026-08-19) (COMPLETE)
 > Field report: insert_block/move_block do not reflow diagrams. Default notebooks are pages + untitled scroll, which v0.57 left freeform. The MCP description even warned that an insert landing on a diagram overlaps it. insert/move already take a scrollId — they are column verbs.
 **Goal:** insert_block and move_block shove every top-level occupant of the target scroll — including diagram frames (members and group ink ride). Guide style is visual; it no longer gates reflow. Default pages notebooks stop overlapping a heading onto a diagram. Human drag still never reflows.
 - [x] insert/move/height-change/delete-gap always pack top-level occupants of the target scroll (diagrams included); guide style is visual only
 - [x] MCP descriptions: occupants move, after may be a diagram id, move_block can move a frame; members stay refused
 - [x] Invert T161/T110 freeform hold-y; cover move_block of a frame; REQ-AGENT-060/061/062/067 + REQ-DIAG-002 + REQ-SCROLL-030
+
 ### v0.61.1 — update_block packs the band (2026-08-19) (COMPLETE)
 > Field follow-up to v0.61.0. update_block currently writes height via updateNode and never calls planHeightChange; diagrams stay put until a 60ms TextNode remeasure, which is too late for a chained agent call.
 **Goal:** update_block that grows or shrinks a note shoves every occupant below it in the scroll — including diagram frames. Same planner as insert/move. One undo.
 - [x] update_block: planHeightChange + applyFlowInOneUndo (text+height+displacements, one undo); return displacedCount
 - [x] T110: grow/shrink a note above a diagram; MCP description; REQ-AGENT-010/067
+
 ### v0.61.2 — Harden reflow and ship v0.61.1 (2026-08-19) (COMPLETE)
 > Robustness pass on v0.61.0/0.61.1 before release. Field agents chain tools; a 60ms TextNode wait is not a contract.
 **Goal:** Agent reflow is solid under chained calls: update then insert with no wait, insert after a frame id, delete_diagram closes the gap. Then APP_VERSION 0.61.1 is tagged and GitHub publishes PowerNote.html.
 - [x] delete_diagram closes the gap below the frame (same planner as delete_block)
 - [x] T110: chained update+insert with no wait; insert after frame id; delete_diagram packs
 - [x] Bump APP_VERSION 0.61.1, rebuild dist-template, full suite, commit, tag, push
+
 ### v0.62.0 — Scroll title chrome
 > Visual prototype of the scroll header, rendered in the real canvas (not a mock).
 **Goal:** One TINT bar for rest and pin: 16px INK, RULE hairline, opaque strip tall enough that body text cannot collide. Rename uses INK/RULE. Active scroll is a left tick, not ACCENT.
 - [x] One TINT bar rest+pin, 16px INK, RULE hairline, 32px strip, left tick for active
 - [x] Rename input uses INK/RULE/TINT; T152 + REQ-HIER-019
+
 ### v0.63.0 — Images: Mini state, lightbox, embed guarantee, agent bridge
 **Goal:** Images become first-class for both hands and agents. A Mini toggle shrinks any image to a small aspect-locked thumbnail (its own remembered size, resizable); a single click on a mini — or a double-click on a full-size image — opens the full image in a lightbox overlay (dimmed backdrop, Escape/backdrop/X to leave), Gmail-style. Every import route (paste, drag-drop, file picker, new insert-from-URL, new agent insert_image) funnels through one embed pipeline: bytes land in the notebook as a base64 data URI, downscaled above a 2048px long edge (JPEG q0.85; PNG kept when alpha matters), so the notebook stays offline-complete and small. The bridge learns images: insert_image (base64 or local file path), compact image records in read_page (id/alt/dims/bytes/mini — never the payload, the 20k budget invariant holds), and read_image to decode an image to a local file so an agent can look at it. Decisions confirmed 2026-08-20: single-click-on-mini expands; images insert full-size with Mini as a toggle; all extras in scope because agents are first-class users of this feature.
 - [x] Data model + Mini toggle: ImageNodeData gains mini?: boolean and miniWidth?: number; ImageToolbar Mini toggle on selected image; transformer resize while mini writes miniWidth (aspect-locked); full-size dims preserved across toggles; round-trips save/load (REQ-IMAGE-017/018, T168)
@@ -1301,9 +1352,11 @@
 - [x] Chunk 4: Agent bridge insert_image (REQ-AGENT-068, T171) — MCP tool + insertImageCmd + tests/agent/171-insert-image.spec.ts [agent: chunk4-insert-image]
 - [x] Chunk 5: read_page images[] + read_image export (REQ-AGENT-069/070, T172) — compact images index in default include, budget trim with imagesTruncated, MCP decode-to-file, never the payload
 - [x] One resize widget per image (user feedback 2026-08-20): a single selected image shall not attach to the generic SelectionTransformer — its own aspect-locked corner handles are the only resize affordance; shapes/text/multi-select unchanged (REQ-IMAGE-024, T173)
+
 ### v0.63.1 — Fix the reload-broadcast test flake behind the failed v0.63.0 release
 **Goal:** Two v0.63.0 release attempts failed on different tests (T151, then T82) with one signature: "Execution context was destroyed by a navigation". Reproduced with a cold vite cache: tests write notebook .html fixtures into tests/ mid-run, vite's watcher full-reloads EVERY connected page on any .html change, and whichever unrelated test is mid-evaluate dies. server.watch.ignored now excludes tests/, test-results/ and playwright-report/. Verified cold-cache: 705/705 with zero reload broadcasts (six before the fix). This flake was invisible since v0.55 because v0.56-v0.61 CI runs hung in playwright install (now fenced by the 25-minute job timeout) and never reached the tests.
 - [x] vite.config.ts server.watch.ignored for tests/, test-results/, playwright-report/ — cold-cache full suite 705/705 with zero page-reload broadcasts
+
 ### v0.64.0 — draw.io exact rendering — viewer snapshot pipeline (2026-08-21 · 721/721 green · showcase: https://claude.ai/code/artifact/4c2ad40c-746e-4cf2-9e2d-765e61c6429b) (COMPLETE)
 **Goal:** Replace transpile-as-default for draw.io with an exact vector snapshot rendered by the bundled draw.io viewer; transpiler remains fallback + explicit escape (render:'nodes'). Full plan: ~/.claude/plans/idempotent-bubbling-newt.md
 - [x] Spike: viewer-static.min.js headless offline render (http + file://), foreignObject/taint decision, findings appended to docs/DESIGN_DRAWIO.md
@@ -1314,6 +1367,7 @@
 - [x] Export short-circuit, search title+source, bridge renderMode summaries, MCP descriptions, useTextPlacement undo-batch drive-by fix
 - [x] SRS amendments (REQ-DIAG-124/127/130/147) + new REQ-DIAG-149..156; update existing tests T147/148/151/160/162/166
 - [x] New tests 174-180 (render, ingest, bridge, dialog, fallback, fit, export); full suite green; smoke test; showcase artifact
+
 ### v0.65.0 — draw.io extension — install, embed, carry-through (2026-08-21) (COMPLETE)
 **Goal:** Make the viewer a per-notebook extension like the user proposed: IndexedDB cache + Settings install flow, embed as a text/plain base64 block in the notebook HTML, re-inject on every save (dev refetches the template!) and carry through app updates (buildUpdatedHtml currently strips everything but powernote-data). Plus Convert-to-editable-nodes. Full plan: ~/.claude/plans/idempotent-bubbling-newt.md
 - [x] extensionStore.ts (IndexedDB powernote-extensions), installDrawioViewer, useExtensionStore; loader tiers memory → DOM block → opened-file HTML → IDB → network; harvest powernote-ext-* blocks on notebook open (extractDataFromHtml callers)
@@ -1321,23 +1375,27 @@
 - [x] SettingsPanel Extensions section (install/installed/failed states, size + license note); update v0.64 fallback copy to point at Settings → Extensions
 - [x] ContextMenu "Convert to editable nodes" (transpile, delete render, one undo) — REQ-DIAG-155
 - [x] Tests 181-185 (install flow, embed-save exactly-once, update carry, standalone offline boot, convert) + REQ-SETTINGS-018/019, REQ-UPDATE-031; full suite green; smoke; showcase artifact
+
 ### v0.66.0 — Resizable scroll width — per page, persistent, user + agent (2026-08-21) (COMPLETE)
 **Goal:** User can resize a scroll's width directly (widths already live per-page in ScrollRecord.width and persist via workspace data); agents get a resize_scroll bridge command + MCP tool. Reuse replacePageScrolls + the existing width-change reflow machinery. SRS impact: new REQ rows in the scroll/hierarchy SRS + settings exposure.
 - [x] Shared applyBandWidth + resizeScroll primitive clamps width and shifts every right-hand node/stroke in one undo
 - [x] Scroll header right-edge drag previews width and commits once; double-click resets to absent/default width
 - [x] resize_scroll bridge + MCP tool; list_scrolls reports effective width
 - [x] T186 + REQ-HIER-024/025, REQ-AGENT-071, REQ-SCROLL-031; 732/732 green on a fresh server; smoke clean; showcase artifact
+
 ### v0.66.1 — Release without the full Playwright gate (2026-08-21) (COMPLETE)
 **Goal:** Publishing a requested tag builds and uploads the committed single-file artifact promptly; the full Playwright campaign remains a local pre-tag requirement and a separate main/PR CI signal, not a release blocker.
 - [x] Remove Chromium installation and the full Playwright campaign from release.yml; keep the release artifact build and publication path [agent: codex]
 - [x] Prove a real v0.63.1 notebook can fetch/open v0.66.0 from GitHub with version and content preserved [agent: codex]
 - [x] Document release-gate policy in SRS_UPDATE and verify workflow syntax [agent: codex]
+
 ### v0.66.2 — Scroll resize follows the pointer (2026-08-21) (COMPLETE)
 **Goal:** Make manual scroll resizing controllable at every canvas pan and zoom: screen movement maps exactly to canvas-width change, the handle remains easy to acquire, and live feedback shows the band boundary before one atomic commit.
 - [x] Replace mixed absolute/world drag math with drag-start screen delta divided by zoom, clamped in the shared width domain [agent: codex]
 - [x] Keep a screen-sized resize hit target and show live guide/width feedback while dragging [agent: codex]
 - [x] Extend T186 across pan/zoom and preview-before-commit; update SRS requirements [agent: codex]
 - [x] Run focused and full verification, smoke, showcase, then prepare the hotfix release [agent: codex]
+
 ### v0.68.0 — Numbered list indentation (2026-08-25) (COMPLETE)
 > Numbered lists could not nest: Tab added 2 spaces, which CommonMark treats as the same list. List-aware indent (4-space step under a numbered parent, 2 under a bullet), renumber on nest/un-nest, renderer padding so old 2-space notes still nest, and nested ol markers (decimal / lower-alpha / lower-roman).
 **Goal:** Tab/Shift+Tab nest numbered list items the same way bullets already nest. CommonMark needs the child indented to the parent marker width (3+ spaces for `1. `); the editor currently inserts 2, so numbered children flatten. Nested ordered lists must render as child <ol>s, restart at 1, and use a distinct marker per depth.
@@ -1348,6 +1406,33 @@
 - [x] Nested ol CSS: decimal / lower-alpha / lower-roman
 - [x] E2E T188 numbered list indent + nested render; existing T73/T75 stay green
 - [x] Showcase from real UI + smoke + Playwright green
+
+### v0.69.0 — Eraser rework — segment hit-test, pending-erase preview, one undo frame per drag (2026-09-02 · 757/757 green) (COMPLETE)
+> The stroke eraser tested distance to sample *points* with a fixed 12px radius, so long straight segments were unerasable in the middle and the radius never followed zoom; deletion was immediate on every pointermove with no preview, and a zone-erase drag pushed one undo frame per split so a single drag could burn the whole 50-entry history. Excalidraw-style: segment distance with zoom-scaled tolerance and a bounds prefilter, pending-erase dimming committed on pointer up, Alt to restore, one history entry per gesture. Eraser had zero E2E coverage.
+**Goal:** Erasing feels like Excalidraw: any part of a stroke can be hit at any zoom, the user sees what will go before lifting the pen, Alt un-marks, and Ctrl+Z reverts a whole erase drag in one step.
+- [x] Stroke eraser hit-tests stroke segments (not sample points) with zoom-scaled tolerance and a bounds prefilter
+- [x] Pending-erase preview: touched strokes dim, commit on pointer up, Alt un-marks, Esc/pointercancel abandons
+- [x] One undo frame per erase gesture in both modes (draw-store batching)
+- [x] Zone eraser sweeps the path between pointer samples so fast moves leave no gaps
+- [x] SRS REQ-DRAW-015..019 and E2E T189 eraser spec (first eraser coverage)
+- [x] Typecheck, lint, full Playwright green, smoke test, commit
+
+### v0.67.0 — PowerScroll public launch foundation (2026-08-22) (COMPLETE)
+> Public brand, storefront, trust, onboarding, compatibility, and distribution work prompted by the decision to adopt the PowerScroll name.
+**Goal:** Rename PowerNote to PowerScroll without breaking existing notebooks, make the product immediately understandable and tryable on GitHub Pages, and publish an independently installable agent bridge plus a verified release.
+- [x] Audit public branding and compatibility-sensitive PowerNote identifiers before renaming [agent: Codex]
+- [x] Rename user-facing product, repository metadata, release artifact, documentation, and agent bridge to PowerScroll while preserving legacy notebook compatibility [agent: Codex]
+- [x] Add GitHub Pages storefront, live demo, real screenshots, onboarding samples, and social preview asset [agent: Codex]
+- [x] Add MIT license, security and contribution docs, issue templates, Discussions, topics, and repository homepage metadata [agent: Codex]
+- [x] Package and publish an independently installable PowerScroll MCP server; prepare official MCP Registry metadata [agent: Codex]
+- [x] Verify legacy v0.66.2 migration and update through the repository rename, run local regression/full suite and smoke checks [agent: Codex]
+- [x] Publish v0.67.0, deploy GitHub Pages, inspect the live product, and document remaining owner-only actions [agent: Codex]
+- [x] Keep GitHub CI lightweight by running the full Playwright campaign locally instead of on every push [agent: Codex]
+
+### v0.69.1 — Freehand ink through perfect-freehand — streamlined, thinned, tapered (ACTIVE)
+> Strokes rendered raw pointer samples with Konva tension only; the variable-width ribbon in inkOutline.ts was a hand-rolled normal-offset walk that applied to stylus strokes alone, so mouse and finger ink was a mechanical constant-width polyline. Excalidraw renders every freedraw element through perfect-freehand (MIT): streamline, thinning by pressure, simulated pressure when the device has none, taper at both ends.
+**Goal:** Every stroke, mouse or pen, renders through perfect-freehand with the same calibrated width as before; stored stroke data is unchanged so legacy notebooks render without migration.
+
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.
 
@@ -1367,14 +1452,3 @@ See `docs/VISION.md` for deferred post-MVP items (cloud sync, collaboration, pai
 - update_diagram bridge tool (redraw an existing diagram's source without the UI dialog) — scoped in v0.34.0, never built, implied by the field-feedback pattern (create-only diagrams); pairs with read_diagram from v0.54
 - draw.io rendering rework: replace transpile-to-native-nodes as the default display with a bundled draw.io viewer render (offline, self-hosted viewer-static.min.js → SVG snapshot in the diagram frame); keep transpiler as optional "convert to editable nodes". Evaluation done 2026-08-21, direction awaiting user decision.
 - Stencil-pack extension: vendor common drawio stencil XMLs (aws4, azure, cisco) so mxStencilRegistry can resolve library icons offline (v0.64 renders them as styled box + label, dynamicLoading=false). Also: math typesetting in drawio labels is disabled offline (DRAW_MATH_URL no-op) — could ship MathJax as an extension later.
-### v0.67.0 — PowerScroll public launch foundation (2026-08-22) (COMPLETE)
-> Public brand, storefront, trust, onboarding, compatibility, and distribution work prompted by the decision to adopt the PowerScroll name.
-**Goal:** Rename PowerNote to PowerScroll without breaking existing notebooks, make the product immediately understandable and tryable on GitHub Pages, and publish an independently installable agent bridge plus a verified release.
-- [x] Audit public branding and compatibility-sensitive PowerNote identifiers before renaming [agent: Codex]
-- [x] Rename user-facing product, repository metadata, release artifact, documentation, and agent bridge to PowerScroll while preserving legacy notebook compatibility [agent: Codex]
-- [x] Add GitHub Pages storefront, live demo, real screenshots, onboarding samples, and social preview asset [agent: Codex]
-- [x] Add MIT license, security and contribution docs, issue templates, Discussions, topics, and repository homepage metadata [agent: Codex]
-- [x] Package and publish an independently installable PowerScroll MCP server; prepare official MCP Registry metadata [agent: Codex]
-- [x] Verify legacy v0.66.2 migration and update through the repository rename, run local regression/full suite and smoke checks [agent: Codex]
-- [x] Publish v0.67.0, deploy GitHub Pages, inspect the live product, and document remaining owner-only actions [agent: Codex]
-- [x] Keep GitHub CI lightweight by running the full Playwright campaign locally instead of on every push [agent: Codex]

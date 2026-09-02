@@ -1,11 +1,20 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type Konva from 'konva';
 import { useCanvasStore } from '../stores/useCanvasStore';
 import { useToolStore } from '../stores/useToolStore';
-import { useDrawStore } from '../stores/useDrawStore';
+import { undoBatchEnd, undoBatchStart, useDrawStore } from '../stores/useDrawStore';
 import { generateId } from '../utils/ids';
 import { clampCanvasY, clampStageY, liveCeiling } from '../utils/scrollCeiling';
 import type { Stroke } from '../types/data';
+import {
+  STROKE_ERASER_SCREEN_RADIUS,
+  boundsFromFlatPoints,
+  boundsIntersect,
+  expandBounds,
+  segmentBounds,
+  segmentSegmentDistance,
+  type Bounds,
+} from '../utils/eraserGeometry';
 
 export interface ShapePreview {
   x: number;
@@ -46,7 +55,10 @@ export function useShapeCreation(
   const [lassoRect, setLassoRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const isDrawing = useRef(false);
   const lassoStart = useRef<{ x: number; y: number } | null>(null);
-  const eraserState = useRef({ prevDir: null as { x: number; y: number } | null, shakeScore: 0, lastTime: 0 });
+  const erasePreviousPoint = useRef<{ x: number; y: number } | null>(null);
+  const eraseBatchOpen = useRef(false);
+  const strokeBounds = useRef(new Map<string, Bounds>());
+  const strokeBoundsSource = useRef(new Map<string, Stroke>());
 
   // One pointer owns the gesture. `erase` is latched at contact so flipping
   // the stylus mid-stroke doesn't switch tools halfway through a line.
@@ -85,25 +97,48 @@ export function useShapeCreation(
     };
   }, [stageRef]);
 
-  // Stroke eraser: deletes entire stroke if any point is within touch radius
-  function eraseStrokeAt(x: number, y: number) {
+  /** Stroke eraser: marks full strokes hit by the swept eraser capsule. */
+  const eraseStrokeAlong = useCallback((start: { x: number; y: number }, end: { x: number; y: number }, restore: boolean) => {
     const strokes = useDrawStore.getState().strokes;
-    const touchRadius = 12; // fixed detection radius for stroke mode
-    const toDelete: string[] = [];
+    const scale = useCanvasStore.getState().viewport.scale;
+    const eraserBounds = segmentBounds(start, end);
+    const hitIds: string[] = [];
     for (const stroke of strokes) {
-      for (let i = 0; i < stroke.points.length; i += 2) {
-        const dx = stroke.points[i] - x;
-        const dy = stroke.points[i + 1] - y;
-        if (dx * dx + dy * dy < touchRadius * touchRadius) {
-          toDelete.push(stroke.id);
+      let bounds = strokeBounds.current.get(stroke.id);
+      if (strokeBoundsSource.current.get(stroke.id) !== stroke || !bounds) {
+        bounds = boundsFromFlatPoints(stroke.points);
+        strokeBounds.current.set(stroke.id, bounds);
+        strokeBoundsSource.current.set(stroke.id, stroke);
+      }
+      const tolerance = Math.max(
+        2.25,
+        STROKE_ERASER_SCREEN_RADIUS / scale + stroke.strokeWidth / 2,
+      );
+      if (!boundsIntersect(expandBounds(bounds, tolerance), eraserBounds)) continue;
+
+      const points = stroke.points;
+      if (points.length === 2) {
+        if (segmentSegmentDistance(start, end, { x: points[0], y: points[1] }, { x: points[0], y: points[1] }) <= tolerance) {
+          hitIds.push(stroke.id);
+        }
+        continue;
+      }
+      for (let i = 0; i + 3 < points.length; i += 2) {
+        if (segmentSegmentDistance(
+          start,
+          end,
+          { x: points[i], y: points[i + 1] },
+          { x: points[i + 2], y: points[i + 3] },
+        ) <= tolerance) {
+          hitIds.push(stroke.id);
           break;
         }
       }
     }
-    if (toDelete.length > 0) {
-      useDrawStore.getState().deleteStrokes(toDelete);
-    }
-  }
+    const draw = useDrawStore.getState();
+    if (restore) draw.unmarkPendingErase(hitIds);
+    else draw.markPendingErase(hitIds);
+  }, []);
 
   /**
    * Zone eraser: precise pixel-level erasing using circle-segment intersection.
@@ -112,7 +147,7 @@ export function useShapeCreation(
    * A pressure stroke's pressures are carried through the split (interpolated
    * at the cut), so the surviving pieces keep their varying width.
    */
-  function eraseZoneAt(ex: number, ey: number, radius: number) {
+  const eraseZoneAt = useCallback((ex: number, ey: number, radius: number) => {
     const store = useDrawStore.getState();
     const strokes = store.strokes;
     const r2 = radius * radius;
@@ -242,6 +277,7 @@ export function useShapeCreation(
           points: run.pts,
           color: stroke.color,
           strokeWidth: stroke.strokeWidth,
+          ...(stroke.groupId !== undefined ? { groupId: stroke.groupId } : {}),
           ...(run.prs ? { pressures: run.prs } : {}),
         });
       }
@@ -253,7 +289,31 @@ export function useShapeCreation(
         useDrawStore.getState().addStroke(s);
       }
     }
-  }
+  }, []);
+
+  /** Cover the entire path, even when pointer events arrive far apart. */
+  const eraseZoneAlong = useCallback((start: { x: number; y: number }, end: { x: number; y: number }, radius: number) => {
+    const distance = Math.hypot(end.x - start.x, end.y - start.y);
+    const samples = Math.max(1, Math.ceil(distance / radius));
+    for (let i = 1; i <= samples; i++) {
+      const t = i / samples;
+      eraseZoneAt(start.x + (end.x - start.x) * t, start.y + (end.y - start.y) * t, radius);
+    }
+  }, [eraseZoneAt]);
+
+  const finishErase = useCallback((commit: boolean) => {
+    const draw = useDrawStore.getState();
+    if (commit) {
+      const pending = draw.pendingEraseIds;
+      if (pending.length > 0) draw.deleteStrokes(pending);
+    }
+    draw.clearPendingErase();
+    if (eraseBatchOpen.current) {
+      undoBatchEnd();
+      eraseBatchOpen.current = false;
+    }
+    erasePreviousPoint.current = null;
+  }, []);
 
   /**
    * Discard whatever gesture is in progress WITHOUT committing it. Called on
@@ -261,6 +321,7 @@ export function useShapeCreation(
    * the half-drawn stroke belongs to a zoom, not to the page.
    */
   const cancelInProgress = useCallback(() => {
+    if (activePointer.current?.mode === 'erase') finishErase(false);
     activePointer.current = null;
     isDrawing.current = false;
     panLast.current = null;
@@ -274,7 +335,20 @@ export function useShapeCreation(
     setLassoRect(null);
     setEraserPos(null);
     setPenCursorPos(null);
-  }, []);
+  }, [finishErase]);
+
+  // Escape abandons a pending stroke erase, matching pointercancel rather
+  // than committing the preview as a pointerup would.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && activePointer.current?.mode === 'erase') {
+        event.preventDefault();
+        cancelInProgress();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [cancelInProgress]);
 
   /**
    * True while a pen gesture should suppress touch: a pen stroke is active,
@@ -361,11 +435,13 @@ export function useShapeCreation(
         // Eraser mode
         isDrawing.current = true;
         activePointer.current = { id: evt.pointerId, type: evt.pointerType, mode: 'erase' };
+        erasePreviousPoint.current = pt;
+        undoBatchStart();
+        eraseBatchOpen.current = true;
         if (drawOpts.eraserMode === 'stroke') {
-          eraseStrokeAt(pt.x, pt.y);
-          setEraserPos({ ...pt, radius: 8 });
+          eraseStrokeAlong(pt, pt, false);
+          setEraserPos({ ...pt, radius: STROKE_ERASER_SCREEN_RADIUS / useCanvasStore.getState().viewport.scale });
         } else {
-          eraserState.current = { prevDir: null, shakeScore: 0, lastTime: Date.now() };
           const radius = drawOpts.eraserSize / 2;
           setEraserPos({ ...pt, radius });
           eraseZoneAt(pt.x, pt.y, radius);
@@ -391,7 +467,7 @@ export function useShapeCreation(
       lassoStart.current = pt;
       setLassoRect({ x: pt.x, y: pt.y, w: 0, h: 0 });
     }
-  }, [getCanvasPoint, stageRef, cancelInProgress, isPenGestureActive]);
+  }, [getCanvasPoint, stageRef, cancelInProgress, isPenGestureActive, eraseStrokeAlong, eraseZoneAt]);
 
   const handleDrawPointerMove = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
     const evt = e.evt;
@@ -431,18 +507,22 @@ export function useShapeCreation(
       if (erasing) {
         // Eraser cursor
         setPenCursorPos(null);
-        const radius = drawOpts.eraserMode === 'zone' ? drawOpts.eraserSize / 2 : 8;
+        const radius = drawOpts.eraserMode === 'zone'
+          ? drawOpts.eraserSize / 2
+          : STROKE_ERASER_SCREEN_RADIUS / useCanvasStore.getState().viewport.scale;
         setEraserPos({ x: pt.x, y: pt.y, radius });
 
         if (isDrawing.current) {
+          const previous = erasePreviousPoint.current ?? pt;
           if (drawOpts.eraserMode === 'stroke') {
-            eraseStrokeAt(pt.x, pt.y);
+            eraseStrokeAlong(previous, pt, evt.altKey);
           } else {
             // Zone eraser — constant size from settings
             const r = drawOpts.eraserSize / 2;
             setEraserPos({ x: pt.x, y: pt.y, radius: r });
-            eraseZoneAt(pt.x, pt.y, r);
+            eraseZoneAlong(previous, pt, r);
           }
+          erasePreviousPoint.current = pt;
         }
       } else {
         // Pen cursor
@@ -512,7 +592,7 @@ export function useShapeCreation(
         h: Math.abs(pt.y - start.y),
       });
     }
-  }, [getCanvasPoint, clientToCanvas, stageRef]);
+  }, [getCanvasPoint, clientToCanvas, stageRef, eraseStrokeAlong, eraseZoneAlong]);
 
   const handleDrawPointerUp = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
     const evt = e.evt;
@@ -531,7 +611,9 @@ export function useShapeCreation(
     const drawOpts = useToolStore.getState().drawOptions;
     const wasErase = activePointer.current?.mode === 'erase';
     const points = pointsRef.current;
-    if (tool === 'draw' && !wasErase && isDrawing.current && points && points.length >= 4) {
+    if (wasErase) {
+      finishErase(true);
+    } else if (tool === 'draw' && isDrawing.current && points && points.length >= 4) {
       const pressures =
         pressuresRef.current && pressuresRef.current.length * 2 === points.length
           ? pressuresRef.current
@@ -622,7 +704,7 @@ export function useShapeCreation(
     // A lifted finger leaves no hover: without this the pen dot sticks at
     // the lift point until the next mouse move.
     if (evt.pointerType === 'touch') setPenCursorPos(null);
-  }, [lassoRect, shapePreview]);
+  }, [lassoRect, shapePreview, finishErase]);
 
   /**
    * Discard the owning pointer's in-progress gesture.

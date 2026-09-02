@@ -49,6 +49,7 @@ export function InfiniteCanvas({ backgroundMode = 'pages', bgColor = '#ffffff' }
 
   const drawStrokes = useDrawStore((s) => s.strokes);
   const selectedStrokeIds = useDrawStore((s) => s.selectedStrokeIds);
+  const pendingEraseIds = useDrawStore((s) => s.pendingEraseIds);
   const editingGroupId = useGroupStore((s) => s.editingGroupId);
 
   const nodes = useCanvasStore((s) => s.nodes);
@@ -442,6 +443,7 @@ export function InfiniteCanvas({ backgroundMode = 'pages', bgColor = '#ffffff' }
             <DrawingLayer
               strokes={drawStrokes}
               selectedStrokeIds={selectedStrokeIds}
+              pendingEraseIds={pendingEraseIds}
               inProgressPoints={inProgressPoints}
               inProgressPressures={inProgressPressures}
               inProgressColor={useToolStore.getState().drawOptions?.color ?? '#1a1a1a'}
