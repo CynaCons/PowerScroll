@@ -3,6 +3,7 @@ import type { ToolType, TextOptions, DrawOptions, ShapeOptions } from '../types/
 import { defaultTextOptions, defaultShapeOptions } from '../utils/defaults';
 
 const TOUCH_DRAW_KEY = 'powernote-touch-draw';
+const SNAP_TO_OBJECTS_KEY = 'powernote-snap-to-objects';
 
 /** Device preference, not notebook content — survives across notebooks. */
 function loadTouchDraw(): DrawOptions['touchDraw'] {
@@ -14,6 +15,15 @@ function loadTouchDraw(): DrawOptions['touchDraw'] {
   }
 }
 
+/** Device preference, not notebook content — defaults on for existing users. */
+function loadSnapToObjects(): boolean {
+  try {
+    return localStorage.getItem(SNAP_TO_OBJECTS_KEY) !== 'false';
+  } catch {
+    return true;
+  }
+}
+
 const defaultDrawOptions: DrawOptions = {
   color: '#1a1a1a',
   strokeWidth: 3,
@@ -21,6 +31,7 @@ const defaultDrawOptions: DrawOptions = {
   eraserSize: 12,
   isErasing: false,
   touchDraw: loadTouchDraw(),
+  snapToObjects: loadSnapToObjects(),
 };
 
 interface ToolState {
@@ -60,6 +71,13 @@ export const useToolStore = create<ToolState>((set) => ({
     if (options.touchDraw) {
       try {
         localStorage.setItem(TOUCH_DRAW_KEY, options.touchDraw);
+      } catch {
+        // private mode — the in-memory value still applies
+      }
+    }
+    if ('snapToObjects' in options) {
+      try {
+        localStorage.setItem(SNAP_TO_OBJECTS_KEY, String(options.snapToObjects));
       } catch {
         // private mode — the in-memory value still applies
       }

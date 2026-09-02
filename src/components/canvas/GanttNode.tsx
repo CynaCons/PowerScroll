@@ -6,14 +6,14 @@ import type { CanvasNode as CanvasNodeType, GanttNodeData } from '../../types/da
 import { GanttRenderer, blankDocument, validateDocument } from '../../vendor/powerplanner/embed';
 import type { GanttDocument } from '../../vendor/powerplanner/embed';
 import { multiDragStart, multiDragMove, multiDragEnd } from '../../utils/multiDrag';
-import type { SnapLine } from './SnapGuides';
+import type { SnapGuide } from './SnapGuides';
 
 interface GanttNodeProps {
   node: CanvasNodeType;
   isSelected: boolean;
   onSelect: (id: string, additive: boolean) => void;
   stageScale: number;
-  onSnapChange: (lines: SnapLine[]) => void;
+  onSnapChange: (lines: SnapGuide[]) => void;
 }
 
 /**

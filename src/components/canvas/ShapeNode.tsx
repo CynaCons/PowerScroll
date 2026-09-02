@@ -8,8 +8,8 @@ import { useGroupStore } from '../../stores/useGroupStore';
 import { useDrawStore } from '../../stores/useDrawStore';
 import { isNodeInteractive } from '../../utils/toolConfig';
 import { generateId } from '../../utils/ids';
-import { multiDragStart, multiDragMove, multiDragEnd } from '../../utils/multiDrag';
-import { calculateSnap, calculateScrollSnap, type SnapLine } from './SnapGuides';
+import { multiDragStart, multiDragMove, multiDragEnd, multiDragBounds } from '../../utils/multiDrag';
+import { calculateObjectSnap, calculateScrollSnap, type SnapGuide } from './SnapGuides';
 import { columnLeft, columnWidth } from '../../utils/pageLayout';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 
@@ -18,7 +18,7 @@ interface ShapeNodeProps {
   isSelected: boolean;
   onSelect: (id: string, additive: boolean) => void;
   stageScale: number;
-  onSnapChange: (lines: SnapLine[]) => void;
+  onSnapChange: (lines: SnapGuide[]) => void;
 }
 
 export function ShapeNode({ node, isSelected, onSelect, stageScale, onSnapChange }: ShapeNodeProps) {
@@ -43,37 +43,33 @@ export function ShapeNode({ node, isSelected, onSelect, stageScale, onSnapChange
 
   const handleDragMove = (e: Konva.KonvaEventObject<DragEvent>) => {
     multiDragMove(node.id, e.target.x(), e.target.y(), e.target.getStage());
-    if (!e.evt.shiftKey) {
-      // Ungated magnet to the scroll band's edges. Shift-snapping to other
-      // nodes is the deliberate act; lining up with your column is not.
-      const page = useWorkspaceStore.getState().getActivePage();
-      const scrolls = page?.scrolls;
-      const snap = calculateScrollSnap(
-        { x: e.target.x(), y: e.target.y(), width: node.width },
-        (c) => columnLeft(c, scrolls),
-        (c) => columnWidth(c, scrolls),
-        scrolls?.length ?? 0,
-      );
-      onSnapChange(snap.line ? [snap.line] : []);
-      if (snap.line) {
-        e.target.x(snap.x);
-        multiDragMove(node.id, snap.x, e.target.y(), e.target.getStage());
-      }
-      return;
-    }
     const allNodes = useCanvasStore.getState().nodes;
-    const draggedBounds = {
+    const draggedBounds = multiDragBounds(node.id, e.target.x(), e.target.y(), {
       id: node.id,
       x: e.target.x(),
       y: e.target.y(),
       width: node.width,
       height: node.height,
-    };
-    const snap = calculateSnap(draggedBounds, allNodes);
-    onSnapChange(snap.lines);
-    e.target.x(snap.x);
-    e.target.y(snap.y);
-    multiDragMove(node.id, snap.x, snap.y, e.target.getStage());
+    });
+    const page = useWorkspaceStore.getState().getActivePage();
+    const scrolls = page?.scrolls;
+    const scrollSnap = calculateScrollSnap(
+      { x: e.target.x(), y: e.target.y(), width: node.width },
+      (c) => columnLeft(c, scrolls),
+      (c) => columnWidth(c, scrolls),
+      scrolls?.length ?? 0,
+    );
+    const objectSnap = calculateObjectSnap(draggedBounds, allNodes, {
+      snapToObjects: useToolStore.getState().drawOptions.snapToObjects,
+      shiftKey: e.evt.shiftKey,
+      viewportScale: useCanvasStore.getState().viewport.scale,
+    });
+    const xSnapped = objectSnap.lines.some((line) => ('kind' in line ? line.axis === 'x' : line.type === 'vertical'));
+    const x = xSnapped ? e.target.x() + objectSnap.x - draggedBounds.x : scrollSnap.x;
+    const y = e.target.y() + objectSnap.y - draggedBounds.y;
+    onSnapChange([...(xSnapped || !scrollSnap.line ? [] : [scrollSnap.line]), ...objectSnap.lines]);
+    e.target.position({ x, y });
+    multiDragMove(node.id, x, y, e.target.getStage());
   };
 
   const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {

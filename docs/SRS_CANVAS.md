@@ -41,6 +41,10 @@ Provide an infinite, pannable, zoomable canvas as the primary workspace for plac
 | REQ-CANVAS-033 | Alt-dragging a resize anchor shall scale around the selection centre. | Must | T191 |
 | REQ-CANVAS-034 | Shapes and images shall expose a rotation handle that snaps at 45° increments; rotation shall persist through save/load. | Must | T191 |
 | REQ-CANVAS-035 | Selected freehand strokes shall share resize and rotation transforms with selected nodes, including stroke-only selections. | Must | T191 |
+| REQ-CANVAS-036 | Object snapping shall be enabled by default, toggleable in Settings, and persisted as a device preference. | Must | T192 |
+| REQ-CANVAS-037 | Holding Shift while dragging shall temporarily bypass object snapping. | Must | T192 |
+| REQ-CANVAS-038 | Object snapping shall use an 8 screen-pixel threshold at every viewport zoom. | Must | T192 |
+| REQ-CANVAS-039 | Object snapping shall offer centre-in-gap and equal-side-gap placement with visible gap guides. | Must | T192 |
 | REQ-CANVAS-010 | A visible undo control shall sit in the top bar, immediately left of zoom-to-fit, disabled when there is nothing to undo and titled to say so. Shipped v0.41. | Must | T134 |
 | REQ-CANVAS-011 | The button and Ctrl+Z shall unwind the SAME history, routed by the active tool from one shared definition (`src/utils/undoOps.ts`) — there are two independent stacks (nodes in the canvas store, strokes in the draw store) and a second copy of the routing rule would eventually disagree with the first. Shipped v0.41. | Must | T134 |
 

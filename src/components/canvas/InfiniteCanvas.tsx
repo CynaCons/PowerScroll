@@ -9,7 +9,7 @@ import { useDrawStore } from '../../stores/useDrawStore';
 import { CanvasNode } from './CanvasNode';
 import { SelectionTransformer } from './SelectionTransformer';
 import { ContextMenu } from './ContextMenu';
-import { SnapGuides, type SnapLine } from './SnapGuides';
+import { SnapGuides, type SnapGuide } from './SnapGuides';
 import { PageGuides } from './PageGuides';
 import { ScrollHeaders } from './ScrollHeaders';
 import { DrawingLayer } from './DrawingLayer';
@@ -44,7 +44,7 @@ export function InfiniteCanvas({ backgroundMode = 'pages', bgColor = '#ffffff' }
   const stageRef = useRef<Konva.Stage>(null);
 
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-  const [snapLines, setSnapLines] = useState<SnapLine[]>([]);
+  const [snapLines, setSnapLines] = useState<SnapGuide[]>([]);
   const [scrollResizePreview, setScrollResizePreview] = useState<{ scrollId: string; width: number } | null>(null);
 
   const drawStrokes = useDrawStore((s) => s.strokes);

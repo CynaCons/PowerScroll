@@ -1446,13 +1446,21 @@
 - [x] Selected strokes scale and rotate with the selection (proxy bbox + transformStrokes in the draw store)
 - [x] SRS REQ-CANVAS-031..035 and E2E T191; typecheck, lint, full Playwright green, commit
 
-### v0.70.1 — Object snapping on by default — Shift bypasses, screen-constant threshold, equal-gap guides (ACTIVE)
+### v0.70.1 — Object snapping on by default — Shift bypasses, screen-constant threshold, equal-gap guides (2026-09-02 · 767/767 green) (COMPLETE)
 > Alignment snapping existed but only while holding Shift, its 8px threshold was in canvas units so it vanished when zoomed out, and there was no equal-spacing snap. Excalidraw snaps by default at 8 screen px / zoom, lets a modifier bypass, and adds centre-in-gap and equal side-gap snaps with gap guides. Ctrl+drag already means duplicate here, so Shift becomes the bypass.
 **Goal:** Dragging anything lines up with its neighbours by default, at any zoom, including equal spacing, and one persisted setting turns it off.
-- [ ] snapToObjects setting (default on, persisted) with a settings-panel toggle; Shift during drag bypasses; single gate helper for all drag handlers [agent: codex]
-- [ ] Snap threshold = 8 screen px / viewport scale [agent: codex]
-- [ ] Equal-gap snaps (centre-in-gap, equal side gaps) with tick guides; pure helper [agent: codex]
-- [ ] SRS REQ-CANVAS-036..039 and E2E T192; typecheck, lint, full Playwright green, commit [agent: codex]
+- [x] snapToObjects setting (default on, persisted) with a settings-panel toggle; Shift during drag bypasses; single gate helper for all drag handlers
+- [x] Snap threshold = 8 screen px / viewport scale
+- [x] Equal-gap snaps (centre-in-gap, equal side gaps) with tick guides; pure helper
+- [x] SRS REQ-CANVAS-036..039 and E2E T192; typecheck, lint, full Playwright green, commit
+
+### v0.71.0 — One undo history across nodes, strokes and scrolls (ACTIVE)
+> Two independent snapshot histories (canvas store for nodes, draw store for strokes) were routed by the active tool in undoOps.ts, so drawing, switching to select and pressing Ctrl+Z undid the wrong thing or nothing, and cross-store gestures were only atomic when someone remembered undoBatchStartFull. Excalidraw keeps one History with one undo and one redo stack for everything.
+**Goal:** Ctrl+Z and the top-bar button undo the most recent change whichever store it touched, in reverse chronological order, with frames that share array references instead of deep copies.
+- [ ] useHistoryStore: single undo/redo stack of {nodes, strokes, scrolls} frames by reference (structural sharing), depth-counted batching, MAX 100 [agent: codex]
+- [ ] Both stores record into it; per-store stacks, undoBatchStartFull and tool routing in undoOps.ts removed; in-place mutations audited and made immutable [agent: codex]
+- [ ] Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y and the top-bar button use canUndo/canRedo from the history store, tool-independent; selections pruned after undo [agent: codex]
+- [ ] SRS REQ-CANVAS-011 rewritten, REQ-CANVAS-040..042 added, E2E T193; T57/T134 stay green; typecheck, lint, full Playwright green, commit [agent: codex]
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.

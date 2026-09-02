@@ -5,6 +5,7 @@
 import type Konva from 'konva';
 import { useCanvasStore, undoBatchStart, undoBatchEnd } from '../stores/useCanvasStore';
 import { useDrawStore, pushStrokeUndo } from '../stores/useDrawStore';
+import type { SnapNodeBounds } from '../components/canvas/SnapGuides';
 
 interface DragSession {
   draggedId: string;
@@ -110,6 +111,40 @@ export function multiDragMove(
       session.strokeStarts,
     );
   }
+}
+
+/**
+ * Bounds of everything moving in the active drag. Object snapping uses this
+ * rather than just the grabbed node, so a multi-selection keeps its shape.
+ */
+export function multiDragBounds(
+  draggedId: string,
+  x: number,
+  y: number,
+  fallback: SnapNodeBounds,
+): SnapNodeBounds {
+  if (!session || session.draggedId !== draggedId || !session.multi) return fallback;
+  const dx = x - session.originX;
+  const dy = y - session.originY;
+  const nodes = useCanvasStore.getState().nodes
+    .filter((node) => session?.nodeStarts.has(node.id))
+    .map((node) => {
+      const start = session!.nodeStarts.get(node.id)!;
+      return { left: start.x + dx, right: start.x + dx + node.width, top: start.y + dy, bottom: start.y + dy + (node.height || 30) };
+    });
+  if (nodes.length === 0) return fallback;
+  const left = Math.min(...nodes.map((node) => Math.min(node.left, node.right)));
+  const right = Math.max(...nodes.map((node) => Math.max(node.left, node.right)));
+  const top = Math.min(...nodes.map((node) => Math.min(node.top, node.bottom)));
+  const bottom = Math.max(...nodes.map((node) => Math.max(node.top, node.bottom)));
+  return {
+    id: draggedId,
+    x: left,
+    y: top,
+    width: right - left,
+    height: bottom - top,
+    excludeIds: Array.from(session.nodeStarts.keys()),
+  };
 }
 
 export function multiDragEnd(draggedId: string, x: number, y: number): void {

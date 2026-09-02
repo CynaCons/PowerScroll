@@ -9,11 +9,11 @@ import { useGroupStore } from '../../stores/useGroupStore';
 import { useDrawStore } from '../../stores/useDrawStore';
 import { useDiagramStore } from '../../stores/useDiagramStore';
 import { isNodeInteractive } from '../../utils/toolConfig';
-import { multiDragStart, multiDragMove, multiDragEnd } from '../../utils/multiDrag';
+import { multiDragStart, multiDragMove, multiDragEnd, multiDragBounds } from '../../utils/multiDrag';
 import { FRAME_PAD, FRAME_TITLE_H } from '../../diagram/canvasOps';
 import { sniffFormat } from '../../diagram';
 import { FORMAT_LABEL } from '../../diagram/formatLabels';
-import type { SnapLine } from './SnapGuides';
+import { calculateObjectSnap, type SnapGuide } from './SnapGuides';
 import './DiagramNode.css';
 
 interface DiagramNodeProps {
@@ -21,7 +21,7 @@ interface DiagramNodeProps {
   isSelected: boolean;
   onSelect: (id: string, additive: boolean) => void;
   stageScale: number;
-  onSnapChange: (lines: SnapLine[]) => void;
+  onSnapChange: (lines: SnapGuide[]) => void;
 }
 
 /**
@@ -135,7 +135,23 @@ export function DiagramNode({ node, isSelected, onSelect, stageScale, onSnapChan
         onDragStart={(e) => multiDragStart(node.id, e.target.x(), e.target.y())}
         onDragMove={(e) => {
           multiDragMove(node.id, e.target.x(), e.target.y(), e.target.getStage());
-          onSnapChange([]);
+          const draggedBounds = multiDragBounds(node.id, e.target.x(), e.target.y(), {
+            id: node.id,
+            x: e.target.x(),
+            y: e.target.y(),
+            width: node.width,
+            height: node.height,
+          });
+          const snap = calculateObjectSnap(draggedBounds, useCanvasStore.getState().nodes, {
+            snapToObjects: useToolStore.getState().drawOptions.snapToObjects,
+            shiftKey: e.evt.shiftKey,
+            viewportScale: useCanvasStore.getState().viewport.scale,
+          });
+          const x = e.target.x() + snap.x - draggedBounds.x;
+          const y = e.target.y() + snap.y - draggedBounds.y;
+          onSnapChange(snap.lines);
+          e.target.position({ x, y });
+          multiDragMove(node.id, x, y, e.target.getStage());
         }}
         onDragEnd={(e) => multiDragEnd(node.id, e.target.x(), e.target.y())}
         onClick={handleClick}

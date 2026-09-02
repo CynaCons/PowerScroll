@@ -1,5 +1,5 @@
 import type { CanvasNode as CanvasNodeType } from '../../types/data';
-import type { SnapLine } from './SnapGuides';
+import type { SnapGuide } from './SnapGuides';
 import { TextNode } from './TextNode';
 import { ImageNode } from './ImageNode';
 import { ShapeNode } from './ShapeNode';
@@ -12,7 +12,7 @@ interface CanvasNodeProps {
   onSelect: (id: string, additive: boolean) => void;
   stageScale: number;
   autoEdit?: boolean;
-  onSnapChange: (lines: SnapLine[]) => void;
+  onSnapChange: (lines: SnapGuide[]) => void;
 }
 
 export function CanvasNode({ node, isSelected, onSelect, stageScale, autoEdit, onSnapChange }: CanvasNodeProps) {

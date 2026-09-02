@@ -158,6 +158,8 @@ export interface DrawOptions {
    * localStorage, not in the notebook file.
    */
   touchDraw: 'auto' | 'always' | 'never';
+  /** Device preference for magnetic alignment and equal-gap object snaps. */
+  snapToObjects: boolean;
 }
 
 // ── Hierarchy types ─────────────────────────────────────────

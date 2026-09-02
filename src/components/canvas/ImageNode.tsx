@@ -7,15 +7,15 @@ import { useCanvasStore } from '../../stores/useCanvasStore';
 import { useToolStore } from '../../stores/useToolStore';
 import { isNodeInteractive } from '../../utils/toolConfig';
 import { generateId } from '../../utils/ids';
-import { multiDragStart, multiDragMove, multiDragEnd } from '../../utils/multiDrag';
-import { calculateSnap, type SnapLine } from './SnapGuides';
+import { multiDragStart, multiDragMove, multiDragEnd, multiDragBounds } from '../../utils/multiDrag';
+import { calculateObjectSnap, type SnapGuide } from './SnapGuides';
 
 interface ImageNodeProps {
   node: CanvasNode;
   isSelected: boolean;
   onSelect: (id: string, additive: boolean) => void;
   stageScale: number;
-  onSnapChange: (lines: SnapLine[]) => void;
+  onSnapChange: (lines: SnapGuide[]) => void;
 }
 
 export function ImageNode({ node, isSelected, onSelect, stageScale, onSnapChange }: ImageNodeProps) {
@@ -50,23 +50,24 @@ export function ImageNode({ node, isSelected, onSelect, stageScale, onSnapChange
 
   const handleDragMove = (e: Konva.KonvaEventObject<DragEvent>) => {
     multiDragMove(node.id, e.target.x(), e.target.y(), e.target.getStage());
-    if (!e.evt.shiftKey) {
-      onSnapChange([]);
-      return;
-    }
     const allNodes = useCanvasStore.getState().nodes;
-    const draggedBounds = {
+    const draggedBounds = multiDragBounds(node.id, e.target.x(), e.target.y(), {
       id: node.id,
       x: e.target.x(),
       y: e.target.y(),
       width: node.width,
       height: node.height,
-    };
-    const snap = calculateSnap(draggedBounds, allNodes);
+    });
+    const snap = calculateObjectSnap(draggedBounds, allNodes, {
+      snapToObjects: useToolStore.getState().drawOptions.snapToObjects,
+      shiftKey: e.evt.shiftKey,
+      viewportScale: useCanvasStore.getState().viewport.scale,
+    });
     onSnapChange(snap.lines);
-    e.target.x(snap.x);
-    e.target.y(snap.y);
-    multiDragMove(node.id, snap.x, snap.y, e.target.getStage());
+    const x = e.target.x() + snap.x - draggedBounds.x;
+    const y = e.target.y() + snap.y - draggedBounds.y;
+    e.target.position({ x, y });
+    multiDragMove(node.id, x, y, e.target.getStage());
   };
 
   const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {

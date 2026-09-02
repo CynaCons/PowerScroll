@@ -88,6 +88,7 @@ export function SettingsPanel({
   const [updateInfo, setUpdateInfo] = useState<{ version: string; url?: string; releaseUrl?: string } | null>(null);
 
   const touchDraw = useToolStore((s) => s.drawOptions.touchDraw);
+  const snapToObjects = useToolStore((s) => s.drawOptions.snapToObjects);
 
   const drawioExt = useExtensionStore((s) => s.drawio);
   const refreshExtensions = useExtensionStore((s) => s.refresh);
@@ -271,6 +272,22 @@ export function SettingsPanel({
         <span style={{ fontSize: 11, color: '#94a3b8', marginTop: 4, display: 'block' }}>
           The pen always draws, with pressure. Two fingers pan and zoom in any
           mode. Saved for this device, not in the notebook.
+        </span>
+      </div>
+
+      {/* Device setting, like touch drawing — it controls interaction, not page content. */}
+      <div className="settings-panel__section" style={{ marginTop: 12, borderTop: '1px solid #e2e8f0', paddingTop: 10 }}>
+        <label className="settings-panel__radio">
+          <input
+            type="checkbox"
+            checked={snapToObjects}
+            onChange={(e) => useToolStore.getState().setDrawOptions({ snapToObjects: e.target.checked })}
+            data-testid="settings-snap-to-objects"
+          />
+          <span>Snap to objects</span>
+        </label>
+        <span style={{ fontSize: 11, color: '#94a3b8', marginTop: 4, display: 'block' }}>
+          Hold Shift while dragging to place freely. Saved for this device.
         </span>
       </div>
 
