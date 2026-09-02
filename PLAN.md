@@ -1472,6 +1472,7 @@
 - [x] SRS REQ-SHAPE-021..025 and E2E T194; typecheck, lint, full Playwright green, commit
 
 ### v0.73.0 — Whiteboard small wins — keyboard nudge, diamond, opacity, marquee on select + hand tool (2026-09-02 · 779/779 green (grok-4.6 build, coordinator run)) (COMPLETE)
+> Showcase for v0.69.0–v0.73.0 (before/after from the running app, real test numbers): https://claude.ai/code/artifact/fa13d083-9894-40b1-8f1f-f00dce47d395
 > Four small Excalidraw parity gaps: no arrow-key nudging (and Ctrl+T/D/E/L switched tools), no diamond shape, no opacity on shapes/images/strokes, and region selection needed the separate L tool because select-tool background drag panned. Excalidraw and every mainstream whiteboard use background drag for marquee and Space / middle button / hand tool for pan. DECISION TO VETO: this rewrites REQ-CANVAS-002 (pan) — left-drag on empty canvas now marquee-selects; pan via Space+drag, middle button, hand tool (H), wheel, touch drag.
 **Goal:** The select tool behaves like Excalidraw's: drag to marquee, arrows to nudge, and the shape palette gains diamond and opacity.
 - [x] Arrow keys nudge nodes and strokes by 1 (Shift 10), one history entry per press; Ctrl+T/D/E/L no longer switch tools
