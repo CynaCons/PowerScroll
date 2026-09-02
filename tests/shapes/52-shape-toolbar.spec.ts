@@ -28,11 +28,11 @@ test.describe('52 - Shape Toolbar (REQ-SHAPE-004..007, 012)', () => {
     await expect(page.locator('[data-testid="shape-toolbar"]')).toBeVisible();
   });
 
-  test('shape toolbar has all five shape type buttons (REQ-SHAPE-012)', async ({ page }) => {
+  test('shape toolbar has all six shape type buttons (REQ-SHAPE-012)', async ({ page }) => {
     await page.click('[data-testid="nav-shape-tool"]');
     await page.waitForTimeout(200);
 
-    for (const type of ['rect', 'circle', 'triangle', 'arrow', 'line']) {
+    for (const type of ['rect', 'circle', 'triangle', 'diamond', 'arrow', 'line']) {
       await expect(page.locator(`[data-testid="shape-type-${type}"]`)).toBeVisible();
     }
   });
@@ -127,7 +127,7 @@ test.describe('52 - Shape Toolbar (REQ-SHAPE-004..007, 012)', () => {
     await page.click('[data-testid="nav-shape-tool"]');
     await page.waitForTimeout(200);
 
-    const types = ['rect', 'circle', 'triangle', 'arrow', 'line'];
+    const types = ['rect', 'circle', 'triangle', 'diamond', 'arrow', 'line'];
 
     for (const type of types) {
       await page.click(`[data-testid="shape-type-${type}"]`);

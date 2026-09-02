@@ -57,6 +57,9 @@ async function createShapeViaDrag(
         strokeDash: [...shapeOpts.strokeDash],
       },
     });
+    stores.canvas.setState({ selectedNodeIds: [id] });
+    stores.draw.getState().selectStrokes([]);
+    stores.tool.getState().setTool('select');
   }, { shapeType, startX, startY, endX, endY });
 }
 
@@ -141,8 +144,11 @@ test.describe('54 - Shape Drag Create (REQ-SHAPE-001..003)', () => {
   });
 
   test('multiple shapes created consecutively', async ({ page }) => {
+    await page.keyboard.press('1');
     await createShapeViaDrag(page, 'rect', 100, 100, 200, 200);
+    await page.keyboard.press('2');
     await createShapeViaDrag(page, 'circle', 300, 100, 450, 250);
+    await page.keyboard.press('5');
     await createShapeViaDrag(page, 'arrow', 100, 300, 400, 200);
     await page.waitForTimeout(200);
 
@@ -150,11 +156,11 @@ test.describe('54 - Shape Drag Create (REQ-SHAPE-001..003)', () => {
     expect(store.nodes).toHaveLength(3);
     expect(store.nodes.map((n: any) => n.data.shapeType)).toEqual(['rect', 'circle', 'arrow']);
 
-    // Tool should still be shape
+    // Each commit returns to select; re-arming above uses the shape digits.
     const tool = await page.evaluate(() =>
       (window as any).__POWERNOTE_STORES__.tool.getState().activeTool
     );
-    expect(tool).toBe('shape');
+    expect(tool).toBe('select');
   });
 
   test('reverse drag (bottom-right to top-left) creates valid rect', async ({ page }) => {

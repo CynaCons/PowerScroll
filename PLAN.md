@@ -1500,13 +1500,13 @@
 - [x] T196 tests/draw/196-ink-integrity.spec.ts + SRS_DRAW rows 022–024
 - [x] Coordinator: typecheck, lint, affected specs, commit
 
-### v0.74.1 — Shape tool flow — digit shortcuts on the shape bar, back to select after creation
+### v0.74.1 — Shape tool flow — digit shortcuts on the shape bar, back to select after creation (2026-09-02) (COMPLETE)
 > User feedback 2026-09-02: Excalidraw's "keyboard digit = tool" on the floating shape bar, and returning to the select tool (new shape selected) as soon as a shape is drawn, because the next thing people do is move it or label it.
 
-- [ ] Digits 1–6 select shape types in bar order (global, not while typing or with modifiers); digit badges on the bar buttons — REQ-SHAPE-028
-- [ ] Committing a shape returns to the select tool with the new shape selected — REQ-SHAPE-029
-- [ ] T197 tests/shapes/197-shape-tool-flow.spec.ts + SRS_SHAPES rows 028/029; update specs that chained shape creations
-- [ ] Coordinator: typecheck, lint, affected specs, commit
+- [x] Digits 1–6 select shape types in bar order (global, not while typing or with modifiers); digit badges on the bar buttons — REQ-SHAPE-028
+- [x] Committing a shape returns to the select tool with the new shape selected — REQ-SHAPE-029
+- [x] T197 tests/shapes/197-shape-tool-flow.spec.ts + SRS_SHAPES rows 028/029; update specs that chained shape creations
+- [x] Coordinator: typecheck, lint, affected specs, commit
 
 ### v0.75.0 — Shape labels — centered text inside closed shapes
 > User feedback 2026-09-02: double-click a shape to edit centered text inside it. Plain-text label stored in the shape's data, rendered centered and word-wrapped in the shape's inner box, edited through a textarea overlay, shape grows in height when the text needs it.

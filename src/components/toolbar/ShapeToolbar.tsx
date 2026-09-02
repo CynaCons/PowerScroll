@@ -1,9 +1,10 @@
-import { Square, Circle, Triangle, Diamond, ArrowUpRight, Minus, Ban } from 'lucide-react';
+import { Ban } from 'lucide-react';
 import type { ShapeOptions, ShapeType } from '../../types/data';
 import { useToolStore } from '../../stores/useToolStore';
 import { ColorPopover } from './ColorPopover';
 import { SizePopover } from './SizePopover';
 import { OpacitySlider } from './OpacitySlider';
+import { SHAPE_TYPES } from './shapeTypes';
 import './BottomToolbar.css';
 
 interface ShapeToolbarProps {
@@ -11,15 +12,6 @@ interface ShapeToolbarProps {
   onChange: (updates: Partial<ShapeOptions>) => void;
   hasSelectedShape?: boolean; // true when a shape node is selected
 }
-
-const SHAPE_TYPES: { type: ShapeType; icon: typeof Square; label: string }[] = [
-  { type: 'rect', icon: Square, label: 'Rectangle' },
-  { type: 'circle', icon: Circle, label: 'Circle' },
-  { type: 'triangle', icon: Triangle, label: 'Triangle' },
-  { type: 'diamond', icon: Diamond, label: 'Diamond' },
-  { type: 'arrow', icon: ArrowUpRight, label: 'Arrow' },
-  { type: 'line', icon: Minus, label: 'Line' },
-];
 
 const DASH_PRESETS: { dash: number[]; label: string }[] = [
   { dash: [], label: 'Solid' },
@@ -45,15 +37,16 @@ export function ShapeToolbar({ options, onChange, hasSelectedShape: _hasSelected
     <div className="text-toolbar" data-testid="shape-toolbar">
       {/* Shape type selector — only highlight when shape tool is active */}
       <div className="shape-toolbar__types">
-        {SHAPE_TYPES.map(({ type, icon: Icon, label }) => (
+        {SHAPE_TYPES.map(({ type, icon: Icon, label }, index) => (
           <button
             key={type}
             className={`text-toolbar__btn ${isShapeToolActive && options.shapeType === type ? 'text-toolbar__btn--active' : ''}`}
             onClick={() => handleShapeTypeClick(type)}
-            title={label}
+            title={`${label} — ${index + 1}`}
             data-testid={`shape-type-${type}`}
           >
             <Icon size={15} />
+            <span className="shape-toolbar__key" data-testid={`shape-key-${type}`}>{index + 1}</span>
           </button>
         ))}
       </div>

@@ -124,6 +124,9 @@ test.describe('54 - Shape Click+Drag Creation (REQ-SHAPE-001..003)', () => {
 
     const store = await getCanvasStore(page);
     expect(store.nodes.length).toBe(0);
+    expect(await page.evaluate(() =>
+      (window as any).__POWERNOTE_STORES__.tool.getState().activeTool,
+    )).toBe('shape');
   });
 
   test('arrow dragged right-to-left has negative width', async ({ page }) => {

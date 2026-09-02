@@ -752,8 +752,9 @@ export function useShapeCreation(
           startBinding: startTarget ? { elementId: startTarget.id, fixedPoint: fixedPointFor(startTarget, snappedStart) } : null,
           endBinding: endTarget ? { elementId: endTarget.id, fixedPoint: fixedPointFor(endTarget, snappedEnd) } : null,
         } : {};
+        const id = generateId();
         useCanvasStore.getState().addNode({
-          id: generateId(),
+          id,
           type: 'shape',
           x: isLine ? snappedStart.x : shapePreview.x,
           y: isLine ? snappedStart.y : shapePreview.y,
@@ -770,6 +771,10 @@ export function useShapeCreation(
             ...arrowData,
           },
         });
+        // A committed shape is immediately ready to move, resize, or edit.
+        useCanvasStore.setState({ selectedNodeIds: [id] });
+        useDrawStore.getState().selectStrokes([]);
+        useToolStore.getState().setTool('select');
       }
     } else if (activePointer.current?.mode === 'lasso' && lassoRect && lassoRect.w > 5 && lassoRect.h > 5) {
       commitLasso(lassoRect, tool === 'lasso');

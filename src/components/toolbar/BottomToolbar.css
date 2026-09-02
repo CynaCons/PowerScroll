@@ -318,6 +318,21 @@
   gap: 2px;
 }
 
+.shape-toolbar__types .text-toolbar__btn {
+  position: relative;
+}
+
+.shape-toolbar__key {
+  position: absolute;
+  right: 3px;
+  bottom: 2px;
+  color: var(--color-text-muted);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  pointer-events: none;
+}
+
 .shape-toolbar__dashes {
   display: flex;
   align-items: center;

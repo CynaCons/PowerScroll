@@ -9,6 +9,7 @@ import { groupSelection, ungroupSelection } from '../utils/groupOps';
 import { getGroupMembers } from '../utils/groups';
 import { redoActive, undoActive } from '../utils/undoOps';
 import { recomputeBoundArrows } from '../utils/arrowBinding';
+import { SHAPE_KEYS } from '../components/toolbar/shapeTypes';
 
 /** Holding an arrow key coalesces repeats into one undo entry. */
 const NUDGE_COALESCE_MS = 300;
@@ -63,7 +64,7 @@ function nudgeSelection(dx: number, dy: number, recordHistory: boolean): boolean
 
 /**
  * Hook for all keyboard event handlers on the canvas.
- * Handles: Delete, Escape, V/H/T/D/S/E/L shortcuts,
+ * Handles: Delete, Escape, 1–6 shape, V/H/T/D/S/E/L shortcuts,
  * arrow-key nudge, Space (pan modifier),
  * Ctrl+Z (undo), Ctrl+Shift+Z/Ctrl+Y (redo),
  * Ctrl+C (copy), Ctrl+V (paste), Ctrl+A (select all).
@@ -150,6 +151,19 @@ export function useCanvasKeyboard(
         e.preventDefault();
         useCanvasStore.getState().setZoom(1);
         return;
+      }
+
+      // Shape digits follow the floating shape bar's canonical order. Shift is
+      // reserved for zoom presets, and modifiers must not steal browser/app shortcuts.
+      if (!e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+        const shapeType = SHAPE_KEYS[e.key];
+        if (shapeType) {
+          e.preventDefault();
+          const toolStore = useToolStore.getState();
+          toolStore.setShapeOptions({ shapeType });
+          toolStore.setTool('shape');
+          return;
+        }
       }
 
       // Arrow keys nudge the selection (nodes + strokes). Shift = 10.

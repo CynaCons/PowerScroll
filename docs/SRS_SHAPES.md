@@ -39,3 +39,5 @@ Allow users to create, style, select, move, resize, and delete geometric shapes 
 | REQ-SHAPE-025 | Pasted or duplicated arrows shall carry no bindings to nodes outside the copied set. | Must | T194 |
 | REQ-SHAPE-026 | The app shall support a diamond shape type, created and Shift-constrained like a rectangle, rendered as a four-point closed polygon, bindable on its four edges, and persisted through save/load. | Must | T195 |
 | REQ-SHAPE-027 | Shapes, images and strokes shall support opacity 0–1 (default 1), editable from the shape, image and draw toolbars, rendered on the Konva node, and persisted through save/load. | Must | T195 |
+| REQ-SHAPE-028 | Digits 1–6 shall select the shape types in the order of the shape bar (rect, circle, triangle, diamond, arrow, line), activating the shape tool when needed, never while a text field has focus or a modifier is held; each bar button shall show its digit. | Must | T197 |
+| REQ-SHAPE-029 | Committing a shape shall return the tool to select with the new shape as the only selection. | Must | T197 |
