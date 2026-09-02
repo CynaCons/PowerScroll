@@ -1,3 +1,6 @@
 [submodule "powerplan"]
 	path = powerplan
 	url = https://github.com/CynaCons/powerplan.git
+[submodule "powerspawn"]
+	path = powerspawn
+	url = https://github.com/CynaCons/PowerSpawn.git
