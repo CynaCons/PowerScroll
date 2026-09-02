@@ -1429,9 +1429,22 @@
 - [x] Publish v0.67.0, deploy GitHub Pages, inspect the live product, and document remaining owner-only actions [agent: Codex]
 - [x] Keep GitHub CI lightweight by running the full Playwright campaign locally instead of on every push [agent: Codex]
 
-### v0.69.1 — Freehand ink through perfect-freehand — streamlined, thinned, tapered (ACTIVE)
+### v0.69.1 — Freehand ink through perfect-freehand — streamlined, thinned, tapered (2026-09-02 · 759/760 then 3/3 on rerun) (COMPLETE)
 > Strokes rendered raw pointer samples with Konva tension only; the variable-width ribbon in inkOutline.ts was a hand-rolled normal-offset walk that applied to stylus strokes alone, so mouse and finger ink was a mechanical constant-width polyline. Excalidraw renders every freedraw element through perfect-freehand (MIT): streamline, thinning by pressure, simulated pressure when the device has none, taper at both ends.
 **Goal:** Every stroke, mouse or pen, renders through perfect-freehand with the same calibrated width as before; stored stroke data is unchanged so legacy notebooks render without migration.
+- [x] Add perfect-freehand (MIT) and route buildInkOutline through getStroke with calibrated size/thinning/streamline
+- [x] Every stroke renders through the outline path (mouse/touch simulate pressure and taper); constant-width Line branch removed
+- [x] SRS REQ-DRAW-020/021 and E2E T190 freehand outline spec; T135 stays green
+- [x] Typecheck, lint, full Playwright green, commit
+
+### v0.70.0 — Transformer completeness — multi-select resize, Shift/Alt modifiers, rotation, ink scales with the selection (ACTIVE)
+> Multi-selection showed a dashed border but hid every anchor, so a group of shapes could not be resized together; Shift did not lock aspect ratio and Alt did not scale from the centre; rotation was disabled except the image toolbar's 90° steps; freehand strokes only ever translated, so resizing a lasso selection with ink scaled the shapes and left the ink behind. Excalidraw's resizeElements.ts gives the target semantics.
+**Goal:** Any selection — shapes, text, images, strokes, or a mix — resizes and rotates as one body with Excalidraw's modifier semantics, in one undo entry.
+- [ ] Multi-select resize: anchors shown, per-node scale→size conversion, text fontSize scales, one undo frame across both stores [agent: codex]
+- [ ] Shift keeps aspect ratio (forced with text/images in selection); Alt scales around the centre [agent: codex]
+- [ ] Rotation handle with 45° snaps for shapes and images, persisted on the node and round-tripped [agent: codex]
+- [ ] Selected strokes scale and rotate with the selection (proxy bbox + transformStrokes in the draw store) [agent: codex]
+- [ ] SRS REQ-CANVAS-031..035 and E2E T191; typecheck, lint, full Playwright green, commit [agent: codex]
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.

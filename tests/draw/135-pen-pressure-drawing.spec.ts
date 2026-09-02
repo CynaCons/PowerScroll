@@ -3,8 +3,8 @@
  *
  * Covers: REQ-DRAW-010 (pointer events carry pen/mouse/touch into the draw
  * tools, one stroke per contact), REQ-DRAW-011 (stylus pressure recorded
- * per point and rendered as a variable-width ribbon; mouse strokes stay
- * constant width), REQ-DRAW-014 (the stylus eraser end erases while held).
+ * per point and rendered as a variable-width outline; mouse strokes use
+ * simulated pressure), REQ-DRAW-014 (the stylus eraser end erases while held).
  *
  * Strokes are driven by dispatching PointerEvents at the Konva content —
  * Konva 10 routes DOM pointer events through its own event system
@@ -106,7 +106,7 @@ test.describe('135 - Pen pressure drawing (REQ-DRAW-010/011/014)', () => {
     expect(result.penDetected).toBe(true);
   });
 
-  test('a pressure stroke renders as a closed filled ribbon, not a plain line', async ({ page }) => {
+  test('a pressure stroke renders as a filled freehand outline', async ({ page }) => {
     await pointerStroke(page, {
       pointerType: 'pen',
       from: { x: 300, y: 300 },
@@ -116,21 +116,23 @@ test.describe('135 - Pen pressure drawing (REQ-DRAW-010/011/014)', () => {
     });
     await page.waitForTimeout(100);
 
-    const ribbon = await page.evaluate(() => {
+    const outline = await page.evaluate(() => {
       const Konva = (window as any).Konva;
       const stage = Konva?.stages?.[0];
       if (!stage) return null;
       const drawLayer = stage.getChildren().find((l: any) => l.name() === 'draw-layer');
       if (!drawLayer) return null;
-      const lines = drawLayer.find('Line');
-      return lines.map((l: any) => ({ closed: l.closed(), hasFill: !!l.fill() }));
+      return drawLayer.find('.freehand-outline').map((node: any) => ({
+        kind: node.getClassName(),
+        hasFill: !!node.fill(),
+      }));
     });
 
-    expect(ribbon).not.toBeNull();
-    expect(ribbon!.some((l: any) => l.closed && l.hasFill)).toBe(true);
+    expect(outline).not.toBeNull();
+    expect(outline!.some((node: any) => node.kind === 'Shape' && node.hasFill)).toBe(true);
   });
 
-  test('a mouse stroke records no pressures and stays constant width', async ({ page }) => {
+  test('a mouse stroke records no pressures', async ({ page }) => {
     await pointerStroke(page, {
       pointerType: 'mouse',
       from: { x: 300, y: 300 },

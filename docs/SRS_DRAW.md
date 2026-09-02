@@ -22,7 +22,7 @@ Allow users to draw freehand strokes on the canvas using a pen tool and erase st
 | REQ-DRAW-008 | Strokes shall be included in the exported HTML file and restored on import | Must | — |
 | REQ-DRAW-009 | Freehand strokes shall render visually above all canvas nodes (images, text, shapes), regardless of the node's `layer` value, so the user can annotate over screenshots and other content | Must | T81 |
 | REQ-DRAW-010 | The draw, erase, shape and lasso tools shall accept input from mouse, pen (stylus) and touch pointers via pointer events; a pen contact shall never be dropped in favour of a synthesized mouse event (no double strokes) | Must | T135 |
-| REQ-DRAW-011 | Pen strokes shall record per-point pressure and render with variable width proportional to pressure; strokes without pressure data (mouse, finger, all previously saved strokes) shall render at constant width exactly as before | Must | T135 |
+| REQ-DRAW-011 | Pen strokes shall record per-point pressure and render with variable width proportional to pressure; strokes without pressure data (mouse, finger, all previously saved strokes) shall render with simulated pressure | Must | T135 |
 | REQ-DRAW-012 | A touch-draw mode (`auto` / `always` / `never`) shall control whether a single finger draws or pans in draw mode. In `auto` (default), fingers draw until the first pen contact is seen, after which fingers pan; in `never`, fingers always pan; in `always`, fingers always draw | Must | T136 |
 | REQ-DRAW-013 | While a pen contact is active, all touch pointers shall be ignored (palm rejection); a second finger landing during a single-finger touch stroke shall cancel that stroke and hand the gesture to pinch-zoom | Must | T136 |
 | REQ-DRAW-014 | The stylus eraser end (pointer `buttons` bit 32) shall erase while held using the current eraser mode and size, and inking shall resume when the eraser end is lifted, without changing the selected tool | Should | T135 |
@@ -31,3 +31,5 @@ Allow users to draw freehand strokes on the canvas using a pen tool and erase st
 | REQ-DRAW-017 | Holding Alt while using the stroke eraser shall unmark touched pending strokes so they survive the gesture | Should | T189 |
 | REQ-DRAW-018 | One erase gesture shall create at most one draw undo entry in both stroke and zone modes | Must | T189 |
 | REQ-DRAW-019 | Zone eraser shall erase continuously along the swept path between pointer samples | Must | T189 |
+| REQ-DRAW-020 | All freehand strokes shall render through a perfect-freehand outline with thinning and streamlining; mouse and touch strokes shall simulate pressure so they taper at both ends | Must | T190 |
+| REQ-DRAW-021 | Strokes with recorded pressure shall use it directly; stored stroke data shall remain unchanged and legacy notebooks shall render without migration | Must | T190 |

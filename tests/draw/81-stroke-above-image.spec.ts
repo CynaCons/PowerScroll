@@ -33,7 +33,7 @@ test.describe('81 - Strokes render above nodes (REQ-DRAW-009)', () => {
       return children.map((c: any, idx: number) => ({
         idx,
         name: c.name() || null,
-        hasDrawGroup: !!c.findOne('.stroke-group') || !!c.findOne('Line'),
+        hasDrawGroup: !!c.findOne('.stroke-group') || !!c.findOne('.freehand-outline'),
       }));
     });
 
@@ -70,7 +70,7 @@ test.describe('81 - Strokes render above nodes (REQ-DRAW-009)', () => {
 
     await page.waitForTimeout(200);
 
-    // Inspect the Konva tree: the stroke's Line node must exist on a
+    // Inspect the Konva tree: the stroke's outline node must exist on a
     // layer whose index is higher than any layer containing an Image.
     const indices = await page.evaluate(() => {
       const Konva = (window as any).Konva;
@@ -83,7 +83,7 @@ test.describe('81 - Strokes render above nodes (REQ-DRAW-009)', () => {
       let strokeLayerIdx = -1;
       layers.forEach((layer, idx) => {
         if (layer.findOne('Image')) imageLayerIdx = Math.max(imageLayerIdx, idx);
-        if (layer.findOne('Line')) strokeLayerIdx = Math.max(strokeLayerIdx, idx);
+        if (layer.findOne('.freehand-outline')) strokeLayerIdx = Math.max(strokeLayerIdx, idx);
       });
       return { imageLayerIdx, strokeLayerIdx };
     });

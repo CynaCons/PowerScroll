@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
-import { Line, Circle, Rect } from 'react-konva';
+import { Line, Circle, Rect, Shape } from 'react-konva';
 import type { Stroke } from '../../types/data';
-import { buildInkOutline } from '../../utils/inkOutline';
+import { buildInProgressInkOutline, buildInkOutline } from '../../utils/inkOutline';
 
 interface DrawingLayerProps {
   strokes: Stroke[];
@@ -18,50 +18,53 @@ interface DrawingLayerProps {
   lassoRect: { x: number; y: number; w: number; h: number } | null;
 }
 
-/**
- * One committed stroke. A pressure stroke (stylus, REQ-DRAW-011) renders as
- * a closed filled ribbon whose width follows the recorded pressure; anything
- * without pressures — mouse, finger, every pre-v0.42 stroke — stays the
- * constant-width Line it always was. The outline is memoised: strokes are
- * immutable between edits, so it computes once, not per frame.
- */
+/** Draw an outline with quadratic curves through each pair of vertex midpoints. */
+function FreehandOutline({
+  points,
+  color,
+  opacity = 1,
+}: {
+  points: number[];
+  color: string;
+  opacity?: number;
+}) {
+  return (
+    <Shape
+      name="freehand-outline"
+      fill={color}
+      opacity={opacity}
+      listening={false}
+      perfectDrawEnabled={false}
+      sceneFunc={(context, shape) => {
+        // buildInkOutline repeats its first vertex to make closure explicit;
+        // omit it here because the midpoint loop closes the path itself.
+        const vertexCount = points.length / 2 - 1;
+        if (vertexCount < 3) return;
+        const pointAt = (index: number) => [points[index * 2], points[index * 2 + 1]];
+        const [lastX, lastY] = pointAt(vertexCount - 1);
+        const [firstX, firstY] = pointAt(0);
+        context.beginPath();
+        context.moveTo((lastX + firstX) / 2, (lastY + firstY) / 2);
+        for (let index = 0; index < vertexCount; index++) {
+          const [x, y] = pointAt(index);
+          const [nextX, nextY] = pointAt((index + 1) % vertexCount);
+          context.quadraticCurveTo(x, y, (x + nextX) / 2, (y + nextY) / 2);
+        }
+        context.closePath();
+        context.fillStrokeShape(shape);
+      }}
+    />
+  );
+}
+
+/** One committed outline. Strokes are immutable between edits, so memoise it. */
 function CommittedStroke({ stroke, opacity = 1 }: { stroke: Stroke; opacity?: number }) {
   const outline = useMemo(
-    () =>
-      stroke.pressures
-        ? buildInkOutline(stroke.points, stroke.pressures, stroke.strokeWidth)
-        : null,
+    () => buildInkOutline(stroke.points, stroke.pressures, stroke.strokeWidth),
     [stroke.points, stroke.pressures, stroke.strokeWidth],
   );
 
-  if (outline) {
-    return (
-      <Line
-        points={outline}
-        closed
-        fill={stroke.color}
-        stroke={stroke.color}
-        strokeWidth={1}
-        lineJoin="round"
-        listening={false}
-        perfectDrawEnabled={false}
-        opacity={opacity}
-      />
-    );
-  }
-  return (
-    <Line
-      points={stroke.points}
-      stroke={stroke.color}
-      strokeWidth={stroke.strokeWidth}
-      tension={0.3}
-      lineCap="round"
-      lineJoin="round"
-      globalCompositeOperation="source-over"
-      listening={false}
-      opacity={opacity}
-    />
-  );
+  return outline ? <FreehandOutline points={outline} color={stroke.color} opacity={opacity} /> : null;
 }
 
 export function DrawingLayer({
@@ -81,13 +84,10 @@ export function DrawingLayer({
   const selectedSet = new Set(selectedStrokeIds);
   const pendingSet = new Set(pendingEraseIds);
 
-  // Live stylus ink previews with the same ribbon it will commit as —
-  // pressure feedback that only appears on lift teaches nothing.
+  // Live ink uses the same outline but leaves the tail unfixed until pointerup.
   const inProgressOutline =
-    inProgressPoints &&
-    inProgressPressures &&
-    inProgressPressures.length * 2 === inProgressPoints.length
-      ? buildInkOutline(inProgressPoints, inProgressPressures, inProgressWidth)
+    inProgressPoints
+      ? buildInProgressInkOutline(inProgressPoints, inProgressPressures, inProgressWidth)
       : null;
 
   return (
@@ -115,30 +115,7 @@ export function DrawingLayer({
         ))}
 
       {/* In-progress stroke (while drawing) */}
-      {inProgressPoints && inProgressPoints.length >= 4 && (
-        inProgressOutline ? (
-          <Line
-            points={inProgressOutline}
-            closed
-            fill={inProgressColor}
-            stroke={inProgressColor}
-            strokeWidth={1}
-            lineJoin="round"
-            listening={false}
-            perfectDrawEnabled={false}
-          />
-        ) : (
-          <Line
-            points={inProgressPoints}
-            stroke={inProgressColor}
-            strokeWidth={inProgressWidth}
-            tension={0.3}
-            lineCap="round"
-            lineJoin="round"
-            listening={false}
-          />
-        )
-      )}
+      {inProgressOutline && <FreehandOutline points={inProgressOutline} color={inProgressColor} />}
 
       {/* Eraser cursor circle */}
       {eraserPos && (
