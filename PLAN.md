@@ -1517,14 +1517,16 @@
 - [x] T198 tests/shapes/198-shape-labels.spec.ts + SRS_SHAPES rows 030–032
 - [x] Coordinator: typecheck, lint, affected specs, commit
 
-### v0.75.1 — Arrow binding controls — Ctrl bypass and anchor-point preview
+### v0.75.1 — Arrow binding controls — Ctrl bypass and anchor-point preview (2026-09-03) (COMPLETE)
 > User feedback 2026-09-02: a modifier to place arrow endpoints without binding (Ctrl/Cmd, Excalidraw parity) and a live preview of the exact anchor point the endpoint will snap to.
 
-- [ ] Ctrl/Cmd held while placing or dragging an endpoint suppresses binding (no hint, no binding, exact placement) — REQ-SHAPE-033
-- [ ] BindingHint component: dashed target outline plus live anchor-point dot at the exact attach point, used by creation and endpoint drag — REQ-SHAPE-034
-- [ ] T199 tests/shapes/199-binding-controls.spec.ts + SRS_SHAPES rows 033/034
-- [ ] Coordinator: typecheck, lint, affected specs, commit
-- [ ] Round-2 wrap-up: full Playwright campaign, template smoke test, showcase artifact with real captures
+- [x] Ctrl/Cmd held while placing or dragging an endpoint suppresses binding (no hint, no binding, exact placement) — REQ-SHAPE-033
+- [x] BindingHint component: dashed target outline plus live anchor-point dot at the exact attach point, used by creation and endpoint drag — REQ-SHAPE-034
+- [x] T199 tests/shapes/199-binding-controls.spec.ts + SRS_SHAPES rows 033/034
+- [x] Coordinator: typecheck, lint, affected specs, commit
+- [x] Round-2 wrap-up: full Playwright campaign, template smoke test, showcase artifact with real captures
+
+Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captures): https://claude.ai/code/artifact/2e55b6ad-d90f-4038-84ec-18b6b8b70597
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.
