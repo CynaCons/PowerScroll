@@ -16,6 +16,7 @@ import { DrawingLayer } from './DrawingLayer';
 import { TrashButton } from './TrashButton';
 import { DiagramSourceDialog } from './DiagramSourceDialog';
 import { ImageLightbox } from './ImageLightbox';
+import { BindingHint } from './BindingHint';
 import { useShapeCreation } from '../../hooks/useShapeCreation';
 import { useTextPlacement, consumeAutoEditNodeId } from '../../hooks/useTextPlacement';
 import { useCanvasKeyboard } from '../../hooks/useCanvasKeyboard';
@@ -87,7 +88,7 @@ export function InfiniteCanvas({ backgroundMode = 'pages', bgColor = '#ffffff' }
     penCursorPos,
     lassoRect,
     shapePreview,
-    bindingHintId,
+    bindingHint,
     handleDrawPointerDown,
     handleDrawPointerMove,
     handleDrawPointerUp,
@@ -420,18 +421,10 @@ export function InfiniteCanvas({ backgroundMode = 'pages', bgColor = '#ffffff' }
               if (opts.shapeType === 'line') return <KonvaLine points={[sp.x, sp.y, sp.x + sp.w, sp.y + sp.h]} stroke={opts.stroke} strokeWidth={opts.strokeWidth} lineCap="round" opacity={0.6} listening={false} />;
               return null;
             })()}
-            {bindingHintId && (() => {
-              const target = nodes.find((node) => node.id === bindingHintId);
+            {bindingHint && (() => {
+              const target = nodes.find((node) => node.id === bindingHint.targetId);
               if (!target) return null;
-              const rotation = (target.data as { rotation?: number }).rotation ?? 0;
-              const x = rotation ? target.x + target.width / 2 : target.x;
-              const y = rotation ? target.y + target.height / 2 : target.y;
-              return <KonvaRect
-                x={x} y={y} width={target.width} height={target.height}
-                rotation={rotation} offsetX={rotation ? target.width / 2 : 0} offsetY={rotation ? target.height / 2 : 0}
-                stroke="#2563eb" strokeWidth={1 / currentScale} dash={[5 / currentScale, 4 / currentScale]}
-                fill="transparent" listening={false}
-              />;
+              return <BindingHint target={target} point={bindingHint.point} scale={currentScale} offset={{ x: 0, y: 0 }} />;
             })()}
 
             {/* Paint order. Group-aware: a diagram's members sort inside its

@@ -84,7 +84,7 @@ export function useShapeCreation(
 
   // Shape creation state
   const [shapePreview, setShapePreview] = useState<ShapePreview | null>(null);
-  const [bindingHintId, setBindingHintId] = useState<string | null>(null);
+  const [bindingHint, setBindingHint] = useState<{ targetId: string; point: { x: number; y: number } } | null>(null);
   const shapeStart = useRef<{ x: number; y: number } | null>(null);
 
   const getCanvasPoint = useCallback(() => {
@@ -672,13 +672,13 @@ export function useShapeCreation(
       if (shapeType === 'arrow' || shapeType === 'line') {
         // Arrows/lines: store start point and signed delta
         setShapePreview({ x: start.x, y: start.y, w, h });
-        const candidate = bindingCandidate(
+        const candidate = evt.ctrlKey || evt.metaKey ? null : bindingCandidate(
           useCanvasStore.getState().nodes,
           pt,
           undefined,
           12 / useCanvasStore.getState().viewport.scale,
         );
-        setBindingHintId(candidate?.id ?? null);
+        setBindingHint(candidate ? { targetId: candidate.id, point: closestPointOnOutline(candidate, pt) } : null);
       } else {
         // Other shapes: normalize to positive width/height with top-left origin
         setShapePreview({
@@ -744,8 +744,9 @@ export function useShapeCreation(
         const nodes = useCanvasStore.getState().nodes;
         const startPoint = { x: shapePreview.x, y: shapePreview.y };
         const endPoint = { x: shapePreview.x + shapePreview.w, y: shapePreview.y + shapePreview.h };
-        const startTarget = isLine ? bindingCandidate(nodes, startPoint, undefined, 12 / useCanvasStore.getState().viewport.scale) : null;
-        const endTarget = isLine ? bindingCandidate(nodes, endPoint, undefined, 12 / useCanvasStore.getState().viewport.scale) : null;
+        const bindingDisabled = e.evt.ctrlKey || e.evt.metaKey;
+        const startTarget = isLine && !bindingDisabled ? bindingCandidate(nodes, startPoint, undefined, 12 / useCanvasStore.getState().viewport.scale) : null;
+        const endTarget = isLine && !bindingDisabled ? bindingCandidate(nodes, endPoint, undefined, 12 / useCanvasStore.getState().viewport.scale) : null;
         const snappedStart = startTarget ? closestPointOnOutline(startTarget, startPoint) : startPoint;
         const snappedEnd = endTarget ? closestPointOnOutline(endTarget, endPoint) : endPoint;
         const arrowData: Partial<ShapeNodeData> = isLine ? {
@@ -789,7 +790,7 @@ export function useShapeCreation(
     setInProgressPressures(null);
     shapeStart.current = null;
     setShapePreview(null);
-    setBindingHintId(null);
+    setBindingHint(null);
     lassoStart.current = null;
     setLassoRect(null);
     const opts = useToolStore.getState().drawOptions;
@@ -828,7 +829,7 @@ export function useShapeCreation(
     penCursorPos,
     lassoRect,
     shapePreview,
-    bindingHintId,
+    bindingHint,
     // Handlers
     handleDrawPointerDown,
     handleDrawPointerMove,

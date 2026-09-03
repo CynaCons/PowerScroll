@@ -39,7 +39,8 @@ test.describe('197 - Shape tool flow (REQ-SHAPE-028, REQ-SHAPE-029)', () => {
 
     for (const [index, [type, label]] of SHAPES.entries()) {
       const key = String(index + 1);
-      await expect(page.locator(`[data-testid="shape-type-${type}"]`)).toHaveAttribute('title', `${label} — ${key}`);
+      const bindingHint = type === 'arrow' || type === 'line' ? ' — Ctrl: no binding' : '';
+      await expect(page.locator(`[data-testid="shape-type-${type}"]`)).toHaveAttribute('title', `${label} — ${key}${bindingHint}`);
       await expect(page.locator(`[data-testid="shape-key-${type}"]`)).toHaveText(key);
     }
   });

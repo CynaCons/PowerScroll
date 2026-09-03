@@ -42,7 +42,7 @@ export function ShapeToolbar({ options, onChange, hasSelectedShape: _hasSelected
             key={type}
             className={`text-toolbar__btn ${isShapeToolActive && options.shapeType === type ? 'text-toolbar__btn--active' : ''}`}
             onClick={() => handleShapeTypeClick(type)}
-            title={`${label} — ${index + 1}`}
+            title={`${label} — ${index + 1}${type === 'arrow' || type === 'line' ? ' — Ctrl: no binding' : ''}`}
             data-testid={`shape-type-${type}`}
           >
             <Icon size={15} />

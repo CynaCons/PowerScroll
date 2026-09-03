@@ -14,6 +14,7 @@ import { columnLeft, columnWidth } from '../../utils/pageLayout';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { useHistoryStore } from '../../stores/useHistoryStore';
 import { bindingCandidate, closestPointOnOutline, fixedPointFor } from '../../utils/arrowBinding';
+import { BindingHint } from './BindingHint';
 import { ShapeLabelEditor, isClosedLabelShape, measureShapeLabelHeight, shapeLabelBox, shapeLabelFontSize } from './ShapeLabelEditor';
 import { defaultTextOptions } from '../../utils/defaults';
 
@@ -31,7 +32,7 @@ export function ShapeNode({ node, isSelected, onSelect, stageScale, onSnapChange
   const updateNode = useCanvasStore((s) => s.updateNode);
   const updateNodeSilent = useCanvasStore((s) => s.updateNodeSilent);
   const [hovered, setHovered] = useState(false);
-  const [bindingHintId, setBindingHintId] = useState<string | null>(null);
+  const [bindingHint, setBindingHint] = useState<{ targetId: string; point: { x: number; y: number } } | null>(null);
   const [isEditingLabel, setIsEditingLabel] = useState(false);
 
   const openLabelEditor = () => {
@@ -415,8 +416,8 @@ export function ShapeNode({ node, isSelected, onSelect, stageScale, onSnapChange
               e.target.y(0);
               const current = useCanvasStore.getState().nodes.find((item) => item.id === node.id) ?? node;
               const point = { x: current.x + dx, y: current.y + dy };
-              const candidate = bindingCandidate(useCanvasStore.getState().nodes, point, node.id, 12 / useCanvasStore.getState().viewport.scale);
-              setBindingHintId(candidate?.id ?? null);
+              const candidate = e.evt.ctrlKey || e.evt.metaKey ? null : bindingCandidate(useCanvasStore.getState().nodes, point, node.id, 12 / useCanvasStore.getState().viewport.scale);
+              setBindingHint(candidate ? { targetId: candidate.id, point: closestPointOnOutline(candidate, point) } : null);
               // Live update: move start point, adjust direction vector.
               updateNodeSilent(node.id, {
                 x: point.x,
@@ -430,13 +431,13 @@ export function ShapeNode({ node, isSelected, onSelect, stageScale, onSnapChange
               e.target.x(0);
               e.target.y(0);
               const current = useCanvasStore.getState().nodes.find((item) => item.id === node.id) ?? node;
-              const candidate = bindingCandidate(useCanvasStore.getState().nodes, { x: current.x, y: current.y }, node.id, 12 / useCanvasStore.getState().viewport.scale);
+              const candidate = e.evt.ctrlKey || e.evt.metaKey ? null : bindingCandidate(useCanvasStore.getState().nodes, { x: current.x, y: current.y }, node.id, 12 / useCanvasStore.getState().viewport.scale);
               const start = candidate ? closestPointOnOutline(candidate, { x: current.x, y: current.y }) : { x: current.x, y: current.y };
               const end = { x: current.x + current.width, y: current.y + current.height };
               updateNode(node.id, { x: start.x, y: start.y, width: end.x - start.x, height: end.y - start.y });
               useCanvasStore.getState().setArrowBinding(node.id, 'start', candidate ? { elementId: candidate.id, fixedPoint: fixedPointFor(candidate, start) } : null);
               useHistoryStore.getState().batchEnd();
-              setBindingHintId(null);
+              setBindingHint(null);
             }}
           />
 
@@ -465,8 +466,8 @@ export function ShapeNode({ node, isSelected, onSelect, stageScale, onSnapChange
               e.cancelBubble = true;
               const current = useCanvasStore.getState().nodes.find((item) => item.id === node.id) ?? node;
               const point = { x: current.x + e.target.x(), y: current.y + e.target.y() };
-              const candidate = bindingCandidate(useCanvasStore.getState().nodes, point, node.id, 12 / useCanvasStore.getState().viewport.scale);
-              setBindingHintId(candidate?.id ?? null);
+              const candidate = e.evt.ctrlKey || e.evt.metaKey ? null : bindingCandidate(useCanvasStore.getState().nodes, point, node.id, 12 / useCanvasStore.getState().viewport.scale);
+              setBindingHint(candidate ? { targetId: candidate.id, point: closestPointOnOutline(candidate, point) } : null);
               // Live update: end point changes direction vector.
               updateNodeSilent(node.id, {
                 width: e.target.x(),
@@ -477,26 +478,22 @@ export function ShapeNode({ node, isSelected, onSelect, stageScale, onSnapChange
               e.cancelBubble = true;
               const current = useCanvasStore.getState().nodes.find((item) => item.id === node.id) ?? node;
               const point = { x: current.x + current.width, y: current.y + current.height };
-              const candidate = bindingCandidate(useCanvasStore.getState().nodes, point, node.id, 12 / useCanvasStore.getState().viewport.scale);
+              const candidate = e.evt.ctrlKey || e.evt.metaKey ? null : bindingCandidate(useCanvasStore.getState().nodes, point, node.id, 12 / useCanvasStore.getState().viewport.scale);
               const end = candidate ? closestPointOnOutline(candidate, point) : point;
               updateNode(node.id, { width: end.x - current.x, height: end.y - current.y });
               useCanvasStore.getState().setArrowBinding(node.id, 'end', candidate ? { elementId: candidate.id, fixedPoint: fixedPointFor(candidate, end) } : null);
               useHistoryStore.getState().batchEnd();
               e.target.x(current.width);
               e.target.y(current.height);
-              setBindingHintId(null);
+              setBindingHint(null);
             }}
           />
         </>
       )}
-      {bindingHintId && (() => {
-        const target = useCanvasStore.getState().nodes.find((item) => item.id === bindingHintId);
+      {bindingHint && (() => {
+        const target = useCanvasStore.getState().nodes.find((item) => item.id === bindingHint.targetId);
         if (!target) return null;
-        return <Rect
-          x={target.x - node.x} y={target.y - node.y} width={target.width} height={target.height}
-          stroke="#2563eb" strokeWidth={1 / stageScale} dash={[5 / stageScale, 4 / stageScale]}
-          fill="transparent" listening={false}
-        />;
+        return <BindingHint target={target} point={bindingHint.point} scale={stageScale} offset={{ x: node.x, y: node.y }} />;
       })()}
     </Group>
   );
