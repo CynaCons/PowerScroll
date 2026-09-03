@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react';
-import { Group, Rect, Ellipse, Line, Arrow, Circle, Arc } from 'react-konva';
+import { useEffect, useRef, useState } from 'react';
+import { Group, Rect, Ellipse, Line, Arrow, Circle, Arc, Text } from 'react-konva';
 import type Konva from 'konva';
 import type { CanvasNode, ShapeNodeData } from '../../types/data';
 import { useCanvasStore } from '../../stores/useCanvasStore';
@@ -14,6 +14,8 @@ import { columnLeft, columnWidth } from '../../utils/pageLayout';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { useHistoryStore } from '../../stores/useHistoryStore';
 import { bindingCandidate, closestPointOnOutline, fixedPointFor } from '../../utils/arrowBinding';
+import { ShapeLabelEditor, isClosedLabelShape, measureShapeLabelHeight, shapeLabelBox, shapeLabelFontSize } from './ShapeLabelEditor';
+import { defaultTextOptions } from '../../utils/defaults';
 
 interface ShapeNodeProps {
   node: CanvasNode;
@@ -30,6 +32,21 @@ export function ShapeNode({ node, isSelected, onSelect, stageScale, onSnapChange
   const updateNodeSilent = useCanvasStore((s) => s.updateNodeSilent);
   const [hovered, setHovered] = useState(false);
   const [bindingHintId, setBindingHintId] = useState<string | null>(null);
+  const [isEditingLabel, setIsEditingLabel] = useState(false);
+
+  const openLabelEditor = () => {
+    if (isClosedLabelShape(node)) setIsEditingLabel(true);
+  };
+
+  // The global canvas keyboard hook has no component-local editor state.
+  // This small event keeps Enter scoped to the currently mounted shape node.
+  useEffect(() => {
+    const open = (event: Event) => {
+      if ((event as CustomEvent<string>).detail === node.id) setIsEditingLabel(true);
+    };
+    window.addEventListener('powerscroll:open-shape-label', open);
+    return () => window.removeEventListener('powerscroll:open-shape-label', open);
+  }, [node.id]);
 
   const handleDragStart = (e: Konva.KonvaEventObject<DragEvent>) => {
     // Ctrl+drag duplicates shapes; duplicate arrows intentionally start free.
@@ -99,13 +116,47 @@ export function ShapeNode({ node, isSelected, onSelect, stageScale, onSnapChange
 
   const handleDblClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
     e.cancelBubble = true;
-    if (!node.groupId) return;
-    const editing = useGroupStore.getState().editingGroupId;
-    if (editing === node.groupId) return;
-    useGroupStore.getState().enterIsolation(node.groupId);
-    // Select only this member inside isolation
-    useCanvasStore.setState({ selectedNodeIds: [node.id] });
-    useDrawStore.getState().selectStrokes([]);
+    if (node.groupId) {
+      const editing = useGroupStore.getState().editingGroupId;
+      if (editing !== node.groupId) {
+        useGroupStore.getState().enterIsolation(node.groupId);
+        // Select only this member inside isolation
+        useCanvasStore.setState({ selectedNodeIds: [node.id] });
+        useDrawStore.getState().selectStrokes([]);
+        return;
+      }
+    }
+    onSelect(node.id, false);
+    openLabelEditor();
+  };
+
+  const finishLabelEdit = (text: string) => {
+    setIsEditingLabel(false);
+    const current = useCanvasStore.getState().nodes.find((item) => item.id === node.id);
+    if (!current || current.type !== 'shape') return;
+    const currentData = current.data as ShapeNodeData;
+    const trimmed = text.trim();
+    const nextData = { ...currentData };
+    if (trimmed) nextData.label = { ...currentData.label, text };
+    else delete nextData.label;
+
+    const box = shapeLabelBox(current);
+    let height = current.height;
+    if (trimmed && box) {
+      const needed = measureShapeLabelHeight(text, box.width, currentData);
+      if (needed > box.height) {
+        if (currentData.shapeType === 'rect') height = needed + 16;
+        else if (currentData.shapeType === 'circle') height = needed * Math.SQRT2;
+        else height = needed * 2; // diamond and lower-half triangle boxes
+      }
+    }
+    useHistoryStore.getState().batchStart();
+    useHistoryStore.getState().record();
+    try {
+      updateNodeSilent(node.id, { data: nextData, height });
+    } finally {
+      useHistoryStore.getState().batchEnd();
+    }
   };
 
   const fill = data.fill === 'transparent' ? undefined : data.fill;
@@ -262,6 +313,35 @@ export function ShapeNode({ node, isSelected, onSelect, stageScale, onSnapChange
           dash={dash}
           lineCap="round"
           listening={false}
+        />
+      )}
+
+      {data.label?.text && !isEditingLabel && (() => {
+        const box = shapeLabelBox(node);
+        if (!box) return null;
+        return <Text
+          name="shape-label"
+          x={box.x}
+          y={box.y}
+          width={box.width}
+          height={box.height}
+          text={data.label.text}
+          fontSize={shapeLabelFontSize(data)}
+          fontFamily={defaultTextOptions.fontFamily}
+          fill={stroke}
+          align="center"
+          verticalAlign="middle"
+          wrap="word"
+          lineHeight={1.2}
+          listening={false}
+        />;
+      })()}
+
+      {isEditingLabel && (
+        <ShapeLabelEditor
+          node={node}
+          onFinish={finishLabelEdit}
+          onCancel={() => setIsEditingLabel(false)}
         />
       )}
 

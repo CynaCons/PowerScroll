@@ -58,6 +58,11 @@ export interface ShapeNodeData {
   endBinding?: ArrowBinding | null;
   /** 0–1, default 1. Absent keeps pre-v0.73 files opaque. */
   opacity?: number;
+  /** Plain text shown inside closed shapes. Absent keeps older files valid. */
+  label?: {
+    text: string;
+    fontSize?: number;
+  };
 }
 
 export interface ArrowBinding {

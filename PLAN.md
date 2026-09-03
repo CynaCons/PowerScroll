@@ -1508,14 +1508,14 @@
 - [x] T197 tests/shapes/197-shape-tool-flow.spec.ts + SRS_SHAPES rows 028/029; update specs that chained shape creations
 - [x] Coordinator: typecheck, lint, affected specs, commit
 
-### v0.75.0 — Shape labels — centered text inside closed shapes
+### v0.75.0 — Shape labels — centered text inside closed shapes (2026-09-03) (COMPLETE)
 > User feedback 2026-09-02: double-click a shape to edit centered text inside it. Plain-text label stored in the shape's data, rendered centered and word-wrapped in the shape's inner box, edited through a textarea overlay, shape grows in height when the text needs it.
 
-- [ ] `label` on ShapeNodeData; Konva label centered and word-wrapped in the inner box per shape type, in the shape's stroke colour/opacity/rotation — REQ-SHAPE-031
-- [ ] ShapeLabelEditor textarea overlay: double-click or Enter opens, TextEditor key semantics, empty text removes, one history entry — REQ-SHAPE-030
-- [ ] Shape grows in height when the committed label overflows its inner box; never shrinks — REQ-SHAPE-032
-- [ ] T198 tests/shapes/198-shape-labels.spec.ts + SRS_SHAPES rows 030–032
-- [ ] Coordinator: typecheck, lint, affected specs, commit
+- [x] `label` on ShapeNodeData; Konva label centered and word-wrapped in the inner box per shape type, in the shape's stroke colour/opacity/rotation — REQ-SHAPE-031
+- [x] ShapeLabelEditor textarea overlay: double-click or Enter opens, TextEditor key semantics, empty text removes, one history entry — REQ-SHAPE-030
+- [x] Shape grows in height when the committed label overflows its inner box; never shrinks — REQ-SHAPE-032
+- [x] T198 tests/shapes/198-shape-labels.spec.ts + SRS_SHAPES rows 030–032
+- [x] Coordinator: typecheck, lint, affected specs, commit
 
 ### v0.75.1 — Arrow binding controls — Ctrl bypass and anchor-point preview
 > User feedback 2026-09-02: a modifier to place arrow endpoints without binding (Ctrl/Cmd, Excalidraw parity) and a live preview of the exact anchor point the endpoint will snap to.

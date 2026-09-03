@@ -41,3 +41,6 @@ Allow users to create, style, select, move, resize, and delete geometric shapes 
 | REQ-SHAPE-027 | Shapes, images and strokes shall support opacity 0–1 (default 1), editable from the shape, image and draw toolbars, rendered on the Konva node, and persisted through save/load. | Must | T195 |
 | REQ-SHAPE-028 | Digits 1–6 shall select the shape types in the order of the shape bar (rect, circle, triangle, diamond, arrow, line), activating the shape tool when needed, never while a text field has focus or a modifier is held; each bar button shall show its digit. | Must | T197 |
 | REQ-SHAPE-029 | Committing a shape shall return the tool to select with the new shape as the only selection. | Must | T197 |
+| REQ-SHAPE-030 | Double-clicking a closed shape (rect, circle, triangle, diamond), or pressing Enter with exactly one selected, shall open a centered plain-text editor inside it; committing an empty text removes the label. | Must | T198 |
+| REQ-SHAPE-031 | A shape label shall render centered in the shape's inner box, word-wrapped to its width, in the shape's stroke colour, opacity and rotation, and shall move, copy, delete and save/load with its shape. | Must | T198 |
+| REQ-SHAPE-032 | When a committed label needs more height than the inner box, the shape shall grow in height; it shall never shrink automatically. | Must | T198 |

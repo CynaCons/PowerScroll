@@ -124,20 +124,34 @@ export function useCanvasKeyboard(
         return;
       }
 
-      // Enter: enter isolation when a single group is selected
+      // Enter: grouped nodes preserve isolation-first behavior. A single
+      // ungrouped (or already isolated) closed shape opens its label editor.
       if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey) {
         const canvas = useCanvasStore.getState();
         const draw = useDrawStore.getState();
-        const first = canvas.nodes.find((n) => canvas.selectedNodeIds.includes(n.id));
-        const gid = first?.groupId;
+        const selected = canvas.nodes.find((n) => canvas.selectedNodeIds.includes(n.id));
+        const first = canvas.selectedNodeIds.length === 1
+          ? canvas.nodes.find((n) => n.id === canvas.selectedNodeIds[0])
+          : undefined;
+        const gid = selected?.groupId;
         if (gid && !useGroupStore.getState().editingGroupId) {
           e.preventDefault();
           useGroupStore.getState().enterIsolation(gid);
           // Keep first shape as the active isolated member
-          if (first) {
-            useCanvasStore.setState({ selectedNodeIds: [first.id] });
+          if (selected) {
+            useCanvasStore.setState({ selectedNodeIds: [selected.id] });
             draw.selectStrokes([]);
           }
+          return;
+        }
+        if (
+          first?.type === 'shape'
+          && draw.selectedStrokeIds.length === 0
+          && ['rect', 'circle', 'triangle', 'diamond'].includes((first.data as { shapeType?: string }).shapeType ?? '')
+        ) {
+          e.preventDefault();
+          window.dispatchEvent(new CustomEvent('powerscroll:open-shape-label', { detail: first.id }));
+          return;
         }
       }
 
