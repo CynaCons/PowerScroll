@@ -14,6 +14,7 @@ import {
   waitForBridgeReady,
   runBridge,
   runBridgeExpectingError,
+  preloadModule,
 } from '../helpers';
 
 const LEFT_BLOCK = 'move-left-block';
@@ -39,9 +40,10 @@ async function seedThreeScrolls(
   page: import('@playwright/test').Page,
   opts: { widenMiddle?: boolean } = {},
 ): Promise<Seed> {
+  await preloadModule(page, '/src/utils/pageLayout.ts');
   return page.evaluate(
     async ({ widenMiddle, wide, leftBlock, frame, overhang, midInk, groupInk, rightBlock, rightInk }) => {
-      const layout = await import('/src/utils/pageLayout.ts');
+      const layout = (window as any).__mods['/src/utils/pageLayout.ts'];
       const S = (window as any).__POWERNOTE_STORES__;
       const ws = S.workspace.getState();
       const pageId = ws.activePageId;
@@ -176,8 +178,9 @@ async function seedThreeScrolls(
 }
 
 async function snapshot(page: import('@playwright/test').Page) {
+  await preloadModule(page, '/src/utils/pageLayout.ts');
   return page.evaluate(async () => {
-    const layout = await import('/src/utils/pageLayout.ts');
+    const layout = (window as any).__mods['/src/utils/pageLayout.ts'];
     const S = (window as any).__POWERNOTE_STORES__;
     const ws = S.workspace.getState();
     const pageRec = ws.getActivePage();

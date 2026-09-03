@@ -14,6 +14,7 @@ import {
   waitForCanvasReady,
   waitForBridgeReady,
   runBridge,
+  preloadModule,
 } from '../helpers';
 
 function mxfile(cells: string): string {
@@ -95,8 +96,9 @@ test.describe('151 - Diagrams fit the scroll they land in (REQ-DIAG-136..139, RE
     const members = store.nodes.filter((n: any) => n.groupId === result.diagramId && n.id !== frame.id);
     expect(members.length).toBeGreaterThan(0);
 
+    await preloadModule(page, '/src/utils/pageLayout.ts');
     const layout = await page.evaluate(async () => {
-      const m = await import('/src/utils/pageLayout.ts');
+      const m = (window as any).__mods['/src/utils/pageLayout.ts'];
       const ws = (window as any).__POWERNOTE_STORES__.workspace.getState();
       const scrolls = ws.getActivePage()?.scrolls;
       return {
@@ -128,8 +130,9 @@ test.describe('151 - Diagrams fit the scroll they land in (REQ-DIAG-136..139, RE
 
     const store = await getCanvasStore(page);
     const frame = store.nodes.find((n: any) => n.id === result.diagramId);
+    await preloadModule(page, '/src/diagram/canvasOps.ts');
     const raw = await page.evaluate(async ({ source }) => {
-      const ops = await import('/src/diagram/canvasOps.ts');
+      const ops = (window as any).__mods['/src/diagram/canvasOps.ts'];
       const built = ops.rebuildDiagram(
         { id: 'probe', type: 'diagram', x: 60, y: 48, width: 260, height: 120, layer: 2, groupId: 'probe', data: { source, title: 'probe' } },
         source,
@@ -141,9 +144,11 @@ test.describe('151 - Diagrams fit the scroll they land in (REQ-DIAG-136..139, RE
   });
 
   test('diagram placed outside any band is left unfitted', async ({ page }) => {
+    await preloadModule(page, '/src/diagram/canvasOps.ts');
+    await preloadModule(page, '/src/utils/pageLayout.ts');
     const compared = await page.evaluate(async ({ source }) => {
-      const ops = await import('/src/diagram/canvasOps.ts');
-      const layout = await import('/src/utils/pageLayout.ts');
+      const ops = (window as any).__mods['/src/diagram/canvasOps.ts'];
+      const layout = (window as any).__mods['/src/utils/pageLayout.ts'];
       const farX = layout.columnLeft(4);
       const frame = {
         id: 'out',
@@ -185,9 +190,11 @@ test.describe('151 - Diagrams fit the scroll they land in (REQ-DIAG-136..139, RE
   test('redraw (rebuildDiagram) refits a frame sitting in a band', async ({ page }) => {
     await nameDefaultScroll(page, 'Backend');
 
+    await preloadModule(page, '/src/diagram/canvasOps.ts');
+    await preloadModule(page, '/src/utils/pageLayout.ts');
     const outcome = await page.evaluate(async ({ source }) => {
-      const ops = await import('/src/diagram/canvasOps.ts');
-      const layout = await import('/src/utils/pageLayout.ts');
+      const ops = (window as any).__mods['/src/diagram/canvasOps.ts'];
+      const layout = (window as any).__mods['/src/utils/pageLayout.ts'];
       const canvas = (window as any).__POWERNOTE_STORES__.canvas;
       const x = layout.columnLeft(0);
       const frame = {
@@ -236,8 +243,9 @@ test.describe('151 - Diagrams fit the scroll they land in (REQ-DIAG-136..139, RE
       ws.createScroll(ws.activePageId, 'Frontend');
     });
 
+    await preloadModule(page, '/src/utils/pageLayout.ts');
     const before = await page.evaluate(async () => {
-      const layout = await import('/src/utils/pageLayout.ts');
+      const layout = (window as any).__mods['/src/utils/pageLayout.ts'];
       const ws = (window as any).__POWERNOTE_STORES__.workspace.getState();
       const canvas = (window as any).__POWERNOTE_STORES__.canvas.getState();
       const scrolls = ws.getActivePage().scrolls;
@@ -283,9 +291,11 @@ test.describe('151 - Diagrams fit the scroll they land in (REQ-DIAG-136..139, RE
       };
     });
 
+    await preloadModule(page, '/src/utils/scrollOps.ts');
+    await preloadModule(page, '/src/utils/pageLayout.ts');
     const fitted = await page.evaluate(async ({ pageId, backendId }) => {
-      const ops = await import('/src/utils/scrollOps.ts');
-      const layout = await import('/src/utils/pageLayout.ts');
+      const ops = (window as any).__mods['/src/utils/scrollOps.ts'];
+      const layout = (window as any).__mods['/src/utils/pageLayout.ts'];
       const result = ops.fitScrollToContent(pageId, backendId);
       const ws = (window as any).__POWERNOTE_STORES__.workspace.getState();
       const canvas = (window as any).__POWERNOTE_STORES__.canvas.getState();
@@ -311,8 +321,9 @@ test.describe('151 - Diagrams fit the scroll they land in (REQ-DIAG-136..139, RE
       (window as any).__POWERNOTE_STORES__.canvas.getState().undo();
     });
 
+    await preloadModule(page, '/src/utils/pageLayout.ts');
     const restored = await page.evaluate(async ({ backendId }) => {
-      const layout = await import('/src/utils/pageLayout.ts');
+      const layout = (window as any).__mods['/src/utils/pageLayout.ts'];
       const ws = (window as any).__POWERNOTE_STORES__.workspace.getState();
       const canvas = (window as any).__POWERNOTE_STORES__.canvas.getState();
       const scrolls = ws.getActivePage().scrolls;

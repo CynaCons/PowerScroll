@@ -187,3 +187,20 @@ export async function disableFSA(page: Page) {
     }
   });
 }
+
+/**
+ * Load a source module into `window.__mods[path]` for later synchronous use
+ * inside `page.evaluate`. Never `await import()` inside an evaluate: Chromium
+ * occasionally garbage-collects the promise the evaluate returns while the
+ * import is pending, which Playwright reports as "Execution context was
+ * destroyed, most likely because of a navigation" (CDP: "Promise was
+ * collected"). T151/T158 flaked at ~10% that way; this pattern ran 48/48.
+ */
+export async function preloadModule(page: Page, path: string): Promise<void> {
+  await page.evaluate((p) => {
+    const w = window as any;
+    w.__mods ??= {};
+    if (!w.__mods[p]) import(/* @vite-ignore */ p).then((m) => { w.__mods[p] = m; });
+  }, path);
+  await page.waitForFunction((p) => Boolean((window as any).__mods?.[p]), path);
+}

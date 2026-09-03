@@ -22,3 +22,8 @@ often get wrong.
   dependencies unless the task names them.
 - Finish with a short summary: files changed, decisions taken, exact test
   numbers, anything left undone.
+
+- Never `await import('/src/...')` inside `page.evaluate`. Chromium can garbage-collect the
+  evaluate's promise while the import is pending (CDP "Promise was collected", reported as
+  "Execution context was destroyed"). Use `preloadModule(page, path)` from `tests/helpers.ts`
+  before the evaluate and read `(window as any).__mods[path]` inside it.
