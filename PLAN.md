@@ -1528,6 +1528,16 @@
 
 Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captures): https://claude.ai/code/artifact/2e55b6ad-d90f-4038-84ec-18b6b8b70597
 
+### v0.76.0 — Storefront redesign — the landing page is a canvas of scrolls (2026-09-05 · 793/793 green · showcase: https://claude.ai/code/artifact/b54308c0-9811-4d5e-ab8c-6c0bc0017970) (COMPLETE)
+> Design pass on site/ (GitHub Pages storefront), 2026-09-05. The v0.67 page was the templated look: cream paper, tight-tracked sans, terracotta accent as decoration, hard offset shadows, numbered promise cards. Replace it with an identity drawn from the app's own world: named scrolls standing on the grey canvas, weighted-ink diagrams, «stereotype» badges, blue only where something is live, terracotta only for the one real hazard.
+**Goal:** A storefront that could only be PowerScroll's: the hero is a live canvas with three resizable scrolls, every product claim is backed by a capture from the running app, and the page reads in the product's own vocabulary.
+- [x] Design plan reviewed against the three AI-default looks: palette from src/diagram/tokens.ts plus the app's selection blue as the only live colour; Recursive (variable, casual and mono axes) for display and utility, Inter (the product's face) for body; hero as a canvas of scrolls
+- [x] Rewrite site/index.html and site/styles.css: hero canvas with three resizable scrolls (drag handle on the title band, keyboard arrows), weighted-ink inline SVG diagrams (how it works, inside the file), agents section with the real tool table, network table with the single FAULT-marked hazard, FAQ, bookend scroll CTA
+- [x] Capture real screenshots from the running app through a temporary in-repo Playwright script (state via __POWERNOTE_BRIDGE__ / __POWERNOTE_STORES__, element-clipped, 2x) into site/assets; delete the script afterwards
+- [x] docs/SRS_SITE.md with REQ-SITE-001..005 and T200 tests/site/200-storefront.spec.ts (hero scrolls present and resizable, primary actions point at ./app/ and the release download, metadata intact, no console errors)
+- [x] Verify: T200 green, full Playwright suite green, npm run dev smoke test, storefront rendered at desktop and mobile widths and inspected
+- [x] Showcase artifact with real before/after captures of the old and new storefront, verification numbers included; commit
+
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.
 
