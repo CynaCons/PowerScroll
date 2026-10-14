@@ -1618,7 +1618,7 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 ### v0.83.0 — Board design and feature plan (2026-10-14) (planning)
 **Goal:** Owner request 2026-10-14: "come up with a visual design, with a feature plan, and submit it to me" for a Kanban board page type with four columns (To do, In progress, Waiting for feedback, Done), cards that open in an overlay with details and notes, named agents visible on the cards, and live updates as agents move work.
 - [x] Visual design (board page, card overlay) and feature plan (data, 12 agent tools, iterations) published - https://claude.ai/artifact/WXeWwRwo5tTzikanN6LiKr [agent: claude-opus-5.5]
-- [ ] Owner approves the design and the plan, and answers the open decisions
+- [ ] Owner approves the design and the plan, and answers the open decisions - board design approved 2026-10-14 ("very good") with one request: active highlighting when an agent is working on a ticket; scroll pick and decisions 2-7 still open
 
 ### v0.83.1 — Board page kind, four columns, drag and drop (planning)
 **Goal:** A notebook page can be a board: Page.kind 'board' (absent = canvas, no migration) with To do / In progress / Waiting for feedback / Done; AppShell shows the board view instead of the canvas; cards drag between and within columns with mouse, pen and finger; quick add per column; Board in the sidebar add menu.
@@ -1631,6 +1631,8 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 
 ### v0.83.4 — Live board - agents strip, activity, feedback loop (planning)
 **Goal:** The board is a live dashboard: the agents strip shows each connected agent (from the MCP hub, new server-to-app presence frame) and the card it is on, the activity panel lists every change live, changed cards flash, the Needs me filter lists cards waiting on the owner, and board_updates (long-poll with a cursor) returns the owner's replies and moves to agents.
+- [ ] Owner request 2026-10-14: 'active highlighting when an agent is working on a ticket'. A card is active while its assignee agent has acted on it (any board tool on that card, or agent_status naming it) in the last 60 s: ring and soft glow in the agent's colour, a slow pulse (static under prefers-reduced-motion), 'working now' with the agent's name on the card face; the agent's chip in the strip pulses too; the highlight fades out when the agent goes quiet or disconnects
+- [ ] SRS row for the active state (60 s window, fade, reduced motion) and its T212 assertions
 
 ### v0.84.0 — Release - scrolls redesign and boards, app and powerscroll-mcp together (planning)
 **Goal:** Coordinated release per docs/RELEASING.md: app v0.84.0 and powerscroll-mcp with the board tools (npm then MCP Registry; owner signs in for npm and the Registry).
