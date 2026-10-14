@@ -112,3 +112,12 @@ test('a card lights up for the me name even when the process label differs, and 
   await sendServerFrame(page, { v: 1, type: 'agents', agents: [] });
   await expect(card).toHaveAttribute('data-active', 'false');
 });
+
+test("the owner's own edits never light a card", async ({ page }) => {
+  const boardId = await openBoardWithCard(page);
+  await runBridge(page, 'card_claim', { boardId, card: 1, actor: 'you' });
+  await runBridge(page, 'card_move', { boardId, card: 1, to: 'doing', actor: 'you' });
+  const card = page.getByTestId('board-card-1');
+  await expect(card).toHaveAttribute('data-active', 'false');
+  await expect(card).not.toContainText('working now');
+});

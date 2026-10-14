@@ -103,7 +103,8 @@ export function BoardView() {
   const agentsGone = presenceSeen && connected.length === 0;
   const activeIdList = (board?.cards ?? [])
     .filter((card) => {
-      if (!card.assignee) return false;
+      // The highlight shows agents at work; the owner's own edits never light a card.
+      if (!card.assignee || card.assignee === 'you') return false;
       const actor = actors[card.assignee];
       if (!actor || actor.cardId !== card.id) return false;
       if (now - actor.lastActionAt > AGENT_ACTIVE_MS) return false;
