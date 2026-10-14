@@ -7,12 +7,12 @@
     "url": "https://github.com/CynaCons/PowerScroll",
     "source": "github"
   },
-  "version": "0.69.0",
+  "version": "0.70.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "powerscroll-mcp",
-      "version": "0.69.0",
+      "version": "0.70.0",
       "transport": {
         "type": "stdio"
       }
