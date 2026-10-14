@@ -108,7 +108,7 @@ test.describe('101 - Scroll guide style (REQ-SETTINGS-005)', () => {
   test('scroll survives page navigation within the session', async ({ page }) => {
     await openSettings(page);
     await page.locator('[data-testid="settings-bg-scroll"]').click();
-    await page.locator('[data-testid="nav-settings"]').click();
+    await page.locator('[data-testid="settings-close"]').click();
 
     await activateTool(page, 'hierarchy');
     await page.locator('[data-testid="add-page-btn"]').first().click();

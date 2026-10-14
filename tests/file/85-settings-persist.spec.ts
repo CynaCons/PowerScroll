@@ -41,7 +41,7 @@ test.describe('85 - Settings persist in HTML (REQ-SETTINGS-002..004)', () => {
     expect(ws.workspace.settings?.bgColor).toBe('paper');
 
     // Close settings, open hierarchy, add/navigate page
-    await page.locator('[data-testid="nav-settings"]').click();
+    await page.locator('[data-testid="settings-close"]').click();
     await expect(page.locator('[data-testid="settings-panel"]')).toBeHidden();
 
     await activateTool(page, 'hierarchy');
@@ -73,6 +73,8 @@ test.describe('85 - Settings persist in HTML (REQ-SETTINGS-002..004)', () => {
     expect(wsBefore.workspace.settings?.backgroundMode).toBe('grid');
     expect(wsBefore.workspace.settings?.bgColor).toBe('paper');
 
+    // Settings is a modal overlay: close it before reaching the top bar.
+    await page.getByTestId('settings-close').click();
     const [download] = await Promise.all([
       page.waitForEvent('download'),
       page.locator('[data-testid="save-btn"]').click(),

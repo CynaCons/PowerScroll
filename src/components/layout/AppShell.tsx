@@ -19,6 +19,8 @@ export function AppShell() {
   const [isHierarchyOpen, setIsHierarchyOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
+  // Stable, so the overlay's Escape listener is not re-registered every render.
+  const closeSettings = useCallback(() => setIsSettingsOpen(false), []);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchNotebookWide, setSearchNotebookWide] = useState(false);
 
@@ -140,6 +142,7 @@ export function AppShell() {
             scope === 'page' ? updatePageSettings(updates) : updateSettings(updates)
           }
           onClearPageOverride={() => clearPageSettings()}
+          onClose={closeSettings}
         />
       )}
       <NotebookLibraryPanel

@@ -58,7 +58,7 @@ test.describe('192 - Object snapping', () => {
 
     await page.locator('[data-testid="nav-settings"]').click();
     await page.locator('[data-testid="settings-snap-to-objects"]').uncheck();
-    await page.locator('[data-testid="nav-settings"]').click();
+    await page.locator('[data-testid="settings-close"]').click();
     await seed(page, [{ id: 'reference-off', x: 200, y: 200 }, { id: 'dragged-off', x: 300, y: 200 }]);
     await dragCanvasNode(page, { x: 325, y: 225 }, { x: 230, y: 225 });
     expect((await getCanvasStore(page)).nodes.find((node: any) => node.id === 'dragged-off')?.x).toBe(205);

@@ -140,6 +140,8 @@ test.describe('133 - Per-page background (REQ-SETTINGS-010..015)', () => {
     await page.getByTestId('settings-bg-color-paper').click();
     await page.waitForTimeout(100);
 
+    // Settings is a modal overlay: close it before reaching the top bar.
+    await page.getByTestId('settings-close').click();
     const [download] = await Promise.all([
       page.waitForEvent('download'),
       page.locator('[data-testid="save-btn"]').click(),
