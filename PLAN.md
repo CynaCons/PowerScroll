@@ -1601,7 +1601,7 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Owner 2026-10-14: 'continue with all the features until you are able to release ... I will test after the release'. Commit the finished but uncommitted v0.77.0 brand mark and v0.78.0 scroll header work on its own after the full campaign [agent: claude-opus-5.5 812/812, showcase https://claude.ai/artifact/FCNM5qiqaf5JkRGapEZNEu, 06f8246]
 - [x] Release v0.81.0 (app-only, docs/RELEASING.md): version 0.81.0 in src/version.ts + package.json/lock, build:template, typecheck, lint, MCP package tests, bridge tests, template smoke; commit dist-template; push main; tag v0.81.0; verify GitHub release assets, Pages and the in-app update path; update docs/DEPLOYMENTS.md [agent: claude-opus-5.5 tag v0.81.0 @925bf61, release 3 assets, Pages+CI green, ledger e58d167]
 
-### v0.82.0 — Scroll visuals - header card apart from the body, new page separators (2026-10-14) (planning) (current) (ACTIVE)
+### v0.82.0 — Scroll visuals - header card apart from the body, new page separators (2026-10-14) (planning) (2026-10-14 · b04896a · 826/826) (COMPLETE)
 **Goal:** Owner request 2026-10-14: the inter-page separators are "very bad" and need a redesign; the scroll title is not readable while scrolling because content shows through it ("if I'm scrolling on a black background or black image, then I don't see the title"). Keep the progress bar. "Split the scroll title from the main scroll itself ... a tiny separated card at the top, a little bit rounded like it is in VS Code, a tiny separation between the scroll title and the scroll body. And when you scroll, only the scroll body actually scrolls and not the scroll title." Maybe centre the title. Visual drafts first.
 - [x] Capture today's scroll header and page separators from the running app (resting, scrolled over dark content, page break) [agent: claude-opus-5.5 https://claude.ai/artifact/WXeWwRwo5tTzikanN6LiKr]
 - [x] Visual drafts: header card detached from the body (rounded, VS Code-like), opaque, pinned while only the body scrolls; title alignment options; separator options - published for the owner to pick [agent: claude-opus-5.5 https://claude.ai/artifact/WXeWwRwo5tTzikanN6LiKr]
@@ -1610,7 +1610,7 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Title alignment per the owner's pick (left or centred); page counter on the card [agent: codex+claude-opus-5.5 b04896a scroll/canvas/text/hierarchy 307/307]
 - [x] Page separators per the owner's pick (A sheet gap, B margin tick, C labelled hairline) replacing the faint #ededed line in scroll mode [agent: codex+claude-opus-5.5 b04896a scroll/canvas/text/hierarchy 307/307]
 - [x] SRS_SCROLL rows (supersede REQ-SCROLL-024/033..038 as needed); T208 asserts composited pixels: title readable over a dark block and over a text block [agent: codex+claude-opus-5.5 b04896a scroll/canvas/text/hierarchy 307/307]
-- [ ] Showcase with real captures; smoke test: npm run dev launches with zero console errors; full campaign green
+- [x] Showcase with real captures; smoke test: npm run dev launches with zero console errors; full campaign green [agent: claude-opus-5.5 campaign 826/826, template smoke 0 errors, showcase https://claude.ai/artifact/JGnyn7hseubHgowozSZthS]
 
 ## v0.83 — Boards - a Kanban page type your agents work on
 > Owner request 2026-10-14: a new page type next to the canvas and scrolls - a Kanban board with To do / In progress / Waiting for feedback / Done, Trello/Planner-style cards that open in an overlay with details and notes, and full MCP control so several named agents (like powerboard names) can claim, move and update cards; the board is the owner's live dashboard of what each agent is doing.
@@ -1620,15 +1620,15 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Visual design (board page, card overlay) and feature plan (data, 12 agent tools, iterations) published - https://claude.ai/artifact/WXeWwRwo5tTzikanN6LiKr [agent: claude-opus-5.5]
 - [x] Owner approves the design and the plan - approved 2026-10-14 with active highlighting added; board is its own page type without drawing (owner); defaults taken where unanswered: third column 'Waiting for feedback', a question required to move there, free-text agent names; owner: 'implement both, release when done' [agent: owner]
 
-### v0.83.1 — Board page kind, four columns, drag and drop (planning)
+### v0.83.1 — Board page kind, four columns, drag and drop (planning) (2026-10-14 · 53cc66f) (COMPLETE)
 **Goal:** A notebook page can be a board: Page.kind 'board' (absent = canvas, no migration) with To do / In progress / Waiting for feedback / Done; AppShell shows the board view instead of the canvas; cards drag between and within columns with mouse, pen and finger; quick add per column; Board in the sidebar add menu.
 - [x] Page.kind board + BoardData, boardOps, Board in the add menu (opens at once), BoardView with four columns, quick add, pointer drag and drop + Alt+Arrow, question prompt for Waiting for feedback, activity panel; SRS_BOARD; T209 [agent: codex+claude-opus-5.5 53cc66f board/hierarchy/file 140/140]
 
-### v0.83.2 — Card overlay - details, checklist, notes, history (planning)
+### v0.83.2 — Card overlay - details, checklist, notes, history (planning) (2026-10-14 · 53cc66f) (COMPLETE)
 **Goal:** Clicking a card opens it in an overlay (Trello/Planner style): editable title, Markdown description, labels, status and assignee, checklist, a signed notes thread with reply, and the card's history; Esc or the cross closes it.
 - [x] Card overlay per B2: two columns, status/assignee/labels chips, Markdown description, checklist, signed notes thread with Reply and Reply-and-move, history sidebar; T210 [agent: codex+claude-opus-5.5 53cc66f board/hierarchy/file 140/140]
 
-### v0.83.3 — Agent tools for boards over MCP (planning)
+### v0.83.3 — Agent tools for boards over MCP (planning) (2026-10-14 · 37fd929) (COMPLETE)
 **Goal:** Agents get full control of boards through the bridge: board_list, board_create, board_read, card_create, card_get, card_update, card_claim/card_release, card_move (Waiting for feedback requires a question), card_note, card_check, agent_status, board_updates; every write takes me (agent name, powerboard convention) and is recorded on the card and in its history.
 - [x] 14 MCP board tools with me/actor attribution, card by number, question rule, board_updates long-poll; board commands never switch the owner's page; T211, MCP board-tools tests, SRS_BOARD/SRS_AGENT [agent: grok-4.6+claude-opus-5.5 37fd929 board+agent 126/126, MCP 8/8, bridge all passed]
 
@@ -1640,6 +1640,8 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 
 ### v0.84.0 — Release - scrolls redesign and boards, app and powerscroll-mcp together (planning)
 **Goal:** Coordinated release per docs/RELEASING.md: app v0.84.0 and powerscroll-mcp with the board tools (npm then MCP Registry; owner signs in for npm and the Registry).
+- [ ] App v0.84.0: version synced, dist-template rebuilt (2,666,755 bytes), typecheck, lint 0 errors, full campaign 826/826, template smoke from disk 0 errors, showcase https://claude.ai/artifact/JGnyn7hseubHgowozSZthS; push main, tag v0.84.0, verify release assets, Pages and update paths; ledger
+- [ ] powerscroll-mcp 0.68.0: versions synced, tests 8/8, bridge pass, audit 0, pack = 4 files; npm publish then MCP Registry - needs the owner's npm sign-in (npm whoami: 401 on 2026-10-14)
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.
