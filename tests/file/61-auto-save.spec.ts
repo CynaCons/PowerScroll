@@ -1,10 +1,10 @@
 /**
  * Test 61: Debounced Auto-Save
- * Covers: REQ-FILE-015, REQ-FILE-016, REQ-FILE-017
+ * Covers: REQ-FILE-017, REQ-FILE-028
  *
  * Verifies the new autosave pipeline:
  *   - An edit triggers a save within ~1.5–2 s (debounce window).
- *   - Autosave routes workspace data into the notebook library, not the
+ *   - Autosave routes workspace data into the browser recovery store, not the
  *     legacy `powernote-autosave` localStorage key.
  *   - The legacy key is removed on startup even if a previous install
  *     left one behind.
@@ -15,6 +15,14 @@ import { waitForCanvasReady, disableFSA } from '../helpers';
 
 const LEGACY_KEY = 'powernote-autosave';
 const LIBRARY_KEY = 'powernote-library';
+
+async function recoveryContains(page: import('@playwright/test').Page, text: string) {
+  return page.evaluate((needle) => new Promise<boolean>((resolve, reject) => {
+    const r = indexedDB.open('powerscroll-recovery');
+    r.onsuccess = () => { const q = r.result.transaction('notebooks').objectStore('notebooks').getAll(); q.onsuccess = () => resolve(JSON.stringify(q.result).includes(needle)); q.onerror = () => reject(q.error); };
+    r.onerror = () => reject(r.error);
+  }), text);
+}
 
 test.describe('61 - Debounced Auto-Save (REQ-FILE-015..017)', () => {
   test.beforeEach(async ({ page }) => {
@@ -59,8 +67,7 @@ test.describe('61 - Debounced Auto-Save (REQ-FILE-015..017)', () => {
     // Debounce is 1.5s; give it up to 3.5s before declaring a miss.
     await expect
       .poll(async () => {
-        const raw = await page.evaluate((k) => localStorage.getItem(k), LIBRARY_KEY);
-        return raw && raw.includes('Debounced save');
+        return recoveryContains(page, 'Debounced save');
       }, { timeout: 3500, intervals: [200, 300, 500] })
       .toBeTruthy();
 
@@ -105,8 +112,7 @@ test.describe('61 - Debounced Auto-Save (REQ-FILE-015..017)', () => {
 
     await expect
       .poll(async () => {
-        const raw = await page.evaluate((k) => localStorage.getItem(k), LIBRARY_KEY);
-        return raw && raw.includes('Max Wait Test');
+        return recoveryContains(page, 'Max Wait Test');
       }, { timeout: 6000, intervals: [250, 500] })
       .toBeTruthy();
 

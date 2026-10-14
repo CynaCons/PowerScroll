@@ -128,6 +128,8 @@ test.describe('101 - Scroll guide style (REQ-SETTINGS-005)', () => {
 
     await openSettings(page);
     await page.locator('[data-testid="settings-bg-scroll"]').click();
+    // Settings is a modal overlay: close it before reaching the top bar.
+    await page.getByTestId('settings-close').click();
 
     const [download] = await Promise.all([
       page.waitForEvent('download'),

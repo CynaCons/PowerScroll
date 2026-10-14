@@ -17,6 +17,7 @@ const DB_VERSION = 1;
 const STORE = 'kv';
 const CURRENT_KEY = 'current';
 const RECENT_KEY = 'recent';
+const NOTEBOOK_KEY = 'handle:';
 const MAX_RECENT = 5;
 
 export interface RecentHandleEntry {
@@ -155,4 +156,33 @@ export async function removeRecentHandle(id: string): Promise<void> {
 
 export async function clearAllRecentHandles(): Promise<void> {
   await idbDelete(RECENT_KEY);
+}
+
+/** Remember which file a notebook (by its stable id) is linked to. */
+export async function setHandleForNotebook(id: string, handle: FileSystemFileHandle): Promise<void> {
+  await idbPut(`${NOTEBOOK_KEY}${id}`, handle);
+}
+
+export async function getHandleForNotebook(id: string): Promise<FileSystemFileHandle | null> {
+  return idbGet<FileSystemFileHandle>(`${NOTEBOOK_KEY}${id}`);
+}
+
+/**
+ * Whether autosave may write `handle` from this document.
+ *
+ * Opened as a local file (file://), the HTML document IS the notebook, and a
+ * copy of it carries the same notebook id — so only a handle with this file's
+ * own name may be written; anything else would silently overwrite the
+ * original from its copy. Elsewhere (hosted app) the linked handle is the file.
+ */
+export function isHandleForThisDocument(handle: { name: string }): boolean {
+  if (window.location.protocol !== 'file:') return true;
+  const last = window.location.pathname.split('/').pop() ?? '';
+  let name = last;
+  try {
+    name = decodeURIComponent(last);
+  } catch {
+    // keep raw
+  }
+  return handle.name === name;
 }

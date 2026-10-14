@@ -124,3 +124,4 @@
   background: #fee2e2;
   color: #dc2626;
 }
+.library-panel__confirm { padding: 10px; font-size: 12px; border-top: 1px solid var(--color-border); display: flex; gap: 6px; align-items: center; }

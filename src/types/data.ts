@@ -254,6 +254,8 @@ export interface WorkspaceSettings {
 }
 
 export interface WorkspaceData {
+  /** Stable notebook identity. Older notebooks are assigned one on first load. */
+  id?: string;
   version: string;
   filename: string;
   sections: Section[];

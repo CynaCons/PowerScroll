@@ -49,17 +49,22 @@ test.describe('90 - File path indicator (REQ-FILE-022)', () => {
   test('library load clears bound path in TopBar', async ({ page }) => {
     await page.evaluate(async () => {
       const { setCurrentHandle } = await import('/src/utils/fileHandleStore.ts');
-      const { saveToLibrary } = await import('/src/utils/notebookLibrary.ts');
+      const { saveRecovery } = await import('/src/utils/recoveryStore.ts');
       const ws = (window as any).__POWERNOTE_STORES__.workspace.getState().workspace;
       await setCurrentHandle({ name: 'DiskBound.html' } as FileSystemFileHandle);
-      saveToLibrary({ ...ws, filename: 'Library Notebook' });
+      // A different notebook, kept only in this browser (no linked file).
+      await saveRecovery({ ...ws, id: 'library-only-90', filename: 'Library Notebook' });
     });
 
     await expect(page.locator('[data-testid="topbar-file-path"]')).toHaveText('DiskBound.html');
 
     await page.locator('[data-testid="nav-library"]').click();
     await expect(page.locator('[data-testid="library-panel"]')).toBeVisible();
-    await page.locator('[data-testid="library-load-btn"]').first().click();
+    await page
+      .getByTestId('library-entry')
+      .filter({ hasText: 'Library Notebook' })
+      .getByTestId('library-load-btn')
+      .click();
 
     await expect(page.locator('[data-testid="topbar-file-path"]')).toHaveText(
       'Not linked to a file',

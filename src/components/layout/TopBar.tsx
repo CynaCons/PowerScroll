@@ -10,7 +10,8 @@ import {
   isFSASupported,
   openWithPicker,
 } from '../../utils/fileSystemAccess';
-import { setCurrentHandle, addRecentHandle, clearCurrentHandle } from '../../utils/fileHandleStore';
+import { setCurrentHandle, addRecentHandle, clearCurrentHandle, setHandleForNotebook, getHandleForNotebook } from '../../utils/fileHandleStore';
+import { useSaveStatusStore } from '../../stores/useSaveStatusStore';
 import { useFileBindingStore } from '../../stores/useFileBindingStore';
 import { saveNotebook } from '../../utils/saveNotebook';
 import { canRevert, revertNotebook } from '../../utils/revertNotebook';
@@ -25,6 +26,9 @@ export function TopBar() {
   const activePageId = useWorkspaceStore((s) => s.activePageId);
   const isDirty = useWorkspaceStore((s) => s.isDirty);
   const isSaving = useWorkspaceStore((s) => s.isSaving);
+  const saveStatus = useSaveStatusStore((s) => s.status);
+  const saveReason = useSaveStatusStore((s) => s.reason);
+  const statusFileName = useSaveStatusStore((s) => s.fileName);
   const filePathLabel = useFileBindingStore((s) => s.label);
   const refreshFileBinding = useFileBindingStore((s) => s.refresh);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -112,6 +116,7 @@ export function TopBar() {
           useCanvasStore.getState().loadPageNodes(firstPage?.nodes ?? []);
           useDrawStore.getState().loadPageStrokes(firstPage?.strokes ?? []);
           await setCurrentHandle(result.handle);
+          if (migrated.id) await setHandleForNotebook(migrated.id, result.handle);
           await addRecentHandle(migrated.filename, result.handle);
           showToast(`Opened ${result.handle.name}`, 'info');
           return;
@@ -206,6 +211,18 @@ export function TopBar() {
       : `${pathDisplay} — full folder path is only available when this tab is opened as a local file (file://). Open/Save As can only expose the file name.`
     : 'No disk file linked. Open a notebook or save with Save As to link one.';
 
+  const reconnect = async () => {
+    const handle = await getHandleForNotebook(workspace.id!);
+    if (!handle) return;
+    const permission = await (handle as any).requestPermission?.({ mode: 'readwrite' });
+    if (permission === 'granted') {
+      await setCurrentHandle(handle);
+      useSaveStatusStore.getState().setStatus('saving', undefined, handle.name);
+      await saveNotebook(false);
+    } else useSaveStatusStore.getState().setStatus('needs-permission', 'Permission is required to write the linked file', handle.name);
+  };
+  const statusText = saveStatus === 'saved-file' ? `Saved to ${statusFileName ?? filePathLabel ?? 'file'}` : saveStatus === 'saved-browser' ? 'Saved in this browser' : saveStatus === 'saving' ? 'Saving…' : saveStatus === 'needs-permission' ? 'File permission needed' : 'Save failed';
+
   return (
     <header className="top-bar" data-testid="topbar">
       <div className="top-bar__identity">
@@ -231,7 +248,6 @@ export function TopBar() {
               title="Click to rename notebook"
             >
               {workspace.filename}
-              {isDirty && <span className="top-bar__dirty" data-testid="dirty-indicator"> *</span>}
             </span>
           )}
           {activeSection && (
@@ -257,12 +273,34 @@ export function TopBar() {
             </>
           )}
         </div>
-        <div
-          className={`top-bar__file-path${filePathLabel ? '' : ' top-bar__file-path--unlinked'}`}
-          data-testid="topbar-file-path"
-          title={pathTitle}
-        >
-          {pathDisplay}
+        {/* One line under the breadcrumb: which file, and where the last change went. */}
+        <div className="top-bar__file-row">
+          <div
+            className={`top-bar__file-path${filePathLabel ? '' : ' top-bar__file-path--unlinked'}`}
+            data-testid="topbar-file-path"
+            title={pathTitle}
+          >
+            {pathDisplay}
+          </div>
+          <span
+            className={`top-bar__save-status top-bar__save-status--${saveStatus}`}
+            data-testid="save-status"
+            data-state={saveStatus}
+            title={saveReason}
+          >
+            {statusText}
+          </span>
+          {saveStatus === 'needs-permission' && (
+            <button
+              type="button"
+              className="top-bar__reconnect"
+              data-testid="reconnect-file-btn"
+              onClick={() => void reconnect()}
+              title="The browser asks again after a reload before a page may write a file"
+            >
+              Reconnect to {statusFileName ?? 'file'}
+            </button>
+          )}
         </div>
       </div>
 

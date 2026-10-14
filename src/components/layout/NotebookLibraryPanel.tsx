@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react';
 import { X, Trash2, FolderOpen as Open } from 'lucide-react';
 import {
-  loadLibrary,
-  deleteFromLibrary,
-  formatRelativeTime,
-  type LibraryEntry,
-} from '../../utils/notebookLibrary';
+  listRecovery,
+  deleteRecovery,
+  type RecoveryEntry,
+} from '../../utils/recoveryStore';
+import { formatRelativeTime } from '../../utils/notebookLibrary';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { useCanvasStore } from '../../stores/useCanvasStore';
 import { useDrawStore } from '../../stores/useDrawStore';
 import { migrateWorkspace } from '../../utils/migrations';
-import { clearCurrentHandle } from '../../utils/fileHandleStore';
+import { getHandleForNotebook, setCurrentHandle, clearCurrentHandle } from '../../utils/fileHandleStore';
+import { useSaveStatusStore } from '../../stores/useSaveStatusStore';
 import { showToast } from './Toast';
 import './NotebookLibraryPanel.css';
 
@@ -20,17 +21,18 @@ interface NotebookLibraryPanelProps {
 }
 
 export function NotebookLibraryPanel({ isOpen, onClose }: NotebookLibraryPanelProps) {
-  const [entries, setEntries] = useState<LibraryEntry[]>([]);
+  const [entries, setEntries] = useState<RecoveryEntry[]>([]);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
-      setEntries(loadLibrary());
+      void listRecovery().then(setEntries);
     }
   }, [isOpen]);
 
-  const refresh = () => setEntries(loadLibrary());
+  const refresh = () => void listRecovery().then(setEntries);
 
-  const handleLoad = async (entry: LibraryEntry) => {
+  const handleLoad = async (entry: RecoveryEntry) => {
     const isDirty = useWorkspaceStore.getState().isDirty;
     if (isDirty) {
       const confirmed = window.confirm(
@@ -49,16 +51,25 @@ export function NotebookLibraryPanel({ isOpen, onClose }: NotebookLibraryPanelPr
     const firstPage = ws.sections[0]?.pages[0];
     useCanvasStore.getState().loadPageNodes(firstPage?.nodes ?? []);
     useDrawStore.getState().loadPageStrokes(firstPage?.strokes ?? []);
-    // Library entries are not disk-linked — drop any stale FSA binding
-    await clearCurrentHandle();
+    // Re-link the file this notebook was saved to. Without one, drop whatever
+    // was linked before: it belongs to the previous notebook, and Ctrl+S or
+    // autosave must never write this notebook into it.
+    const handle = ws.id ? await getHandleForNotebook(ws.id) : null;
+    if (handle) await setCurrentHandle(handle);
+    else await clearCurrentHandle();
+    useSaveStatusStore.getState().setStatus('saved-browser');
     showToast(`Loaded "${entry.name}"`, 'info');
     onClose();
   };
 
-  const handleDelete = (entry: LibraryEntry, e: React.MouseEvent) => {
+  const handleDelete = (entry: RecoveryEntry, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!window.confirm(`Delete "${entry.name}" from library?`)) return;
-    deleteFromLibrary(entry.id);
+    setDeleteId(entry.id);
+  };
+  const confirmDelete = async () => {
+    if (!deleteId) return;
+    await deleteRecovery(deleteId);
+    setDeleteId(null);
     refresh();
   };
 
@@ -67,7 +78,7 @@ export function NotebookLibraryPanel({ isOpen, onClose }: NotebookLibraryPanelPr
   return (
     <div className="library-panel" data-testid="library-panel">
       <div className="library-panel__header">
-        <h3 className="library-panel__title">Notebook Library</h3>
+        <h3 className="library-panel__title">Recent notebooks</h3>
         <button className="library-panel__close" onClick={onClose} aria-label="Close">
           <X size={16} />
         </button>
@@ -91,6 +102,8 @@ export function NotebookLibraryPanel({ isOpen, onClose }: NotebookLibraryPanelPr
                   {' · '}
                   {entry.workspace.sections.length} section
                   {entry.workspace.sections.length !== 1 ? 's' : ''}
+                  {' · '}{Math.max(1, Math.ceil(entry.bytes / 1024))} KB
+                  {entry.fileName ? ` · ${entry.fileName}` : ''}
                 </div>
               </div>
               <div className="library-panel__entry-actions">
@@ -114,6 +127,7 @@ export function NotebookLibraryPanel({ isOpen, onClose }: NotebookLibraryPanelPr
             </div>
           ))
         )}
+        {deleteId && <div className="library-panel__confirm" data-testid="library-delete-confirm"><span>Delete this browser copy?</span><button onClick={confirmDelete}>Delete</button><button onClick={() => setDeleteId(null)}>Cancel</button></div>}
       </div>
     </div>
   );

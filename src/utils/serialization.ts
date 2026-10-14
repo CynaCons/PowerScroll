@@ -1,6 +1,7 @@
 import type { WorkspaceData } from '../types/data';
 import { injectExtensionBlocks } from '../extensions/embed';
 import { collectEmbeddedExtensions, harvestEmbeddedExtensions } from '../extensions/drawioViewer';
+import { generateId } from './ids';
 
 const DATA_SCRIPT_ID = 'powernote-data';
 const LEGACY_AUTOSAVE_KEY = 'powernote-autosave';
@@ -21,6 +22,10 @@ export function deserializeWorkspace(json: string): WorkspaceData | null {
   try {
     const data = JSON.parse(json);
     if (!data.version || !data.sections) return null;
+    // Notebooks saved before ids existed get one derived from their own first
+    // section id, so reopening the same file finds the same recovery entry
+    // instead of adding a new one each session.
+    if (!data.id) data.id = data.sections[0]?.id ? `nb-${data.sections[0].id}` : generateId();
     return data as WorkspaceData;
   } catch {
     return null;
@@ -170,47 +175,95 @@ export function startAutoSave(
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
   let firstDirtyAt: number | null = null;
   let saveInFlight = false;
+  let rerunAfterSave = false;
+  // Counts real edits. The flush below writes the canvas into the workspace
+  // store, which notifies subscribers too — those notifications are ignored,
+  // otherwise every save would schedule the next one forever.
+  let changeSeq = 0;
+  let flushing = false;
 
   const runSave = async () => {
+    if (debounceTimer) clearTimeout(debounceTimer);
     debounceTimer = null;
     firstDirtyAt = null;
-    if (saveInFlight || !getIsDirty()) return;
+    if (saveInFlight) {
+      // An edit landed while a save was running: save again when it finishes,
+      // rather than leaving that edit unsaved until the next one.
+      rerunAfterSave = true;
+      return;
+    }
+    if (!getIsDirty()) return;
     saveInFlight = true;
     try {
-      const workspace = flushAndGetWorkspace();
+      const seqAtSnapshot = changeSeq;
+      flushing = true;
+      let workspace: WorkspaceData;
+      try {
+        workspace = flushAndGetWorkspace();
+      } finally {
+        flushing = false;
+      }
+      (window as any).__POWERNOTE_AUTOSAVE_RUNS__ = ((window as any).__POWERNOTE_AUTOSAVE_RUNS__ ?? 0) + 1;
+      const { saveRecovery } = await import('./recoveryStore');
+      const { useSaveStatusStore } = await import('../stores/useSaveStatusStore');
+      const status = useSaveStatusStore.getState();
+      status.setStatus('saving', undefined, status.fileName);
 
-      const { saveToLibrary } = await import('./notebookLibrary');
-      saveToLibrary(workspace);
+      let browserSaved = false;
+      try {
+        await saveRecovery(workspace);
+        browserSaved = true;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Browser storage is unavailable';
+        useSaveStatusStore.getState().setStatus('error', message);
+        // Once per failure streak — not a toast every 1.5 s.
+        if (!useSaveStatusStore.getState().failureReported) {
+          const { showToast } = await import('../components/layout/Toast');
+          showToast(`Could not keep a recovery copy in this browser: ${message}`, 'error');
+          useSaveStatusStore.getState().setFailureReported(true);
+        }
+      }
 
+      let fileSaved = false;
       try {
         const { isFSASupported } = await import('./fileSystemAccess');
-        if (isFSASupported()) {
-          const { getCurrentHandle } = await import('./fileHandleStore');
-          const handle = await getCurrentHandle();
-          if (handle) {
+        if (isFSASupported() && workspace.id) {
+          const { getHandleForNotebook, isHandleForThisDocument } = await import('./fileHandleStore');
+          const handle = await getHandleForNotebook(workspace.id);
+          if (handle && isHandleForThisDocument(handle)) {
             const perm = await (handle as any).queryPermission?.({ mode: 'readwrite' });
             if (perm === 'granted') {
               const html = await buildExportHtml(workspace);
               const writable = await handle.createWritable();
               await writable.write(html);
               await writable.close();
-              if (import.meta.env?.DEV) {
-                console.log('[PowerScroll] Auto-saved to file via FSA handle');
-              }
+              fileSaved = true;
+              useSaveStatusStore.getState().setStatus('saved-file', undefined, handle.name);
+            } else {
+              useSaveStatusStore.getState().setStatus('needs-permission', undefined, handle.name);
             }
           }
         }
       } catch (err) {
-        if (import.meta.env?.DEV) {
-          console.log('[PowerScroll] FSA autosave skipped:', err);
-        }
+        const message = err instanceof Error ? err.message : 'The linked file could not be written';
+        useSaveStatusStore.getState().setStatus('error', message);
       }
 
-      if (import.meta.env?.DEV) {
-        console.log('[PowerScroll] Auto-saved to library');
+      if (browserSaved && !fileSaved && useSaveStatusStore.getState().status === 'saving') {
+        useSaveStatusStore.getState().setStatus('saved-browser');
+      }
+      if (browserSaved) useSaveStatusStore.getState().setFailureReported(false);
+      // Clean only when the snapshot just persisted is still the latest state.
+      if ((browserSaved || fileSaved) && changeSeq === seqAtSnapshot) {
+        const { useWorkspaceStore } = await import('../stores/useWorkspaceStore');
+        useWorkspaceStore.getState().markClean();
       }
     } finally {
       saveInFlight = false;
+      if (rerunAfterSave) {
+        rerunAfterSave = false;
+        scheduleSave();
+      }
     }
   };
 
@@ -224,7 +277,27 @@ export function startAutoSave(
     debounceTimer = setTimeout(runSave, delay);
   };
 
-  const unsubscribe = subscribeToChanges(scheduleSave);
+  const onChange = () => {
+    if (flushing) return;
+    changeSeq++;
+    if (saveInFlight) rerunAfterSave = true;
+    scheduleSave();
+  };
+  const unsubscribe = subscribeToChanges(onChange);
+
+  // Never lose the last seconds: leaving the tab saves at once, skipping the debounce.
+  const flushNow = () => {
+    void runSave();
+  };
+  const onVisibility = () => {
+    if (document.visibilityState === 'hidden') flushNow();
+  };
+  document.addEventListener('visibilitychange', onVisibility);
+  window.addEventListener('pagehide', flushNow);
+
+  // A notebook that is already dirty when autosave starts (state written
+  // before this subscription existed) is saved too.
+  scheduleSave();
 
   return () => {
     unsubscribe();
@@ -232,5 +305,7 @@ export function startAutoSave(
       clearTimeout(debounceTimer);
       debounceTimer = null;
     }
+    document.removeEventListener('visibilitychange', onVisibility);
+    window.removeEventListener('pagehide', flushNow);
   };
 }

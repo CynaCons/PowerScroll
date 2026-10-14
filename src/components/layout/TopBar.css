@@ -104,6 +104,57 @@
   flex-shrink: 0;
 }
 
+.top-bar__file-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.top-bar__file-row .top-bar__file-path {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.top-bar__save-status {
+  flex-shrink: 0;
+  font-size: 11px;
+  line-height: 1.2;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.top-bar__save-status::before {
+  content: '·';
+  margin-right: 8px;
+}
+
+.top-bar__save-status--needs-permission {
+  color: #b45309;
+}
+
+.top-bar__save-status--error {
+  color: #dc2626;
+}
+
+.top-bar__reconnect {
+  flex-shrink: 0;
+  height: 18px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--color-active);
+  color: var(--color-primary);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.top-bar__reconnect:hover {
+  background: #dbeafe;
+}
+
 .top-bar__action-btn {
   display: flex;
   align-items: center;

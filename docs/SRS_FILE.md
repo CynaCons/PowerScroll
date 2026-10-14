@@ -1,7 +1,7 @@
 # SRS: File System (Save/Load)
 
 **Project:** PowerScroll (formerly PowerNote)
-**Version:** 0.67.0
+**Version:** 0.79.0
 **Date:** 2026-07-18
 
 ## Purpose
@@ -26,8 +26,8 @@ Enable users to save their entire notebook as a single self-contained HTML file 
 | REQ-FILE-012 | The recent file handles list shall be LRU-capped at 5 entries, upserted by file name | Should | T80 |
 | REQ-FILE-013 | The app shall expose `setCurrentHandle`, `getCurrentHandle`, `clearCurrentHandle`, `addRecentHandle`, `removeRecentHandle`, `getRecentHandles`, and `clearAllRecentHandles` APIs for handle management | Must | T80 |
 | REQ-FILE-014 | The app shall verify or request permission on a persisted handle before writing, re-prompting the user if the permission has been revoked | Must | — |
-| REQ-FILE-015 | While the notebook is dirty, the app shall debounce auto-save so that it fires 1.5 s after the last edit, and shall force a save no later than 5 s after the notebook first became dirty (whichever happens first) | Must | T61 |
-| REQ-FILE-016 | Auto-save shall write to the notebook library (localStorage) and, when a current `FileSystemFileHandle` exists with granted read-write permission, to the live file on disk. Auto-save shall NOT write a `powernote-autosave` snapshot to localStorage | Must | T61 |
+| REQ-FILE-015 | (superseded by REQ-FILE-028) While the notebook is dirty, the app shall debounce auto-save so that it fires 1.5 s after the last edit, and shall force a save no later than 5 s after the notebook first became dirty (whichever happens first) | Must | T61 |
+| REQ-FILE-016 | (superseded by REQ-FILE-028, REQ-FILE-030) Auto-save shall write to the notebook library (localStorage) and, when a current `FileSystemFileHandle` exists with granted read-write permission, to the live file on disk. Auto-save shall NOT write a `powernote-autosave` snapshot to localStorage | Must | T61 |
 | REQ-FILE-017 | On startup, the app shall remove any legacy `powernote-autosave` localStorage key to avoid shipping stale state on upgrade | Must | T61 |
 | REQ-FILE-018 | The app shall check for new releases on GitHub and offer an in-app update when a newer version is available | Should | T72 |
 | REQ-FILE-019 | The TopBar shall expose a Revert action. On user confirmation, the app shall re-read the current `FileSystemFileHandle`, hydrate the workspace/canvas/draw stores from that content, and clear the dirty flag | Must | T82 |
@@ -37,3 +37,10 @@ Enable users to save their entire notebook as a single self-contained HTML file 
 | REQ-FILE-023 | When the app is opened as a local `file://` HTML document with embedded `#powernote-data`, the TopBar path indicator shall show the decoded absolute OS path from `window.location` (not a stale FSA handle name). The app shall clear any persisted current `FileSystemFileHandle` on that boot so Save/autosave cannot target a different previously linked file. After an in-session Open/Save-As that establishes a new handle, the indicator may show that handle’s `name` (browsers do not expose a full folder path for picker handles) | Must | T91 |
 | REQ-FILE-024 | User-facing product, manifest, help, validation, release and download copy shall identify the application as PowerScroll. Existing PowerNote notebooks shall still open and save without conversion or data loss. | Must | T187 |
 | REQ-FILE-025 | Compatibility-sensitive identifiers already embedded in notebooks or browser state (`#powernote-data`, `powernote://`, `powernote-*` storage keys, bridge protocol app id and test globals) shall remain readable after the rename. New builds may expose PowerScroll aliases but shall not invalidate the legacy identifiers. | Must | T187, T131 |
+| REQ-FILE-027 | Every notebook shall have a stable id (`WorkspaceData.id`), assigned on creation; a notebook saved before ids existed shall derive it from its first section id, so reopening the same file finds the same recovery copy. | Must | T204 |
+| REQ-FILE-028 | Autosave (1.5 s after the last edit, at most 5 s after the first) shall write a recovery copy of the whole notebook, images included, to IndexedDB (`powerscroll-recovery`/`notebooks`, keyed by notebook id, no count cap). Entries from the old localStorage library shall be migrated once. After a run the notebook is clean only if nothing changed since the snapshot it saved; an edit made during a run triggers another run; an idle notebook does not keep saving. | Must | T204 |
+| REQ-FILE-029 | When the browser refuses the recovery copy (quota or any other error, including an aborted transaction), the save status shall show the error with its reason, a toast shall say so once per failure streak, and the notebook shall stay dirty. | Must | T204 |
+| REQ-FILE-030 | A file linked to the notebook id (by Open, Save, Save As or Link to a file) shall be written on every autosave while read-write permission is granted. When the browser needs permission again, the top bar shall offer "Reconnect to <file>"; one click requests permission and saves. Opened as a local file (file://), only a linked handle whose name equals this file's name may be written, and the stored "current" handle is cleared so Ctrl+S cannot overwrite another file. | Must | T204 |
+| REQ-FILE-031 | The top bar shall show where the last change went, beside the file path: Saved to <file> / Saved in this browser / Saving… / File permission needed (with Reconnect) / Save failed (reason on hover). It replaces the `*` unsaved marker. | Must | T204 |
+| REQ-FILE-032 | Hiding the tab or leaving the page shall save at once, skipping the debounce; the leave-page warning shall only appear while a change has reached neither the file nor the browser copy. | Must | T204 |
+| REQ-FILE-033 | Recent notebooks shall list every browser recovery copy, newest first, with its last change, size and linked file; opening one restores its content and re-links its file; deleting one asks for confirmation inside the panel. | Must | T204 |

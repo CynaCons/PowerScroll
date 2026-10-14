@@ -539,6 +539,10 @@
   background: var(--color-primary-hover);
 }
 
+.settings-panel__link-btn {
+  align-self: flex-start;
+}
+
 .settings-panel__reset {
   border: none;
   background: transparent;

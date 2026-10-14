@@ -111,7 +111,7 @@ function findPage(workspace: WorkspaceData, pageId: string): Page | undefined {
 }
 
 export const useWorkspaceStore = create<WorkspaceState>((set, get) => {
-  const initial = createWorkspace();
+  const initial = { ...createWorkspace(), id: generateId() };
   const firstSection = initial.sections[0];
   const firstPage = firstSection.pages[0];
 

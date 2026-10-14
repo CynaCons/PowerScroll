@@ -16,6 +16,9 @@ import { useFileBindingStore } from '../../stores/useFileBindingStore';
 import type { ExtensionStatus } from '../../extensions/types';
 import { DEFAULT_BRIDGE_URL } from '../../bridge/protocol';
 import { showToast } from '../layout/Toast';
+import { saveNotebook } from '../../utils/saveNotebook';
+import { recoveryStats } from '../../utils/recoveryStore';
+import { useSaveStatusStore } from '../../stores/useSaveStatusStore';
 import './SettingsPanel.css';
 
 interface SettingsPanelProps {
@@ -130,6 +133,9 @@ export function SettingsPanel({
 
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>('idle');
   const [updateInfo, setUpdateInfo] = useState<{ version: string; url?: string; releaseUrl?: string } | null>(null);
+  const [recovery, setRecovery] = useState({ count: 0, bytes: 0 });
+  const saveStatus = useSaveStatusStore((s) => s.status);
+  useEffect(() => { void recoveryStats().then(setRecovery); }, [saveStatus]);
 
   const touchDraw = useToolStore((s) => s.drawOptions.touchDraw);
   const snapToObjects = useToolStore((s) => s.drawOptions.snapToObjects);
@@ -532,18 +538,29 @@ export function SettingsPanel({
                     {fileLabel ?? 'Not linked to a file'}
                   </span>
                   <span className="settings-panel__hint">
-                    {fileSource === 'fsa'
-                      ? 'Changes are written back to this file automatically.'
-                      : 'Save with Ctrl+S to link a file; changes are then written back to it automatically.'}
+                    {saveStatus === 'saved-file'
+                      ? 'Every change is written back to this file.'
+                      : saveStatus === 'needs-permission'
+                        ? 'The browser needs your permission again — use Reconnect in the top bar.'
+                        : 'Link a file and every change is written back to it, as well as to this browser.'}
                   </span>
+                  <button
+                    type="button"
+                    className="settings-panel__btn settings-panel__link-btn"
+                    data-testid="link-file-btn"
+                    onClick={() => void saveNotebook(true)}
+                  >
+                    {fileSource === 'fsa' ? 'Link to another file…' : 'Link to a file…'}
+                  </button>
                 </div>
               </div>
 
               <div className="settings-panel__row">
                 <span className="settings-panel__row-label">Browser copy</span>
                 <div className="settings-panel__row-control settings-panel__stack">
-                  <span>A recovery copy of this notebook is kept in this browser.</span>
-                  <span className="settings-panel__hint">Reopen it from Recent notebooks in the left rail.</span>
+                  <span data-testid="settings-save-status">{saveStatus === 'saved-file' ? 'Saved to linked file' : saveStatus === 'saved-browser' ? 'Saved in this browser' : saveStatus === 'saving' ? 'Saving…' : saveStatus === 'needs-permission' ? 'File permission needed' : 'Save error'}</span>
+                  <span data-testid="settings-recovery-count">{recovery.count} notebook{recovery.count === 1 ? '' : 's'} · {Math.max(0, Math.ceil(recovery.bytes / 1024))} KB kept in this browser.</span>
+                  <span className="settings-panel__hint">Every change is kept here too, so closing the tab never loses work. Reopen a notebook from Recent notebooks in the left rail.</span>
                 </div>
               </div>
             </section>

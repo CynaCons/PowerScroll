@@ -68,18 +68,26 @@ test.describe('97 - Agent Navigation & Errors (REQ-AGENT-011, REQ-AGENT-012, REQ
     await runBridge(page, 'create_page', { title: 'Persisted', withHeading: false });
     await runBridge(page, 'append_block', { markdown: '- [ ] survive the reload' });
 
-    // Auto-save debounces at 1.5s with a 5s max wait.
-    await expect
-      .poll(
-        async () =>
-          page.evaluate(() => localStorage.getItem('powernote-library') !== null),
-        { timeout: 10_000 },
-      )
-      .toBe(true);
-
-    const saved = await page.evaluate(() => localStorage.getItem('powernote-library'));
-    expect(saved).toContain('survive the reload');
-    expect(saved).toContain('Persisted');
+    // Auto-save debounces at 1.5s with a 5s max wait, then keeps a recovery
+    // copy of the notebook in IndexedDB (REQ-FILE-028).
+    const recovered = () =>
+      page.evaluate(
+        () =>
+          new Promise<string>((resolve, reject) => {
+            const r = indexedDB.open('powerscroll-recovery');
+            r.onsuccess = () => {
+              const q = r.result.transaction('notebooks').objectStore('notebooks').getAll();
+              q.onsuccess = () => {
+                r.result.close();
+                resolve(JSON.stringify(q.result));
+              };
+              q.onerror = () => reject(q.error);
+            };
+            r.onerror = () => reject(r.error);
+          }),
+      );
+    await expect.poll(recovered, { timeout: 10_000 }).toContain('survive the reload');
+    expect(await recovered()).toContain('Persisted');
   });
 
   test('unknown command returns UNSUPPORTED', async ({ page }) => {

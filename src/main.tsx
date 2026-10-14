@@ -9,7 +9,9 @@ import { useHistoryStore } from './stores/useHistoryStore';
 import { migrateWorkspace } from './utils/migrations';
 import { checkForUpdate } from './utils/updateChecker';
 import { isFSASupported, readFromHandle } from './utils/fileSystemAccess';
-import { getCurrentHandle, clearCurrentHandle } from './utils/fileHandleStore';
+import { getCurrentHandle, getHandleForNotebook, clearCurrentHandle, setCurrentHandle, isHandleForThisDocument } from './utils/fileHandleStore';
+import { migrateLibrary, initializeRecovery } from './utils/recoveryStore';
+import { useSaveStatusStore } from './stores/useSaveStatusStore';
 import { useFileBindingStore } from './stores/useFileBindingStore';
 import { APP_VERSION } from './version';
 import type { WorkspaceData } from './types/data';
@@ -34,6 +36,9 @@ function hydrateStores(data: WorkspaceData, refreshBinding = true) {
 // library cover persistence now. Clear any legacy value so upgraded
 // installs don't hold stale state.
 clearLegacyAutoSave();
+void initializeRecovery().catch(() => undefined);
+void migrateLibrary().catch(() => undefined);
+void navigator.storage?.persist?.().catch(() => undefined);
 
 // Hydrate priority:
 //   1. Embedded data (standalone HTML)
@@ -44,13 +49,24 @@ if (embeddedData) {
   const migrated = migrateWorkspace(embeddedData);
   if (window.location.protocol === 'file:') {
     // Local file:// open: this HTML document IS the notebook. Drop any
-    // persisted FSA handle BEFORE resolving the path indicator so a stale
-    // name (e.g. from a previous Save As) cannot win — and so Save/autosave
-    // cannot overwrite that other file.
+    // persisted "current" FSA handle BEFORE resolving the path indicator so a
+    // stale name (e.g. from a previous Save As) cannot win — and so Ctrl+S
+    // cannot overwrite that other file. A handle linked to THIS notebook with
+    // THIS file's name is offered back for autosave (one click: browser rule).
     hydrateStores(migrated, false);
     void (async () => {
       await clearCurrentHandle();
       useFileBindingStore.getState().setFromFileUrl();
+      if (!migrated.id || !isFSASupported()) return;
+      const handle = await getHandleForNotebook(migrated.id);
+      if (!handle || !isHandleForThisDocument(handle)) return;
+      const permission = await (handle as any).queryPermission?.({ mode: 'readwrite' });
+      if (permission === 'granted') {
+        await setCurrentHandle(handle);
+        useSaveStatusStore.getState().setStatus('saved-file', undefined, handle.name);
+      } else {
+        useSaveStatusStore.getState().setStatus('needs-permission', undefined, handle.name);
+      }
     })();
   } else {
     hydrateStores(migrated);

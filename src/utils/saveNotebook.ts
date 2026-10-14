@@ -7,7 +7,7 @@ import {
   saveAsWithPicker,
   writeToHandle,
 } from './fileSystemAccess';
-import { getCurrentHandle, setCurrentHandle, addRecentHandle } from './fileHandleStore';
+import { getCurrentHandle, setCurrentHandle, addRecentHandle, setHandleForNotebook } from './fileHandleStore';
 import { APP_VERSION } from '../version';
 import { showToast } from '../components/layout/Toast';
 
@@ -71,6 +71,7 @@ export async function saveNotebook(
         const ok = await writeToHandle(handle, html);
         if (ok) {
           useWorkspaceStore.getState().markClean();
+          if (ws.id) await setHandleForNotebook(ws.id, handle);
           showToast(`Saved to ${handle.name}`, 'success');
           return { ok: true, savedTo: handle.name, revision };
         }
@@ -90,6 +91,7 @@ export async function saveNotebook(
       if (newHandle) {
         await setCurrentHandle(newHandle);
         await addRecentHandle(ws.filename, newHandle);
+        if (ws.id) await setHandleForNotebook(ws.id, newHandle);
         useWorkspaceStore.getState().markClean();
         showToast(`Saved to ${newHandle.name}`, 'success');
         return { ok: true, savedTo: newHandle.name, revision };
