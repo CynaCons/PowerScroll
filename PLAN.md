@@ -1643,6 +1643,14 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] App v0.84.0: version synced, dist-template rebuilt (2,666,755 bytes), typecheck, lint 0 errors, full campaign 826/826, template smoke from disk 0 errors, showcase https://claude.ai/artifact/JGnyn7hseubHgowozSZthS; push main, tag v0.84.0, verify release assets, Pages and update paths; ledger [agent: claude-opus-5.5 tag v0.84.0 @f0f52d2, release 3 assets, CI+Pages green, live 0.84.0, ledger c484a8b]
 - [ ] powerscroll-mcp 0.68.0: versions synced, tests 8/8, bridge pass, audit 0, pack = 4 files; npm publish then MCP Registry - needs the owner's npm sign-in (npm whoami: 401 on 2026-10-14)
 
+### v0.85.0 — Board follow-ups - agents leave, clear Done, spotlight an agent's cards (2026-10-14) (current) (ACTIVE)
+**Goal:** Owner request 2026-10-14: "when agents are connected to the notebook, they never go out and they don't have themselves the ability to go out from the list of active agents"; "in my done column ... I want to clean it up, remove the tasks because it's done"; "if I click on that agent, it highlights all the tasks on which this agent is working or all the tasks that this agent has created". Then push and release.
+- [x] Agents leave the strip: chips come from board activity only (not every connected MCP process label, which today keeps them forever); a name leaves on agent_leave (new MCP tool), when its process disconnects (label match), when the owner dismisses its chip, or after 30 min of silence; acting again brings it back; leaving ends its active highlight [agent: grok-4.6+claude-opus-5.5 ddb5b44 board+agent 140/140, campaign 838/838, MCP 9/9]
+- [x] Clear Done: 'Clear done' on the Done column archives every done card (inline confirm, count); 'Archive' in the card overlay; an Archived view in the board header restores cards; archived cards leave the columns, counts and board_read (unless asked); events archived/restored; MCP card_archive / card_restore [agent: grok-4.6+claude-opus-5.5 ddb5b44 board+agent 140/140, campaign 838/838, MCP 9/9]
+- [x] Agent spotlight: clicking an agent chip highlights the cards assigned to or created by that agent and dims the rest; click again, Esc or another chip changes it [agent: grok-4.6+claude-opus-5.5 ddb5b44 board+agent 140/140, campaign 838/838, MCP 9/9]
+- [x] SRS_BOARD / SRS_AGENT rows; T213 (leave), T214 (archive and clear done incl. save-reopen), T215 (spotlight); MCP package tests [agent: grok-4.6+claude-opus-5.5 ddb5b44 board+agent 140/140, campaign 838/838, MCP 9/9]
+- [ ] Release: app 0.85.0 (full campaign, template smoke, showcase, push, tag, verify, ledger); powerscroll-mcp 0.69.0 (0.68.0 was never published but its snapshot shipped in the v0.84.0 release assets, so its number is not reused) - npm/Registry still need the owner's npm login
+
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.
 
