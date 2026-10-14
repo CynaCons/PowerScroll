@@ -168,6 +168,7 @@ export async function getPresenceStore(page: Page) {
     return {
       connected: state.connected,
       actors: state.actors,
+      left: state.left ?? {},
       now: state.now,
     };
   });

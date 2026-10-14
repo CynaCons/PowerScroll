@@ -32,11 +32,15 @@ canvas undo history.
 | REQ-BOARD-016 | Bridge card commands shall accept a card by id, by number (`15`) or by `#15`. | Must | T211 |
 | REQ-BOARD-017 | Board bridge commands shall update the board in place and shall not switch the owner's active page or disturb the canvas. | Must | T211 |
 | REQ-BOARD-018 | The app shall accept a server `agents` frame `{type:'agents', agents:[{label, role, connectedAt}]}` and store the connected labels. | Must | T212 |
-| REQ-BOARD-019 | A board shall show an agents strip between the header and the columns: one chip per name that is connected or that acted on this board in the last 30 minutes, with avatar, name, status line and a presence dot. | Must | T212 |
+| REQ-BOARD-019 | (superseded by REQ-BOARD-024) A board shall show an agents strip between the header and the columns: one chip per name that is connected or that acted on this board in the last 30 minutes, with avatar, name, status line and a presence dot. | Must | T212 |
 | REQ-BOARD-020 | A card is active while its assignee has acted on it in the last 60 s and is still connected: 2 px ring in the agent colour, glow at 22% alpha, 2.4 s pulse, footer "<name> · working now". The window lapsing or the agent disconnecting fades the highlight over ~600 ms. Under `prefers-reduced-motion: reduce` the ring stays and animation is off. Recomputed on a 5 s ticker. | Must | T212 |
 | REQ-BOARD-021 | A card changed by someone other than `you` shall flash its background for ~1.2 s; the owner's own edits shall not. | Must | T212 |
 | REQ-BOARD-022 | `board_updates` with no `since` shall return `{events: [], cursor}` for the latest event; with `since` it shall return events with seq greater than that cursor. | Must | T211 |
 | REQ-BOARD-023 | The Needs me header filter shall show a count badge of cards in Waiting for feedback. | Should | T212 |
+| REQ-BOARD-024 | Agent chips shall come from board activity only: a name gets a chip when it acted on this board in the last 30 minutes and has not left. Connected-but-silent MCP process labels shall not appear. Chip avatar, status line and presence-dot colour/blink are unchanged. | Must | T213 |
+| REQ-BOARD-025 | A name shall leave the strip (chip removed, its cards stop being active at once, the active fade still plays) when (a) `agent_leave` is called, (b) an `agents` frame arrives without a previously listed process label equal to that name, (c) the owner dismisses the chip via its × (`board-agent-dismiss-<name>`), or (d) 30 minutes of silence on this board. Acting again by that name shall restore the chip and clear left. | Must | T213 |
+| REQ-BOARD-026 | A live card may be archived (`archivedAt` set, `archived` event); archived cards are excluded from column order/renumbering, counts, the Needs me filter and "Board · N cards". Done's Clear button (`board-clear-done`) shall confirm inline (`board-clear-done-confirm`) then archive every live Done card. Overlay Archive (`card-archive`) archives that card and closes. `Archived (N)` (`board-archived-toggle`) lists archived cards with Restore (`board-restore-<number>`), which returns a card to the end of its previous column (`restored` event). `moveCard`/`updateCard` on an archived card fail with `ARCHIVED`. Archive state shall persist across save and reopen. | Must | T214 |
+| REQ-BOARD-027 | Clicking an agent chip body shall toggle a transient spotlight on that name (`aria-pressed`, `data-spotlight` on the board): cards whose assignee or createdBy is that name stay at full opacity with a 2 px ring in the agent's colour; all other cards dim to about 0.35 opacity. Columns stay in place. Clicking the same chip, another chip, or Escape (when no overlay is open) shall change or clear it. Spotlight shall combine with the All / Needs me filter; dimmed cards stay clickable; active highlighting still shows on top. | Must | T215 |
 
 ## Traceability
 
@@ -44,3 +48,6 @@ canvas undo history.
 - T210 — `tests/board/210-card-overlay.spec.ts`
 - T211 — `tests/agent/211-board-agent-tools.spec.ts`
 - T212 — `tests/board/212-live-board.spec.ts`
+- T213 — `tests/board/213-agents-leave.spec.ts`
+- T214 — `tests/board/214-clear-done.spec.ts`
+- T215 — `tests/board/215-agent-spotlight.spec.ts`

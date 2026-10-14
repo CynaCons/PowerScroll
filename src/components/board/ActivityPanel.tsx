@@ -23,6 +23,12 @@ function eventText(event: BoardEvent, board: BoardData): string {
       return `released ${cardNumber}`;
     case 'deleted':
       return `deleted ${cardNumber}`;
+    case 'archived':
+      return `archived ${cardNumber}`;
+    case 'restored':
+      return `restored ${cardNumber}`;
+    case 'left':
+      return event.text ? `left — ${event.text}` : 'left';
     default:
       return `updated ${cardNumber}`;
   }

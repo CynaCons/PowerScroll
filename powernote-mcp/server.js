@@ -79,7 +79,10 @@ const BOARD_ME_TOOLS = new Set([
   'card_note',
   'card_check',
   'card_checklist_add',
+  'card_archive',
+  'card_restore',
   'agent_status',
+  'agent_leave',
   'board_updates',
 ]);
 const BOARD_WORKFLOW =
@@ -1658,6 +1661,7 @@ const TOOLS = [
     description:
       'Read cards on a board: number, id, title, column, order, assignee, labels, ' +
       'checklist done/total, question, last note, updatedAt. Filter with column or assignee. ' +
+      'Archived cards are omitted unless include_archived is true. ' +
       BOARD_WORKFLOW,
     inputSchema: {
       type: 'object',
@@ -1669,6 +1673,10 @@ const TOOLS = [
           description: 'If set, only cards in this column.',
         },
         assignee: { type: 'string', description: 'If set, only cards assigned to this name.' },
+        include_archived: {
+          type: 'boolean',
+          description: 'If true, include archived cards. Default false.',
+        },
       },
       required: ['boardId'],
       additionalProperties: false,
@@ -1830,6 +1838,38 @@ const TOOLS = [
     },
   },
   {
+    name: 'card_archive',
+    description:
+      'Archive a card (hide it from columns; it stays in the notebook and can be restored). ' +
+      BOARD_WORKFLOW,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        boardId: { type: 'string' },
+        card: { description: 'Card id, number, or "#15".' },
+        me: ME_PROP,
+      },
+      required: ['boardId', 'card'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'card_restore',
+    description:
+      'Restore an archived card into its previous column, at the end. ' +
+      BOARD_WORKFLOW,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        boardId: { type: 'string' },
+        card: { description: 'Card id, number, or "#15".' },
+        me: ME_PROP,
+      },
+      required: ['boardId', 'card'],
+      additionalProperties: false,
+    },
+  },
+  {
     name: 'agent_status',
     description:
       'Set the one-line status shown in the board agents strip. Naming a card marks you active on it. ' +
@@ -1844,6 +1884,24 @@ const TOOLS = [
         card: { description: 'Card id, number, or "#15". Marks you active on that card.' },
       },
       required: ['text'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'agent_leave',
+    description:
+      'Sign off: remove me from the board\'s active agents. Call when you finish or stop working. ' +
+      BOARD_WORKFLOW,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        me: ME_PROP,
+        boardId: {
+          type: 'string',
+          description: 'Board to record the leave event on. Defaults to the last board you acted on.',
+        },
+        note: { type: 'string', description: 'Optional sign-off note stored on the leave event.' },
+      },
       additionalProperties: false,
     },
   },

@@ -7,14 +7,18 @@ import type { BoardCard, BoardColumnId, BoardData, Page, Section } from '../type
 import {
   addChecklistItem,
   addNote,
+  archiveCard,
   BOARD_COLUMNS,
   BoardOperationError,
   claimCard,
   createCard,
+  liveCards,
   moveCard,
+  recordAgentLeave,
   releaseCard,
   resolveCardRef,
   resolveCheckItem,
+  restoreCard,
   setChecklistItem,
   updateCard,
 } from '../board/boardOps';
@@ -23,6 +27,7 @@ import { useWorkspaceStore } from '../stores/useWorkspaceStore';
 import { useAgentPresenceStore } from '../stores/useAgentPresenceStore';
 import { BridgeCommandError } from './protocol';
 import type {
+  AgentLeaveResult,
   AgentStatusResult,
   BoardCardDetail,
   BoardCreateResult,
@@ -173,6 +178,7 @@ function summariseCard(card: BoardCard): CardListEntry {
     question: card.question,
     lastNote: lastNote(card),
     updatedAt: card.updatedAt,
+    archivedAt: card.archivedAt,
   };
 }
 
@@ -197,6 +203,7 @@ function cardDetail(board: BoardData, card: BoardCard): BoardCardDetail {
     createdBy: card.createdBy,
     createdAt: card.createdAt,
     updatedAt: card.updatedAt,
+    archivedAt: card.archivedAt,
     history: board.events
       .filter((event) => event.cardId === card.id)
       .map((event) => ({
@@ -212,11 +219,12 @@ function cardDetail(board: BoardData, card: BoardCard): BoardCardDetail {
 }
 
 function countsOf(board: BoardData) {
+  const live = liveCards(board.cards);
   return {
-    todo: board.cards.filter((card) => card.column === 'todo').length,
-    doing: board.cards.filter((card) => card.column === 'doing').length,
-    waiting: board.cards.filter((card) => card.column === 'waiting').length,
-    done: board.cards.filter((card) => card.column === 'done').length,
+    todo: live.filter((card) => card.column === 'todo').length,
+    doing: live.filter((card) => card.column === 'doing').length,
+    waiting: live.filter((card) => card.column === 'waiting').length,
+    done: live.filter((card) => card.column === 'done').length,
   };
 }
 
@@ -272,7 +280,8 @@ export function boardRead(params: Record<string, unknown>): BoardReadResult {
   const { page, board } = requireBoard(boardId);
   const column = optionalColumnId(params);
   const assignee = optionalString(params, 'assignee');
-  let cards = board.cards.slice().sort((left, right) => {
+  const includeArchived = optionalBool(params, 'include_archived') === true;
+  let cards = (includeArchived ? board.cards : liveCards(board.cards)).slice().sort((left, right) => {
     if (left.column === right.column) return left.order - right.order;
     return (
       BOARD_COLUMNS.findIndex((item) => item.id === left.column)
@@ -414,6 +423,56 @@ export function cardChecklistAdd(params: Record<string, unknown>): CardListEntry
     addChecklistItem(current, { cardId: card.id, text }, actor, Date.now()),
   );
   return summariseCard(next.cards.find((item) => item.id === card.id)!);
+}
+
+export function cardArchive(params: Record<string, unknown>): CardListEntry {
+  const actor = requireActor(params);
+  const boardId = requireString(params, 'boardId');
+  const { board } = requireBoard(boardId);
+  const card = runBoardOp(() => resolveCardRef(board, requireCardRef(params)));
+  const next = editBoard(boardId, actor, card.id, (current) =>
+    archiveCard(current, { cardId: card.id }, actor, Date.now()),
+  );
+  return summariseCard(next.cards.find((item) => item.id === card.id)!);
+}
+
+export function cardRestore(params: Record<string, unknown>): CardListEntry {
+  const actor = requireActor(params);
+  const boardId = requireString(params, 'boardId');
+  const { board } = requireBoard(boardId);
+  const card = runBoardOp(() => resolveCardRef(board, requireCardRef(params)));
+  const next = editBoard(boardId, actor, card.id, (current) =>
+    restoreCard(current, { cardId: card.id }, actor, Date.now()),
+  );
+  return summariseCard(next.cards.find((item) => item.id === card.id)!);
+}
+
+export function agentLeave(params: Record<string, unknown>): AgentLeaveResult {
+  const actor = requireActor(params);
+  const boardIdParam = optionalString(params, 'boardId');
+  const note = optionalString(params, 'note');
+  const knownBoardId = boardIdParam
+    ?? useAgentPresenceStore.getState().actors[actor]?.boardId;
+  if (knownBoardId) {
+    const located = locatePage(knownBoardId);
+    if (boardIdParam) {
+      if (!located) {
+        throw new BridgeCommandError('NOT_FOUND', `No page with id "${knownBoardId}"`);
+      }
+      if (located.page.kind !== 'board' || !located.page.board) {
+        throw new BridgeCommandError('PRECONDITION', `Page "${located.page.title}" is not a board`);
+      }
+    }
+    if (located?.page.kind === 'board' && located.page.board) {
+      const currentBoard = located.page.board;
+      const next = runBoardOp(() =>
+        recordAgentLeave(currentBoard, actor, Date.now(), note),
+      );
+      useWorkspaceStore.getState().updateBoard(knownBoardId, () => next);
+    }
+  }
+  useAgentPresenceStore.getState().leave(actor);
+  return { me: actor, boardId: knownBoardId };
 }
 
 export function agentStatus(params: Record<string, unknown>): AgentStatusResult {

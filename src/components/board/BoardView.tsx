@@ -1,7 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { Plus } from 'lucide-react';
 import type { BoardCard, BoardColumnId, BoardData } from '../../types/data';
-import { BOARD_COLUMNS, createCard, moveCard } from '../../board/boardOps';
+import {
+  BOARD_COLUMNS,
+  clearDone,
+  createCard,
+  liveCards,
+  moveCard,
+  restoreCard,
+} from '../../board/boardOps';
+import { displayName, relativeTime } from './boardUi';
 import {
   AGENT_ACTIVE_MS,
   AGENT_TICK_MS,
@@ -45,8 +53,11 @@ export function BoardView() {
   const connected = useAgentPresenceStore((state) => state.connected);
   const presenceSeen = useAgentPresenceStore((state) => state.presenceSeen);
   const actors = useAgentPresenceStore((state) => state.actors);
+  const left = useAgentPresenceStore((state) => state.left);
   const now = useAgentPresenceStore((state) => state.now);
   const [needsMe, setNeedsMe] = useState(false);
+  const [spotlight, setSpotlight] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
   const [opened, setOpened] = useState<BoardCard | null>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
   const [drop, setDrop] = useState<DropState | null>(null);
@@ -67,9 +78,12 @@ export function BoardView() {
   useEffect(() => {
     if (!board) return;
 
-    setOpened((previous) => previous
-      ? board.cards.find((card) => card.id === previous.id) ?? null
-      : null);
+    setOpened((previous) => {
+      if (!previous) return null;
+      const found = board.cards.find((card) => card.id === previous.id);
+      if (!found || found.archivedAt) return null;
+      return found;
+    });
   }, [board]);
 
   useEffect(() => {
@@ -109,11 +123,38 @@ export function BoardView() {
       if (!actor || actor.cardId !== card.id) return false;
       if (now - actor.lastActionAt > AGENT_ACTIVE_MS) return false;
       if (agentsGone) return false;
+      if (left[card.assignee]) return false;
       return true;
     })
     .map((card) => card.id);
   const activeCardIds = new Set(activeIdList);
   const activeKey = activeIdList.slice().sort().join(',');
+  const chips = agentChips(
+    board?.cards ?? [],
+    connected,
+    actors,
+    now,
+    page?.id ?? '',
+    presenceSeen,
+    left,
+  );
+  const chipNames = chips.map((chip) => chip.name).join(',');
+
+  useEffect(() => {
+    if (spotlight && !(chipNames ? chipNames.split(',') : []).includes(spotlight)) {
+      setSpotlight(null);
+    }
+  }, [spotlight, chipNames]);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      if (opened || questionDrop) return;
+      setSpotlight(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [opened, questionDrop]);
 
   useEffect(() => {
     const nextActive = new Set(activeKey ? activeKey.split(',') : []);
@@ -134,11 +175,25 @@ export function BoardView() {
   if (!page || !board) return null;
 
   const edit = (fn: (current: BoardData) => BoardData) => updateBoard(page.id, fn);
+  const live = liveCards(board.cards);
+  const archivedCards = board.cards
+    .filter((card) => card.archivedAt)
+    .slice()
+    .sort((leftCard, rightCard) => (rightCard.archivedAt ?? 0) - (leftCard.archivedAt ?? 0));
   const visibleCards = needsMe
-    ? board.cards.filter((card) => card.column === 'waiting')
-    : board.cards;
-  const waitingCount = board.cards.filter((card) => card.column === 'waiting').length;
-  const chips = agentChips(board.cards, connected, actors, now, page.id, presenceSeen);
+    ? live.filter((card) => card.column === 'waiting')
+    : live;
+  const waitingCount = live.filter((card) => card.column === 'waiting').length;
+  const spotlightActive = spotlight && chips.some((chip) => chip.name === spotlight)
+    ? spotlight
+    : null;
+
+  const archivedBy = (card: BoardCard) => {
+    const event = [...board.events]
+      .reverse()
+      .find((item) => item.type === 'archived' && item.cardId === card.id);
+    return event?.actor;
+  };
 
   const updateDrop = (event: React.PointerEvent<HTMLElement>, current: DragState) => {
     const columnElement = (document.elementFromPoint(event.clientX, event.clientY) as HTMLElement | null)
@@ -226,6 +281,7 @@ export function BoardView() {
     <main
       className="board-view"
       data-testid="board-view"
+      data-spotlight={spotlightActive ?? undefined}
       onPointerMove={(event) => {
         if ((event.target as HTMLElement).closest('.board-overlay')) return;
         if (!drag) return;
@@ -250,7 +306,7 @@ export function BoardView() {
       <header className="board-view__header">
         <div>
           <h1>{page.title}</h1>
-          <p>Board · {board.cards.length} cards</p>
+          <p>Board · {live.length} cards</p>
         </div>
         <div className="board-view__controls">
           <button
@@ -273,6 +329,17 @@ export function BoardView() {
               </span>
             )}
           </button>
+          {archivedCards.length > 0 && (
+            <button
+              type="button"
+              className={showArchived ? 'board-filter board-filter--active' : 'board-filter'}
+              data-testid="board-archived-toggle"
+              aria-pressed={showArchived}
+              onClick={() => setShowArchived((current) => !current)}
+            >
+              Archived ({archivedCards.length})
+            </button>
+          )}
           <button
             type="button"
             className="board-button board-button--primary"
@@ -287,7 +354,36 @@ export function BoardView() {
           </button>
         </div>
       </header>
-      <AgentsStrip chips={chips} />
+      <AgentsStrip
+        chips={chips}
+        spotlight={spotlightActive}
+        onToggleSpotlight={(name) => setSpotlight((current) => (current === name ? null : name))}
+        onDismiss={(name) => useAgentPresenceStore.getState().leave(name)}
+      />
+      {showArchived && archivedCards.length > 0 && (
+        <div className="board-archived" data-testid="board-archived-list">
+          {archivedCards.map((card) => (
+            <div key={card.id} className="board-archived__row">
+              <span className="board-card__number">#{card.number}</span>
+              <strong className="board-archived__title">{card.title}</strong>
+              <span className="board-archived__meta">
+                {relativeTime(card.archivedAt ?? 0)}
+                {archivedBy(card) ? ` · ${displayName(archivedBy(card))}` : ''}
+              </span>
+              <button
+                type="button"
+                className="board-button"
+                data-testid={`board-restore-${card.number}`}
+                onClick={() => edit((current) => restoreCard(current, {
+                  cardId: card.id,
+                }, ACTOR, Date.now()))}
+              >
+                Restore
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="board-view__content">
         <div className="board-view__columns">
           {BOARD_COLUMNS.map((column) => {
@@ -324,6 +420,10 @@ export function BoardView() {
                 }}
                 onCardPointerUp={() => undefined}
                 onCardKeyDown={moveWithKeyboard}
+                spotlightName={spotlightActive}
+                onClearDone={column.id === 'done'
+                  ? () => edit((current) => clearDone(current, ACTOR, Date.now()))
+                  : undefined}
               />
             );
           })}

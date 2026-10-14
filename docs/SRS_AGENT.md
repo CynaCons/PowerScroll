@@ -122,6 +122,9 @@ Added after the feature was demoed live and before it shipped.
 | REQ-AGENT-073 | Every board write tool takes `me` matching `^[a-z0-9][a-z0-9._-]{0,39}$`. When omitted the MCP server fills it from `POWERNOTE_AGENT_NAME` or the process label and passes it to the app as `actor`. An invalid `me` is `INVALID` and does not reach the notebook. | Must | powernote-mcp `board-tools.test.mjs` |
 | REQ-AGENT-074 | `board_updates` shall return events with seq > `since` (omit `since` for cursor only). If none and `wait_seconds` > 0 the MCP server shall re-ask the app every 1 s until events arrive or the wait (max 300 s) ends, returning `{events, cursor}`. | Must | powernote-mcp `board-tools.test.mjs`, T211 |
 | REQ-AGENT-075 | `board_list`, `board_read`, `card_get` and `board_updates` are read-only and bypass the lease. Other board tools take the write lease. `agent_status` is a write that does not change the board. | Must | test:bridge, powernote-mcp `board-tools.test.mjs` |
+| REQ-AGENT-076 | `agent_leave {me, boardId?, note?}` shall take the write lease, mark that name left on the board, and if `boardId` is given (or the name's last board is known) append a `left` event with the optional note. `me` follows REQ-AGENT-073. | Must | T213, powernote-mcp `board-tools.test.mjs` |
+| REQ-AGENT-077 | `card_archive` and `card_restore` are write-lease tools (`boardId`, `card`, `me`). Archive sets `archivedAt`; restore returns the card to the end of its previous column. `me` follows REQ-AGENT-073. | Must | T214, powernote-mcp `board-tools.test.mjs` |
+| REQ-AGENT-078 | `board_read` shall omit archived cards unless `include_archived: true`. `card_get` shall still return archived cards, including `archivedAt`. | Must | T214 |
 
 ## Related
 

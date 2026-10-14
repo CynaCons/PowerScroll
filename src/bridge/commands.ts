@@ -104,11 +104,13 @@ import type {
 } from './protocol';
 import { READ_DIAGRAM_DEFAULT_MEMBER_LIMIT, READ_PAGE_RESPONSE_BUDGET } from './protocol';
 import {
+  agentLeave,
   agentStatus,
   boardCreate,
   boardList,
   boardRead,
   boardUpdates,
+  cardArchive,
   cardCheck,
   cardChecklistAdd,
   cardClaim,
@@ -117,6 +119,7 @@ import {
   cardMove,
   cardNote,
   cardRelease,
+  cardRestore,
   cardUpdate,
 } from './boardCommands';
 import { APP_VERSION } from '../version';
@@ -2490,7 +2493,10 @@ const HANDLERS: Record<BridgeCommandName, Handler> = {
   card_note: cardNote,
   card_check: cardCheck,
   card_checklist_add: cardChecklistAdd,
+  card_archive: cardArchive,
+  card_restore: cardRestore,
   agent_status: agentStatus,
+  agent_leave: agentLeave,
 };
 
 export async function runBridgeCommand(

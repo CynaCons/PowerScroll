@@ -4,6 +4,7 @@ import type { BoardCard, BoardColumnId, BoardData } from '../../types/data';
 import {
   addChecklistItem,
   addNote,
+  archiveCard,
   claimCard,
   moveCard,
   releaseCard,
@@ -236,9 +237,22 @@ export function CardOverlay({ card, cards, events, edit, onClose }: CardOverlayP
               />
             </div>
           </div>
-          <button type="button" className="board-overlay__close" aria-label="Close card" onClick={onClose}>
-            <X size={19} />
-          </button>
+          <div className="board-overlay__header-actions">
+            <button
+              type="button"
+              className="board-button"
+              data-testid="card-archive"
+              onClick={() => {
+                edit((board) => archiveCard(board, { cardId: card.id }, ACTOR, Date.now()));
+                onClose();
+              }}
+            >
+              Archive
+            </button>
+            <button type="button" className="board-overlay__close" aria-label="Close card" onClick={onClose}>
+              <X size={19} />
+            </button>
+          </div>
         </header>
         <div className="board-overlay__body">
           <main className="board-overlay__main">

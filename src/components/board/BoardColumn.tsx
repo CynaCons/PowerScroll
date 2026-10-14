@@ -2,6 +2,7 @@ import { Plus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { BoardCard, BoardColumnId } from '../../types/data';
 import { BoardCardFace } from './BoardCardFace';
+import { avatarColor } from './boardUi';
 
 interface BoardColumnProps {
   cards: BoardCard[];
@@ -16,6 +17,8 @@ interface BoardColumnProps {
   onCardPointerDown: (card: BoardCard, event: React.PointerEvent<HTMLButtonElement>) => void;
   onCardPointerUp: (card: BoardCard) => void;
   onCardKeyDown: (card: BoardCard, event: React.KeyboardEvent<HTMLButtonElement>) => void;
+  spotlightName?: string | null;
+  onClearDone?: () => void;
 }
 
 export function BoardColumn({
@@ -31,14 +34,21 @@ export function BoardColumn({
   onCardPointerDown,
   onCardPointerUp,
   onCardKeyDown,
+  spotlightName = null,
+  onClearDone,
 }: BoardColumnProps) {
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState('');
+  const [confirmingClear, setConfirmingClear] = useState(false);
   const input = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (adding) input.current?.focus();
   }, [adding]);
+
+  useEffect(() => {
+    if (cards.length === 0) setConfirmingClear(false);
+  }, [cards.length]);
 
   const close = () => {
     setDraft('');
@@ -60,6 +70,40 @@ export function BoardColumn({
         <span className={`board-column__dot board-column__dot--${column.id}`} />
         <h2>{column.title}</h2>
         <span className="board-column__count">{cards.length}</span>
+        {column.id === 'done' && cards.length > 0 && onClearDone && !confirmingClear && (
+          <button
+            type="button"
+            className="board-column__clear"
+            data-testid="board-clear-done"
+            onClick={() => setConfirmingClear(true)}
+          >
+            Clear
+          </button>
+        )}
+        {confirmingClear && (
+          <div className="board-column__confirm" data-testid="board-clear-done-confirm">
+            <span>
+              Archive {cards.length} done card{cards.length === 1 ? '' : 's'}?
+            </span>
+            <button
+              type="button"
+              className="board-button board-button--primary"
+              onClick={() => {
+                onClearDone?.();
+                setConfirmingClear(false);
+              }}
+            >
+              Archive
+            </button>
+            <button
+              type="button"
+              className="board-button"
+              onClick={() => setConfirmingClear(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        )}
       </header>
       <div className="board-column__cards">
         {cards.map((card, index) => (
@@ -71,6 +115,16 @@ export function BoardColumn({
               active={activeCardIds?.has(card.id)}
               fading={fadingCardIds?.has(card.id)}
               flashing={flashingCardIds?.has(card.id)}
+              spotlight={Boolean(
+                spotlightName
+                && (card.assignee === spotlightName || card.createdBy === spotlightName),
+              )}
+              dimmed={Boolean(
+                spotlightName
+                && card.assignee !== spotlightName
+                && card.createdBy !== spotlightName,
+              )}
+              spotlightColor={spotlightName ? avatarColor(spotlightName) : undefined}
               onOpen={() => {
                 onCardPointerUp(card);
                 onOpen(card);

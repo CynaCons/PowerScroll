@@ -266,6 +266,8 @@ export interface BoardCard {
   createdBy: string;
   createdAt: number;
   updatedAt: number;
+  /** Absent means the card is live; no migration for older notebooks. */
+  archivedAt?: number;
 }
 
 export type BoardEventType =
@@ -276,7 +278,10 @@ export type BoardEventType =
   | 'released'
   | 'noted'
   | 'checked'
-  | 'deleted';
+  | 'deleted'
+  | 'archived'
+  | 'restored'
+  | 'left';
 
 export interface BoardEvent {
   seq: number;

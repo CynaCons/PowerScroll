@@ -22,6 +22,8 @@ interface AgentPresenceState {
   /** True once the bridge hub has sent at least one agent list. */
   presenceSeen: boolean;
   actors: Record<string, AgentActorState>;
+  /** Names that have left; chip hidden and their cards go dark until they act again. */
+  left: Record<string, number>;
   /** Clock used by the live board. Overridable from tests via `setNow`. */
   now: number;
   clockOverride: number | null;
@@ -30,6 +32,7 @@ interface AgentPresenceState {
     actor: string,
     info?: { cardId?: string; boardId?: string; status?: string },
   ) => void;
+  leave: (name: string) => void;
   setNow: (ms: number) => void;
   clearNow: () => void;
   tick: () => void;
@@ -43,28 +46,44 @@ export const useAgentPresenceStore = create<AgentPresenceState>((set, get) => ({
   connected: [],
   presenceSeen: false,
   actors: {},
+  left: {},
   now: wallClock(),
   clockOverride: null,
 
-  setConnected: (agents) =>
+  setConnected: (agents) => {
+    const at = get().clockOverride ?? wallClock();
+    const next = agents
+      .filter((agent) => typeof agent?.label === 'string' && agent.label.length > 0)
+      .map((agent) => ({
+        label: agent.label,
+        role: typeof agent.role === 'string' ? agent.role : 'agent',
+        connectedAt: typeof agent.connectedAt === 'number' ? agent.connectedAt : wallClock(),
+      }));
+    const incoming = new Set(next.map((agent) => agent.label));
+    const left = { ...get().left };
+    for (const previous of get().connected) {
+      if (!incoming.has(previous.label) && previous.label !== 'you') {
+        left[previous.label] = at;
+      }
+    }
     set({
       presenceSeen: true,
-      connected: agents
-        .filter((agent) => typeof agent?.label === 'string' && agent.label.length > 0)
-        .map((agent) => ({
-          label: agent.label,
-          role: typeof agent.role === 'string' ? agent.role : 'agent',
-          connectedAt: typeof agent.connectedAt === 'number' ? agent.connectedAt : wallClock(),
-        })),
-    }),
+      connected: next,
+      left,
+      now: at,
+    });
+  },
 
   recordAction: (actor, info = {}) => {
     if (!actor) return;
     const at = get().clockOverride ?? wallClock();
     set((state) => {
       const previous = state.actors[actor] ?? { lastActionAt: at };
+      const nextLeft = { ...state.left };
+      delete nextLeft[actor];
       return {
         now: at,
+        left: nextLeft,
         actors: {
           ...state.actors,
           [actor]: {
@@ -76,6 +95,15 @@ export const useAgentPresenceStore = create<AgentPresenceState>((set, get) => ({
         },
       };
     });
+  },
+
+  leave: (name) => {
+    if (!name || name === 'you') return;
+    const at = get().clockOverride ?? wallClock();
+    set((state) => ({
+      now: at,
+      left: { ...state.left, [name]: at },
+    }));
   },
 
   setNow: (ms) => set({ clockOverride: ms, now: ms }),

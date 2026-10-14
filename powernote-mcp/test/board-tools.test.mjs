@@ -28,7 +28,10 @@ const BOARD_TOOLS = [
   'card_note',
   'card_check',
   'card_checklist_add',
+  'card_archive',
+  'card_restore',
   'agent_status',
+  'agent_leave',
   'board_updates',
 ];
 
@@ -189,6 +192,29 @@ test('connecting the app receives an agents frame naming the hub', async () => {
   const frame = await waitUntil(() => notebook.control.find((item) => item.type === 'agents'));
   assert.equal(frame.type, 'agents');
   assert.ok(frame.agents.some((agent) => agent.label === 'feature-1' && agent.role === 'hub'));
+  notebook.close();
+});
+
+test('agent_leave, card_archive and card_restore schemas include me and fill the default', async () => {
+  const tools = await proc.listTools();
+  for (const name of ['agent_leave', 'card_archive', 'card_restore']) {
+    const tool = tools.find((item) => item.name === name);
+    assert.ok(tool, `missing tool ${name}`);
+    assert.equal(tool.inputSchema.properties.me.type, 'string');
+  }
+  const leave = tools.find((item) => item.name === 'agent_leave');
+  assert.match(leave.description, /Sign off/);
+  const read = tools.find((item) => item.name === 'board_read');
+  assert.equal(read.inputSchema.properties.include_archived.type, 'boolean');
+
+  const notebook = connectNotebook();
+  await waitUntil(() => notebook.control.some((item) => item.type === 'agents'));
+  const result = await proc.call('agent_leave', { boardId: 'board-1' });
+  assert.equal(result.isError, false, result.text);
+  const frame = notebook.frames.find((item) => item.cmd === 'agent_leave');
+  assert.ok(frame, 'agent_leave did not reach the notebook');
+  assert.equal(frame.params.me, 'feature-1');
+  assert.equal(frame.params.actor, 'feature-1');
   notebook.close();
 });
 

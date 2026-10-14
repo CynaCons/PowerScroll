@@ -66,7 +66,10 @@ export type BridgeCommandName =
   | 'card_note'
   | 'card_check'
   | 'card_checklist_add'
-  | 'agent_status';
+  | 'card_archive'
+  | 'card_restore'
+  | 'agent_status'
+  | 'agent_leave';
 
 /**
  * Hard cap on a serialized read payload, in characters.
@@ -163,6 +166,7 @@ export type BridgeErrorCode =
   /** Command is valid but the app cannot run it in its current state. */
   | 'PRECONDITION'
   | 'QUESTION_REQUIRED'
+  | 'ARCHIVED'
   | 'INTERNAL';
 
 export interface BridgeOk<T = unknown> {
@@ -684,6 +688,7 @@ export interface CardListEntry {
   question?: string;
   lastNote?: CardNoteSummary;
   updatedAt: number;
+  archivedAt?: number;
 }
 
 export interface BoardReadResult {
@@ -707,6 +712,7 @@ export interface BoardCardDetail {
   createdBy: string;
   createdAt: number;
   updatedAt: number;
+  archivedAt?: number;
   history: Array<{
     seq: number;
     at: number;
@@ -745,4 +751,9 @@ export interface AgentStatusResult {
   text: string;
   boardId?: string;
   cardId?: string;
+}
+
+export interface AgentLeaveResult {
+  me: string;
+  boardId?: string;
 }

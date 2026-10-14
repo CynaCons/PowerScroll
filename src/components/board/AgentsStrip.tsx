@@ -1,6 +1,7 @@
 import type { BoardCard } from '../../types/data';
 import {
   AGENT_ACTIVE_MS,
+  AGENT_RECENT_MS,
   type AgentActorState,
   type ConnectedAgent,
 } from '../../stores/useAgentPresenceStore';
@@ -25,12 +26,13 @@ export function agentChips(
   now: number,
   boardId: string,
   presenceSeen: boolean,
+  left: Record<string, number> = {},
 ): AgentChipModel[] {
   const names = new Set<string>();
-  for (const agent of connected) names.add(agent.label);
   for (const [name, actor] of Object.entries(actors)) {
     if (name === 'you') continue;
-    if (actor.boardId === boardId && now - actor.lastActionAt <= 30 * 60_000) {
+    if (left[name]) continue;
+    if (actor.boardId === boardId && now - actor.lastActionAt <= AGENT_RECENT_MS) {
       names.add(name);
     }
   }
@@ -48,7 +50,7 @@ export function agentChips(
     // Names come from `me` on each call and need not equal the process label,
     // so only an empty agent list counts as everyone having left.
     const disconnected = presenceSeen && connected.length === 0;
-    const active = Boolean(actedRecently && card && !disconnected);
+    const active = Boolean(actedRecently && card && !disconnected && !left[name]);
     const quietMin = actor
       ? Math.max(0, Math.floor((now - actor.lastActionAt) / 60_000))
       : 0;
@@ -63,37 +65,76 @@ export function agentChips(
   });
 }
 
-export function AgentsStrip({ chips }: { chips: AgentChipModel[] }) {
+interface AgentsStripProps {
+  chips: AgentChipModel[];
+  spotlight: string | null;
+  onToggleSpotlight: (name: string) => void;
+  onDismiss: (name: string) => void;
+}
+
+export function AgentsStrip({
+  chips,
+  spotlight,
+  onToggleSpotlight,
+  onDismiss,
+}: AgentsStripProps) {
   if (chips.length === 0) return null;
 
   return (
     <div className="board-agents" data-testid="board-agents">
-      {chips.map((chip) => (
-        <div
-          key={chip.name}
-          className={`board-agent-chip${chip.active ? ' board-agent-chip--active' : ''}`}
-          data-testid={`board-agent-${chip.name}`}
-          data-active={chip.active ? 'true' : 'false'}
-          style={{
-            ['--agent-color' as string]: chip.color,
-            ['--agent-glow' as string]: colorWithAlpha(chip.color, 0.22),
-          }}
-        >
-          <span
-            className="board-avatar board-avatar--medium"
-            style={{ backgroundColor: chip.color }}
+      {chips.map((chip) => {
+        const pressed = spotlight === chip.name;
+        return (
+          <div
+            key={chip.name}
+            className={[
+              'board-agent-chip',
+              chip.active ? 'board-agent-chip--active' : '',
+              pressed ? 'board-agent-chip--spotlight' : '',
+            ].filter(Boolean).join(' ')}
+            data-testid={`board-agent-${chip.name}`}
+            data-active={chip.active ? 'true' : 'false'}
+            style={{
+              ['--agent-color' as string]: chip.color,
+              ['--agent-glow' as string]: colorWithAlpha(chip.color, 0.22),
+            }}
           >
-            {avatarInitial(chip.name)}
-          </span>
-          <span className="board-agent-chip__text">
-            <strong>{displayName(chip.name)}</strong>
-            <span>{chip.subtitle}</span>
-          </span>
-          <span
-            className={`board-agent-dot${chip.active ? ' board-agent-dot--active' : ' board-agent-dot--idle'}`}
-          />
-        </div>
-      ))}
+            <button
+              type="button"
+              className="board-agent-chip__body"
+              aria-pressed={pressed}
+              aria-label={`${displayName(chip.name)}${pressed ? ', spotlight on' : ''}`}
+              onClick={() => onToggleSpotlight(chip.name)}
+            >
+              <span
+                className="board-avatar board-avatar--medium"
+                style={{ backgroundColor: chip.color }}
+              >
+                {avatarInitial(chip.name)}
+              </span>
+              <span className="board-agent-chip__text">
+                <strong>{displayName(chip.name)}</strong>
+                <span>{chip.subtitle}</span>
+              </span>
+            </button>
+            <span
+              className={`board-agent-dot${chip.active ? ' board-agent-dot--active' : ' board-agent-dot--idle'}`}
+            />
+            <button
+              type="button"
+              className="board-agent-dismiss"
+              data-testid={`board-agent-dismiss-${chip.name}`}
+              aria-label={`Dismiss ${displayName(chip.name)}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                onDismiss(chip.name);
+              }}
+            >
+              ×
+            </button>
+          </div>
+        );
+      })}
     </div>
   );
 }

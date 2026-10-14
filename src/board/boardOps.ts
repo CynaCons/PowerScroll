@@ -22,7 +22,7 @@ export const BOARD_COLUMNS: ReadonlyArray<{
 /** A small, inspectable domain error for UI callers and future agent tools. */
 export class BoardOperationError extends Error {
   constructor(
-    public readonly code: 'NOT_FOUND' | 'QUESTION_REQUIRED',
+    public readonly code: 'NOT_FOUND' | 'QUESTION_REQUIRED' | 'ARCHIVED',
     message: string,
   ) {
     super(message);
@@ -83,6 +83,14 @@ function appendEvent(
   };
 }
 
+export function isArchived(card: BoardCard): boolean {
+  return Boolean(card.archivedAt);
+}
+
+export function liveCards(cards: BoardCard[]): BoardCard[] {
+  return cards.filter((card) => !isArchived(card));
+}
+
 function getCard(board: BoardData, id: string): BoardCard {
   const found = board.cards.find((item) => item.id === id);
 
@@ -91,6 +99,13 @@ function getCard(board: BoardData, id: string): BoardCard {
   }
 
   return found;
+}
+
+function requireLive(card: BoardCard): BoardCard {
+  if (isArchived(card)) {
+    throw new BoardOperationError('ARCHIVED', `Board card "${card.id}" is archived`);
+  }
+  return card;
 }
 
 /** Resolve a card by id, number (`15`), or `#15`. */
@@ -131,14 +146,16 @@ export function resolveCheckItem(card: BoardCard, item: string | number): BoardC
 }
 
 function orderedInColumn(cards: BoardCard[], column: BoardColumnId): BoardCard[] {
-  return cards
+  return liveCards(cards)
     .filter((item) => item.column === column)
     .sort((left, right) => left.order - right.order)
     .map((item, order) => ({ ...item, order }));
 }
 
 function normalizeOrders(cards: BoardCard[]): BoardCard[] {
-  return BOARD_COLUMNS.flatMap((column) => orderedInColumn(cards, column.id));
+  const live = BOARD_COLUMNS.flatMap((column) => orderedInColumn(cards, column.id));
+  const archived = cards.filter((card) => isArchived(card));
+  return [...live, ...archived];
 }
 
 function replaceCard(
@@ -162,7 +179,7 @@ export function createCard(
     title: args.title.trim() || 'Untitled card',
     description: args.description ?? '',
     column,
-    order: board.cards.filter((item) => item.column === column).length,
+    order: liveCards(board.cards).filter((item) => item.column === column).length,
     labels: args.labels ?? [],
     checklist: (args.checklist ?? [])
       .map((text) => text.trim())
@@ -197,7 +214,7 @@ export function updateCard(
   actor: string,
   now: number,
 ): BoardData {
-  getCard(board, args.cardId);
+  requireLive(getCard(board, args.cardId));
 
   return appendEvent(
     {
@@ -223,7 +240,7 @@ export function moveCard(
   actor: string,
   now: number,
 ): BoardData {
-  const found = getCard(board, args.cardId);
+  const found = requireLive(getCard(board, args.cardId));
   const question = args.question?.trim();
 
   if (args.to === 'waiting' && !question && !found.question) {
@@ -270,7 +287,7 @@ export function claimCard(
   actor: string,
   now: number,
 ): BoardData {
-  getCard(board, args.cardId);
+  requireLive(getCard(board, args.cardId));
 
   return appendEvent(
     {
@@ -294,7 +311,7 @@ export function releaseCard(
   actor: string,
   now: number,
 ): BoardData {
-  getCard(board, args.cardId);
+  requireLive(getCard(board, args.cardId));
 
   return appendEvent(
     {
@@ -318,7 +335,7 @@ export function addNote(
   actor: string,
   now: number,
 ): BoardData {
-  getCard(board, args.cardId);
+  requireLive(getCard(board, args.cardId));
 
   const note: BoardNote = {
     id: generateId(),
@@ -349,7 +366,7 @@ export function addChecklistItem(
   actor: string,
   now: number,
 ): BoardData {
-  getCard(board, args.cardId);
+  requireLive(getCard(board, args.cardId));
 
   const item: BoardCheckItem = {
     id: generateId(),
@@ -379,7 +396,7 @@ export function setChecklistItem(
   actor: string,
   now: number,
 ): BoardData {
-  const found = getCard(board, args.cardId);
+  const found = requireLive(getCard(board, args.cardId));
 
   if (!found.checklist.some((item) => item.id === args.itemId)) {
     throw new BoardOperationError('NOT_FOUND', `Checklist item "${args.itemId}" was not found`);
@@ -409,7 +426,7 @@ export function removeChecklistItem(
   actor: string,
   now: number,
 ): BoardData {
-  const found = getCard(board, args.cardId);
+  const found = requireLive(getCard(board, args.cardId));
 
   if (!found.checklist.some((item) => item.id === args.itemId)) {
     throw new BoardOperationError('NOT_FOUND', `Checklist item "${args.itemId}" was not found`);
@@ -437,7 +454,7 @@ export function deleteCard(
   actor: string,
   now: number,
 ): BoardData {
-  getCard(board, args.cardId);
+  requireLive(getCard(board, args.cardId));
 
   return appendEvent(
     {
@@ -448,5 +465,89 @@ export function deleteCard(
     actor,
     now,
     { cardId: args.cardId },
+  );
+}
+
+export function archiveCard(
+  board: BoardData,
+  args: { cardId: string },
+  actor: string,
+  now: number,
+): BoardData {
+  requireLive(getCard(board, args.cardId));
+
+  return appendEvent(
+    {
+      ...board,
+      cards: normalizeOrders(replaceCard(board, args.cardId, (current) => ({
+        ...current,
+        archivedAt: now,
+        updatedAt: now,
+      }))),
+    },
+    'archived',
+    actor,
+    now,
+    { cardId: args.cardId },
+  );
+}
+
+export function restoreCard(
+  board: BoardData,
+  args: { cardId: string },
+  actor: string,
+  now: number,
+): BoardData {
+  const found = getCard(board, args.cardId);
+  if (!isArchived(found)) {
+    throw new BoardOperationError('NOT_FOUND', `Board card "${args.cardId}" is not archived`);
+  }
+
+  const others = board.cards.filter((item) => item.id !== args.cardId);
+  const liveCount = liveCards(others).filter((item) => item.column === found.column).length;
+  const restored: BoardCard = {
+    ...found,
+    archivedAt: undefined,
+    order: liveCount,
+    updatedAt: now,
+  };
+
+  return appendEvent(
+    {
+      ...board,
+      cards: normalizeOrders([...others, restored]),
+    },
+    'restored',
+    actor,
+    now,
+    { cardId: args.cardId },
+  );
+}
+
+export function clearDone(
+  board: BoardData,
+  actor: string,
+  now: number,
+): BoardData {
+  const done = liveCards(board.cards).filter((card) => card.column === 'done');
+  let next = board;
+  for (const card of done) {
+    next = archiveCard(next, { cardId: card.id }, actor, now);
+  }
+  return next;
+}
+
+export function recordAgentLeave(
+  board: BoardData,
+  actor: string,
+  now: number,
+  note?: string,
+): BoardData {
+  return appendEvent(
+    board,
+    'left',
+    actor,
+    now,
+    note ? { text: note } : {},
   );
 }

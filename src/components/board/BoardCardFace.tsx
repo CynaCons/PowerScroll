@@ -14,6 +14,9 @@ interface BoardCardFaceProps {
   active?: boolean;
   fading?: boolean;
   flashing?: boolean;
+  spotlight?: boolean;
+  dimmed?: boolean;
+  spotlightColor?: string;
   onOpen: () => void;
   onPointerDown: (event: React.PointerEvent<HTMLButtonElement>) => void;
   onKeyDown: (event: React.KeyboardEvent<HTMLButtonElement>) => void;
@@ -25,6 +28,9 @@ export function BoardCardFace({
   active = false,
   fading = false,
   flashing = false,
+  spotlight = false,
+  dimmed = false,
+  spotlightColor,
   onOpen,
   onPointerDown,
   onKeyDown,
@@ -42,6 +48,8 @@ export function BoardCardFace({
     active ? 'board-card--active' : '',
     fading ? 'board-card--fading' : '',
     flashing ? 'board-card--flash' : '',
+    spotlight ? 'board-card--spotlight' : '',
+    dimmed ? 'board-card--dimmed' : '',
   ].filter(Boolean).join(' ');
 
   return (
@@ -51,9 +59,11 @@ export function BoardCardFace({
       data-testid={`board-card-${card.number}`}
       data-board-card={card.id}
       data-active={active ? 'true' : 'false'}
-      style={active || fading ? {
+      data-spotlighted={spotlight ? 'true' : 'false'}
+      style={active || fading || spotlight ? {
         ['--agent-color' as string]: agentColor,
         ['--agent-glow' as string]: colorWithAlpha(agentColor, 0.22),
+        ['--spotlight-color' as string]: spotlightColor ?? agentColor,
       } : undefined}
       onPointerDown={onPointerDown}
       onPointerUp={onOpen}
