@@ -1622,17 +1622,21 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 
 ### v0.83.1 — Board page kind, four columns, drag and drop (planning)
 **Goal:** A notebook page can be a board: Page.kind 'board' (absent = canvas, no migration) with To do / In progress / Waiting for feedback / Done; AppShell shows the board view instead of the canvas; cards drag between and within columns with mouse, pen and finger; quick add per column; Board in the sidebar add menu.
+- [x] Page.kind board + BoardData, boardOps, Board in the add menu (opens at once), BoardView with four columns, quick add, pointer drag and drop + Alt+Arrow, question prompt for Waiting for feedback, activity panel; SRS_BOARD; T209 [agent: codex+claude-opus-5.5 53cc66f board/hierarchy/file 140/140]
 
 ### v0.83.2 — Card overlay - details, checklist, notes, history (planning)
 **Goal:** Clicking a card opens it in an overlay (Trello/Planner style): editable title, Markdown description, labels, status and assignee, checklist, a signed notes thread with reply, and the card's history; Esc or the cross closes it.
+- [x] Card overlay per B2: two columns, status/assignee/labels chips, Markdown description, checklist, signed notes thread with Reply and Reply-and-move, history sidebar; T210 [agent: codex+claude-opus-5.5 53cc66f board/hierarchy/file 140/140]
 
 ### v0.83.3 — Agent tools for boards over MCP (planning)
 **Goal:** Agents get full control of boards through the bridge: board_list, board_create, board_read, card_create, card_get, card_update, card_claim/card_release, card_move (Waiting for feedback requires a question), card_note, card_check, agent_status, board_updates; every write takes me (agent name, powerboard convention) and is recorded on the card and in its history.
+- [x] 14 MCP board tools with me/actor attribution, card by number, question rule, board_updates long-poll; board commands never switch the owner's page; T211, MCP board-tools tests, SRS_BOARD/SRS_AGENT [agent: grok-4.6+claude-opus-5.5 37fd929 board+agent 126/126, MCP 8/8, bridge all passed]
 
 ### v0.83.4 — Live board - agents strip, activity, feedback loop (planning)
 **Goal:** The board is a live dashboard: the agents strip shows each connected agent (from the MCP hub, new server-to-app presence frame) and the card it is on, the activity panel lists every change live, changed cards flash, the Needs me filter lists cards waiting on the owner, and board_updates (long-poll with a cursor) returns the owner's replies and moves to agents.
-- [ ] Owner request 2026-10-14: 'active highlighting when an agent is working on a ticket'. A card is active while its assignee agent has acted on it (any board tool on that card, or agent_status naming it) in the last 60 s: ring and soft glow in the agent's colour, a slow pulse (static under prefers-reduced-motion), 'working now' with the agent's name on the card face; the agent's chip in the strip pulses too; the highlight fades out when the agent goes quiet or disconnects
-- [ ] SRS row for the active state (60 s window, fade, reduced motion) and its T212 assertions
+- [ ] Owner request 2026-10-14: 'active highlighting when an agent is working on a ticket'. A card is active while its assignee agent has acted on it (any board tool on that card, or agent_status naming it) in the last 60 s: ring and soft glow in the agent's colour, a slow pulse (static under prefers-reduced-motion), 'working now' with the agent's name on the card face; the agent's chip in the strip pulses too; the highlight fades out when the agent goes quiet or every agent disconnects - implemented 37fd929, awaiting owner verification
+- [x] SRS row for the active state (60 s window, fade, reduced motion) and its T212 assertions [agent: grok-4.6+claude-opus-5.5 37fd929 T212 2/2]
+- [x] agents presence frame from the hub, useAgentPresenceStore, agents strip, live activity dot, change flash for others' edits, Needs me badge; T212 [agent: grok-4.6+claude-opus-5.5 37fd929 board+agent 126/126]
 
 ### v0.84.0 — Release - scrolls redesign and boards, app and powerscroll-mcp together (planning)
 **Goal:** Coordinated release per docs/RELEASING.md: app v0.84.0 and powerscroll-mcp with the board tools (npm then MCP Registry; owner signs in for npm and the Registry).

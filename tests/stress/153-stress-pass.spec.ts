@@ -741,8 +741,10 @@ test.describe('153 - stress pass v0.46–v0.52', () => {
     });
 
     expect(out.ceiling).toBe(-10000 - out.pad);
-    expect(out.max01).toBeCloseTo((out.headroom - out.ceiling!) * 0.1, 5);
-    expect(out.max50).toBeCloseTo((out.headroom - out.ceiling!) * 5.0, 5);
+    // Headroom is screen pixels since v0.82.0 (REQ-CANVAS-045): only the
+    // ceiling's canvas distance scales with zoom.
+    expect(out.max01).toBeCloseTo(out.headroom - out.ceiling! * 0.1, 5);
+    expect(out.max50).toBeCloseTo(out.headroom - out.ceiling! * 5.0, 5);
     expect(out.at01.y).toBeLessThanOrEqual(out.max01 + 0.01);
     expect(out.at50.y).toBeLessThanOrEqual(out.max50 + 0.01);
     expect(out.at01.scale).toBeCloseTo(0.1, 5);
