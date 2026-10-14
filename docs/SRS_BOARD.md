@@ -1,7 +1,7 @@
 # SRS: Board pages
 
 **Project:** PowerScroll
-**Version:** 0.83.2
+**Version:** 0.83.4
 **Date:** 2026-10-14
 
 ## Purpose
@@ -27,8 +27,20 @@ canvas undo history.
 | REQ-BOARD-011 | Board edits shall be persisted but shall not be added to canvas undo history. | Must | T209 |
 | REQ-BOARD-012 | The board shall show the 50 newest board events in a 290 px Activity panel, newest first, with actor avatar, action and relative time. | Should | T210 |
 | REQ-BOARD-013 | The card overlay shall use a centred 920 x 760 px maximum dialog with an editable header, two-column body and 250 px details/history sidebar. | Must | T210 |
+| REQ-BOARD-014 | Every board write from the agent bridge shall record the supplied `actor` on the card, note and board event it produces. | Must | T211 |
+| REQ-BOARD-015 | Moving a card to Waiting for feedback over the bridge shall fail with `QUESTION_REQUIRED` when no question is supplied and the card has none. | Must | T211 |
+| REQ-BOARD-016 | Bridge card commands shall accept a card by id, by number (`15`) or by `#15`. | Must | T211 |
+| REQ-BOARD-017 | Board bridge commands shall update the board in place and shall not switch the owner's active page or disturb the canvas. | Must | T211 |
+| REQ-BOARD-018 | The app shall accept a server `agents` frame `{type:'agents', agents:[{label, role, connectedAt}]}` and store the connected labels. | Must | T212 |
+| REQ-BOARD-019 | A board shall show an agents strip between the header and the columns: one chip per name that is connected or that acted on this board in the last 30 minutes, with avatar, name, status line and a presence dot. | Must | T212 |
+| REQ-BOARD-020 | A card is active while its assignee has acted on it in the last 60 s and is still connected: 2 px ring in the agent colour, glow at 22% alpha, 2.4 s pulse, footer "<name> · working now". The window lapsing or the agent disconnecting fades the highlight over ~600 ms. Under `prefers-reduced-motion: reduce` the ring stays and animation is off. Recomputed on a 5 s ticker. | Must | T212 |
+| REQ-BOARD-021 | A card changed by someone other than `you` shall flash its background for ~1.2 s; the owner's own edits shall not. | Must | T212 |
+| REQ-BOARD-022 | `board_updates` with no `since` shall return `{events: [], cursor}` for the latest event; with `since` it shall return events with seq greater than that cursor. | Must | T211 |
+| REQ-BOARD-023 | The Needs me header filter shall show a count badge of cards in Waiting for feedback. | Should | T212 |
 
 ## Traceability
 
 - T209 — `tests/board/209-board-page.spec.ts`
 - T210 — `tests/board/210-card-overlay.spec.ts`
+- T211 — `tests/agent/211-board-agent-tools.spec.ts`
+- T212 — `tests/board/212-live-board.spec.ts`

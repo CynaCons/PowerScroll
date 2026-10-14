@@ -62,13 +62,13 @@ import {
   removeBlockGap,
   type PageLike,
 } from './reflow';
+import { BridgeCommandError } from './protocol';
 import type {
   AppendBlockResult,
   CreateDiagramResult,
   BackgroundResult,
   BlockSummary,
   BridgeCommandName,
-  BridgeErrorCode,
   CheckUpdateResult,
   CreatePageResult,
   CreateScrollResult,
@@ -103,6 +103,22 @@ import type {
   UpdateBlockResult,
 } from './protocol';
 import { READ_DIAGRAM_DEFAULT_MEMBER_LIMIT, READ_PAGE_RESPONSE_BUDGET } from './protocol';
+import {
+  agentStatus,
+  boardCreate,
+  boardList,
+  boardRead,
+  boardUpdates,
+  cardCheck,
+  cardChecklistAdd,
+  cardClaim,
+  cardCreate,
+  cardGet,
+  cardMove,
+  cardNote,
+  cardRelease,
+  cardUpdate,
+} from './boardCommands';
 import { APP_VERSION } from '../version';
 import { checkForUpdate, performUpdate } from '../utils/updateChecker';
 import { isFSASupported } from '../utils/fileSystemAccess';
@@ -116,14 +132,7 @@ import {
 } from '../utils/imageEmbed';
 import { imageMiniTogglePatch } from '../utils/imageMini';
 
-export class BridgeCommandError extends Error {
-  code: BridgeErrorCode;
-  constructor(code: BridgeErrorCode, message: string) {
-    super(message);
-    this.code = code;
-    this.name = 'BridgeCommandError';
-  }
-}
+export { BridgeCommandError };
 
 // ── State helpers ───────────────────────────────────────────
 
@@ -2468,6 +2477,20 @@ const HANDLERS: Record<BridgeCommandName, Handler> = {
   save_notebook: saveNotebookCmd,
   check_update: checkUpdate,
   run_update: runUpdate,
+  board_list: boardList,
+  board_create: boardCreate,
+  board_read: boardRead,
+  board_updates: boardUpdates,
+  card_create: cardCreate,
+  card_get: cardGet,
+  card_update: cardUpdate,
+  card_claim: cardClaim,
+  card_release: cardRelease,
+  card_move: cardMove,
+  card_note: cardNote,
+  card_check: cardCheck,
+  card_checklist_add: cardChecklistAdd,
+  agent_status: agentStatus,
 };
 
 export async function runBridgeCommand(

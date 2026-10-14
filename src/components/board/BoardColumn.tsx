@@ -8,6 +8,9 @@ interface BoardColumnProps {
   column: { id: BoardColumnId; title: string };
   draggingCardId?: string;
   dropIndex?: number;
+  activeCardIds?: Set<string>;
+  fadingCardIds?: Set<string>;
+  flashingCardIds?: Set<string>;
   onCreate: (title: string) => void;
   onOpen: (card: BoardCard) => void;
   onCardPointerDown: (card: BoardCard, event: React.PointerEvent<HTMLButtonElement>) => void;
@@ -20,6 +23,9 @@ export function BoardColumn({
   column,
   draggingCardId,
   dropIndex,
+  activeCardIds,
+  fadingCardIds,
+  flashingCardIds,
   onCreate,
   onOpen,
   onCardPointerDown,
@@ -62,6 +68,9 @@ export function BoardColumn({
             <BoardCardFace
               card={card}
               dragging={draggingCardId === card.id}
+              active={activeCardIds?.has(card.id)}
+              fading={fadingCardIds?.has(card.id)}
+              flashing={flashingCardIds?.has(card.id)}
               onOpen={() => {
                 onCardPointerUp(card);
                 onOpen(card);

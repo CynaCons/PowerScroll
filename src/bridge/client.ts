@@ -11,9 +11,11 @@ import { APP_VERSION } from '../version';
 import { useWorkspaceStore } from '../stores/useWorkspaceStore';
 import { useBridgeStore } from '../stores/useBridgeStore';
 import { runBridgeCommand, BridgeCommandError } from './commands';
+import { useAgentPresenceStore } from '../stores/useAgentPresenceStore';
 import {
   BRIDGE_PROTOCOL_VERSION,
   DEFAULT_BRIDGE_URL,
+  type BridgeAgents,
   type BridgeControlFrame,
   type BridgeErrorCode,
   type BridgeHello,
@@ -72,6 +74,7 @@ function standDown(reason: string): void {
   attempt = 0;
   if (socket) {
     socket.onclose = null;
+    socket.onerror = null;
     socket.close();
     socket = null;
   }
@@ -104,6 +107,14 @@ export async function handleServerFrame(raw: string): Promise<void> {
       typeof candidate.reason === 'string' && candidate.reason
         ? candidate.reason
         : 'Another notebook took the connection',
+    );
+    return;
+  }
+
+  if (candidate.type === 'agents') {
+    const agentsFrame = frame as BridgeAgents;
+    useAgentPresenceStore.getState().setConnected(
+      Array.isArray(agentsFrame.agents) ? agentsFrame.agents : [],
     );
     return;
   }

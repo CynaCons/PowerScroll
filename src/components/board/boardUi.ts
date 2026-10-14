@@ -45,3 +45,11 @@ export function relativeTime(at: number): string {
 export function statusClass(column: BoardColumnId): string {
   return `board-status--${column}`;
 }
+
+export function colorWithAlpha(hex: string, alpha: number): string {
+  const raw = hex.replace('#', '');
+  const full = raw.length === 3 ? raw.split('').map((char) => char + char).join('') : raw;
+  const value = Number.parseInt(full, 16);
+  if (!Number.isFinite(value)) return `rgba(20, 24, 26, ${alpha})`;
+  return `rgba(${(value >> 16) & 255}, ${(value >> 8) & 255}, ${value & 255}, ${alpha})`;
+}

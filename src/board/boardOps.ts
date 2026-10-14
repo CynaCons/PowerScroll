@@ -35,6 +35,7 @@ interface CreateCardArgs {
   column?: BoardColumnId;
   description?: string;
   labels?: string[];
+  checklist?: string[];
 }
 
 interface UpdateCardArgs {
@@ -92,6 +93,43 @@ function getCard(board: BoardData, id: string): BoardCard {
   return found;
 }
 
+/** Resolve a card by id, number (`15`), or `#15`. */
+export function resolveCardRef(board: BoardData, card: string | number): BoardCard {
+  if (typeof card === 'number' || /^-?\d+$/.test(String(card)) || /^#\d+$/.test(String(card).trim())) {
+    const number = typeof card === 'number'
+      ? card
+      : Number(String(card).trim().replace(/^#/, ''));
+    const found = board.cards.find((item) => item.number === number);
+    if (!found) {
+      throw new BoardOperationError('NOT_FOUND', `Board card #${number} was not found`);
+    }
+    return found;
+  }
+
+  return getCard(board, String(card));
+}
+
+/** Resolve a checklist item by id or 1-based index. */
+export function resolveCheckItem(card: BoardCard, item: string | number): BoardCheckItem {
+  if (typeof item === 'number' || /^-?\d+$/.test(String(item))) {
+    const index = typeof item === 'number' ? item : Number(item);
+    const found = card.checklist[index - 1];
+    if (!found) {
+      throw new BoardOperationError(
+        'NOT_FOUND',
+        `Checklist item ${index} was not found on card #${card.number}`,
+      );
+    }
+    return found;
+  }
+
+  const found = card.checklist.find((entry) => entry.id === item);
+  if (!found) {
+    throw new BoardOperationError('NOT_FOUND', `Checklist item "${item}" was not found`);
+  }
+  return found;
+}
+
 function orderedInColumn(cards: BoardCard[], column: BoardColumnId): BoardCard[] {
   return cards
     .filter((item) => item.column === column)
@@ -126,7 +164,14 @@ export function createCard(
     column,
     order: board.cards.filter((item) => item.column === column).length,
     labels: args.labels ?? [],
-    checklist: [],
+    checklist: (args.checklist ?? [])
+      .map((text) => text.trim())
+      .filter(Boolean)
+      .map((text) => ({
+        id: generateId(),
+        text,
+        done: false,
+      })),
     notes: [],
     createdBy: actor,
     createdAt: now,

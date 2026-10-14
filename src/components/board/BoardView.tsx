@@ -2,8 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { Plus } from 'lucide-react';
 import type { BoardCard, BoardColumnId, BoardData } from '../../types/data';
 import { BOARD_COLUMNS, createCard, moveCard } from '../../board/boardOps';
+import {
+  AGENT_ACTIVE_MS,
+  AGENT_TICK_MS,
+  useAgentPresenceStore,
+} from '../../stores/useAgentPresenceStore';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { ActivityPanel } from './ActivityPanel';
+import { agentChips, AgentsStrip } from './AgentsStrip';
 import { BoardColumn } from './BoardColumn';
 import { CardOverlay } from './CardOverlay';
 import { QuestionPrompt } from './QuestionPrompt';
@@ -36,13 +42,27 @@ function cardsIn(cards: BoardCard[], column: BoardColumnId): BoardCard[] {
 export function BoardView() {
   const page = useWorkspaceStore((state) => state.getActivePage());
   const updateBoard = useWorkspaceStore((state) => state.updateBoard);
+  const connected = useAgentPresenceStore((state) => state.connected);
+  const presenceSeen = useAgentPresenceStore((state) => state.presenceSeen);
+  const actors = useAgentPresenceStore((state) => state.actors);
+  const now = useAgentPresenceStore((state) => state.now);
   const [needsMe, setNeedsMe] = useState(false);
   const [opened, setOpened] = useState<BoardCard | null>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
   const [drop, setDrop] = useState<DropState | null>(null);
   const [questionDrop, setQuestionDrop] = useState<QuestionDrop | null>(null);
+  const [flashing, setFlashing] = useState<Set<string>>(() => new Set());
+  const [fading, setFading] = useState<Set<string>>(() => new Set());
   const suppressOpen = useRef(false);
+  const seenSeq = useRef<number | null>(null);
+  const wasActive = useRef<Set<string>>(new Set());
   const board = page?.board;
+
+  useEffect(() => {
+    const id = window.setInterval(() => useAgentPresenceStore.getState().tick(), AGENT_TICK_MS);
+    useAgentPresenceStore.getState().tick();
+    return () => window.clearInterval(id);
+  }, []);
 
   useEffect(() => {
     if (!board) return;
@@ -52,12 +72,72 @@ export function BoardView() {
       : null);
   }, [board]);
 
+  useEffect(() => {
+    if (!board) return;
+    const latest = board.events[board.events.length - 1]?.seq ?? 0;
+    if (seenSeq.current === null) {
+      seenSeq.current = latest;
+      return;
+    }
+    const fresh = board.events.filter((event) => event.seq > (seenSeq.current ?? 0));
+    seenSeq.current = latest;
+    const ids = fresh
+      .filter((event) => event.actor !== 'you' && event.cardId)
+      .map((event) => event.cardId as string);
+    if (!ids.length) return;
+    setFlashing((current) => new Set([...current, ...ids]));
+    const timer = window.setTimeout(() => {
+      setFlashing((current) => {
+        const next = new Set(current);
+        for (const id of ids) next.delete(id);
+        return next;
+      });
+    }, 1200);
+    return () => window.clearTimeout(timer);
+  }, [board]);
+
+  // Agents act under the `me` name they pass on each call, which need not match
+  // their MCP process label, so presence cannot be matched per name. Activity
+  // in the last minute is what lights a card; only an empty agent list (every
+  // agent gone) puts the lights out early.
+  const agentsGone = presenceSeen && connected.length === 0;
+  const activeIdList = (board?.cards ?? [])
+    .filter((card) => {
+      if (!card.assignee) return false;
+      const actor = actors[card.assignee];
+      if (!actor || actor.cardId !== card.id) return false;
+      if (now - actor.lastActionAt > AGENT_ACTIVE_MS) return false;
+      if (agentsGone) return false;
+      return true;
+    })
+    .map((card) => card.id);
+  const activeCardIds = new Set(activeIdList);
+  const activeKey = activeIdList.slice().sort().join(',');
+
+  useEffect(() => {
+    const nextActive = new Set(activeKey ? activeKey.split(',') : []);
+    const lost = [...wasActive.current].filter((id) => !nextActive.has(id));
+    wasActive.current = nextActive;
+    if (!lost.length) return;
+    setFading((current) => new Set([...current, ...lost]));
+    const timer = window.setTimeout(() => {
+      setFading((current) => {
+        const next = new Set(current);
+        for (const id of lost) next.delete(id);
+        return next;
+      });
+    }, 600);
+    return () => window.clearTimeout(timer);
+  }, [activeKey]);
+
   if (!page || !board) return null;
 
   const edit = (fn: (current: BoardData) => BoardData) => updateBoard(page.id, fn);
   const visibleCards = needsMe
     ? board.cards.filter((card) => card.column === 'waiting')
     : board.cards;
+  const waitingCount = board.cards.filter((card) => card.column === 'waiting').length;
+  const chips = agentChips(board.cards, connected, actors, now, page.id, presenceSeen);
 
   const updateDrop = (event: React.PointerEvent<HTMLElement>, current: DragState) => {
     const columnElement = (document.elementFromPoint(event.clientX, event.clientY) as HTMLElement | null)
@@ -186,6 +266,11 @@ export function BoardView() {
             onClick={() => setNeedsMe(true)}
           >
             Needs me
+            {waitingCount > 0 && (
+              <span className="board-filter__badge" data-testid="board-needs-me-count">
+                {waitingCount}
+              </span>
+            )}
           </button>
           <button
             type="button"
@@ -201,6 +286,7 @@ export function BoardView() {
           </button>
         </div>
       </header>
+      <AgentsStrip chips={chips} />
       <div className="board-view__content">
         <div className="board-view__columns">
           {BOARD_COLUMNS.map((column) => {
@@ -214,6 +300,9 @@ export function BoardView() {
                 cards={cards}
                 draggingCardId={drag?.active ? drag.cardId : undefined}
                 dropIndex={isDropColumn ? drop.index : undefined}
+                activeCardIds={activeCardIds}
+                fadingCardIds={fading}
+                flashingCardIds={flashing}
                 onCreate={(title) => edit((current) => createCard(current, {
                   title,
                   column: column.id,

@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import type { BoardData, BoardEvent } from '../../types/data';
 import { BOARD_COLUMNS } from '../../board/boardOps';
 import { avatarColor, avatarInitial, displayName, relativeTime } from './boardUi';
@@ -28,19 +29,38 @@ function eventText(event: BoardEvent, board: BoardData): string {
 }
 
 export function ActivityPanel({ board }: { board: BoardData }) {
+  const baseline = useRef<number | null>(null);
+  const [fresh, setFresh] = useState<Set<number>>(() => new Set());
+
+  useEffect(() => {
+    const latest = board.events[board.events.length - 1]?.seq ?? 0;
+    if (baseline.current === null) {
+      baseline.current = latest;
+      return;
+    }
+    const arrived = board.events
+      .filter((event) => event.seq > (baseline.current ?? 0))
+      .map((event) => event.seq);
+    baseline.current = latest;
+    if (!arrived.length) return;
+    setFresh((current) => new Set([...current, ...arrived]));
+  }, [board.events]);
+
   return (
     <aside className="board-activity" aria-label="Activity">
       <header className="board-activity__header">
         <h2>Activity</h2>
+        <span className="board-live-dot" data-testid="board-activity-live" title="Live" />
       </header>
-      {/* Reserved for the live agent strip that follows this repair pass. */}
-      <div className="board-activity__agents" aria-label="Agents" />
       <ol className="board-activity__list">
         {board.events
           .slice(-50)
           .reverse()
           .map((event) => (
-            <li key={event.seq} className="board-activity__item">
+            <li
+              key={event.seq}
+              className={`board-activity__item${fresh.has(event.seq) ? ' board-activity__item--new' : ''}`}
+            >
               <span
                 className="board-avatar board-avatar--small"
                 style={{ backgroundColor: avatarColor(event.actor) }}

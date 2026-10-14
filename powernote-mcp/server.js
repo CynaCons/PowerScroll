@@ -62,7 +62,38 @@ const READ_ONLY = new Set([
   'get_background',
   'check_update',
   'bridge_status',
+  'board_list',
+  'board_read',
+  'card_get',
+  'board_updates',
 ]);
+
+const AGENT_NAME_RE = /^[a-z0-9][a-z0-9._-]{0,39}$/;
+const BOARD_ME_TOOLS = new Set([
+  'board_create',
+  'card_create',
+  'card_update',
+  'card_claim',
+  'card_release',
+  'card_move',
+  'card_note',
+  'card_check',
+  'card_checklist_add',
+  'agent_status',
+  'board_updates',
+]);
+const BOARD_WORKFLOW =
+  'Workflow: board_read the board, card_claim a card, card_move it to doing, ' +
+  'work and call card_check/card_note as you go, agent_status for what you are doing now, ' +
+  'card_move to waiting WITH a question when you need the owner, ' +
+  'board_updates {mine:true, wait_seconds} to hear back, then card_move to done.';
+const HUB_CONNECTED_AT = Date.now();
+const ME_PROP = {
+  type: 'string',
+  description:
+    'Your short agent name (^[a-z0-9][a-z0-9._-]{0,39}$). Defaults to POWERNOTE_AGENT_NAME ' +
+    'or this process label. Passed to the app as actor and recorded on cards, notes and events.',
+};
 
 /** Idle grace between one agent's commands before another may take over. */
 const LOCK_IDLE_MS = Number(process.env.POWERNOTE_LOCK_IDLE_MS || 10_000);
@@ -211,9 +242,10 @@ function onHubConnection(socket) {
     // A peer announces itself before anything else; the app sends 'hello'.
     if (msg.type === 'peer-hello') {
       kind = 'peer';
-      peers.set(socket, { agentId: msg.agentId, label: msg.label });
+      peers.set(socket, { agentId: msg.agentId, label: msg.label, connectedAt: Date.now() });
       log('Peer agent "' + msg.label + '" connected. ' + peers.size + ' peer(s).');
       socket.send(JSON.stringify({ v: PROTOCOL_VERSION, type: 'peer-welcome', hub: AGENT_LABEL }));
+      pushAgents();
       return;
     }
 
@@ -247,6 +279,7 @@ function onHubConnection(socket) {
         if (w >= 0) waiting.splice(w, 1);
       }
       log('Peer agent disconnected. ' + peers.size + ' peer(s).');
+      pushAgents();
       return;
     }
     if (app === socket) {
@@ -291,6 +324,29 @@ function adoptApp(socket, msg) {
     rejectPending(
       'The notebook this request was sent to was displaced by another connection. Retry.',
     );
+  }
+
+  pushAgents();
+}
+
+function agentsFrame() {
+  const agents = [{ label: AGENT_LABEL, role: 'hub', connectedAt: HUB_CONNECTED_AT }];
+  for (const info of peers.values()) {
+    agents.push({
+      label: info.label,
+      role: 'peer',
+      connectedAt: info.connectedAt || Date.now(),
+    });
+  }
+  return { v: PROTOCOL_VERSION, type: 'agents', agents };
+}
+
+function pushAgents() {
+  if (!app || app.readyState !== app.OPEN) return;
+  try {
+    app.send(JSON.stringify(agentsFrame()));
+  } catch (err) {
+    log('Could not push agents frame:', (err && err.message) || err);
   }
 }
 
@@ -365,7 +421,7 @@ function askHub(cmd, params) {
       return;
     }
     const reqId = randomUUID();
-    const budget = timeoutFor(cmd);
+    const budget = timeoutFor(cmd, params);
     const timer = setTimeout(() => {
       pending.delete(reqId);
       reject(new Error('The agent hub did not answer "' + cmd + '" within ' + budget + 'ms'));
@@ -415,7 +471,11 @@ const SLOW_COMMAND_TIMEOUT_MS = Number(
 );
 const SLOW_COMMANDS = new Set(['check_update', 'run_update', 'save_notebook']);
 
-function timeoutFor(cmd) {
+function timeoutFor(cmd, params) {
+  if (cmd === 'board_updates') {
+    const wait = Math.min(Math.max(0, Number(params && params.wait_seconds) || 0), 300);
+    return wait * 1000 + REQUEST_TIMEOUT_MS + 2000;
+  }
   return SLOW_COMMANDS.has(cmd) ? SLOW_COMMAND_TIMEOUT_MS : REQUEST_TIMEOUT_MS;
 }
 
@@ -432,7 +492,7 @@ function callApp(cmd, params) {
     }
 
     const id = randomUUID();
-    const budget = timeoutFor(cmd);
+    const budget = timeoutFor(cmd, params);
     const timer = setTimeout(() => {
       pending.delete(id);
       reject(new Error(`Notebook did not respond to "${cmd}" within ${budget}ms`));
@@ -1568,6 +1628,251 @@ const TOOLS = [
       additionalProperties: false,
     },
   },
+  {
+    name: 'board_list',
+    description:
+      'List every board page in the notebook: id, title, section, and card counts per column. ' +
+      BOARD_WORKFLOW,
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  },
+  {
+    name: 'board_create',
+    description:
+      'Create a new board page. Does NOT switch the owner\'s active page. ' + BOARD_WORKFLOW,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'Board title.' },
+        sectionId: {
+          type: 'string',
+          description: 'Section to create the board in. Defaults to the active section.',
+        },
+        me: ME_PROP,
+      },
+      required: ['title'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'board_read',
+    description:
+      'Read cards on a board: number, id, title, column, order, assignee, labels, ' +
+      'checklist done/total, question, last note, updatedAt. Filter with column or assignee. ' +
+      BOARD_WORKFLOW,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        boardId: { type: 'string', description: 'Board page id from board_list.' },
+        column: {
+          type: 'string',
+          enum: ['todo', 'doing', 'waiting', 'done'],
+          description: 'If set, only cards in this column.',
+        },
+        assignee: { type: 'string', description: 'If set, only cards assigned to this name.' },
+      },
+      required: ['boardId'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'card_create',
+    description:
+      'Create a card on a board. Returns the card including its number. Default column is todo. ' +
+      BOARD_WORKFLOW,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        boardId: { type: 'string' },
+        title: { type: 'string' },
+        description: { type: 'string' },
+        column: { type: 'string', enum: ['todo', 'doing', 'waiting', 'done'] },
+        labels: { type: 'array', items: { type: 'string' } },
+        checklist: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Checklist item titles, all unchecked.',
+        },
+        me: ME_PROP,
+      },
+      required: ['boardId', 'title'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'card_get',
+    description:
+      'Read one card in full, including notes, checklist and history events. ' +
+      '`card` accepts the id or the number (15 or "#15"). ' +
+      BOARD_WORKFLOW,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        boardId: { type: 'string' },
+        card: { description: 'Card id, number, or "#15".' },
+      },
+      required: ['boardId', 'card'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'card_update',
+    description: 'Update a card title, description or labels. ' + BOARD_WORKFLOW,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        boardId: { type: 'string' },
+        card: { description: 'Card id, number, or "#15".' },
+        title: { type: 'string' },
+        description: { type: 'string' },
+        labels: { type: 'array', items: { type: 'string' } },
+        me: ME_PROP,
+      },
+      required: ['boardId', 'card'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'card_claim',
+    description: 'Assign the card to me. ' + BOARD_WORKFLOW,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        boardId: { type: 'string' },
+        card: { description: 'Card id, number, or "#15".' },
+        me: ME_PROP,
+      },
+      required: ['boardId', 'card'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'card_release',
+    description: 'Clear the card assignee. ' + BOARD_WORKFLOW,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        boardId: { type: 'string' },
+        card: { description: 'Card id, number, or "#15".' },
+        me: ME_PROP,
+      },
+      required: ['boardId', 'card'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'card_move',
+    description:
+      'Move a card to todo, doing, waiting or done. `question` is required when moving to waiting. ' +
+      BOARD_WORKFLOW,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        boardId: { type: 'string' },
+        card: { description: 'Card id, number, or "#15".' },
+        to: { type: 'string', enum: ['todo', 'doing', 'waiting', 'done'] },
+        position: { type: 'integer', minimum: 0, description: 'Index in the destination column.' },
+        question: {
+          type: 'string',
+          description: 'Required when `to` is waiting. Shown to the owner.',
+        },
+        me: ME_PROP,
+      },
+      required: ['boardId', 'card', 'to'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'card_note',
+    description: 'Add a signed note on a card. ' + BOARD_WORKFLOW,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        boardId: { type: 'string' },
+        card: { description: 'Card id, number, or "#15".' },
+        text: { type: 'string' },
+        me: ME_PROP,
+      },
+      required: ['boardId', 'card', 'text'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'card_check',
+    description:
+      'Tick or untick a checklist item. `item` is the item id or a 1-based index. ' +
+      BOARD_WORKFLOW,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        boardId: { type: 'string' },
+        card: { description: 'Card id, number, or "#15".' },
+        item: { description: 'Checklist item id or 1-based index.' },
+        done: { type: 'boolean' },
+        me: ME_PROP,
+      },
+      required: ['boardId', 'card', 'item', 'done'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'card_checklist_add',
+    description: 'Append a checklist item to a card. ' + BOARD_WORKFLOW,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        boardId: { type: 'string' },
+        card: { description: 'Card id, number, or "#15".' },
+        text: { type: 'string' },
+        me: ME_PROP,
+      },
+      required: ['boardId', 'card', 'text'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'agent_status',
+    description:
+      'Set the one-line status shown in the board agents strip. Naming a card marks you active on it. ' +
+      'Does not change the board. ' +
+      BOARD_WORKFLOW,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        me: ME_PROP,
+        text: { type: 'string', description: 'What you are doing now.' },
+        boardId: { type: 'string' },
+        card: { description: 'Card id, number, or "#15". Marks you active on that card.' },
+      },
+      required: ['text'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'board_updates',
+    description:
+      'Events with seq > since (omit since to receive only the cursor). ' +
+      'mine:true limits to cards assigned to you. If none and wait_seconds > 0, this server ' +
+      're-asks the app every 1 s until something arrives or the wait (max 300 s) ends. ' +
+      'Returns {events, cursor}. This is how you hear the owner\'s replies and moves. ' +
+      BOARD_WORKFLOW,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        boardId: { type: 'string' },
+        since: { type: 'integer', minimum: 0, description: 'Return events with seq greater than this.' },
+        mine: { type: 'boolean', description: 'Only events on cards currently assigned to me.' },
+        wait_seconds: {
+          type: 'integer',
+          minimum: 0,
+          maximum: 300,
+          description: 'Long-poll up to this many seconds (max 300) when there are no events.',
+        },
+        me: ME_PROP,
+      },
+      required: ['boardId'],
+      additionalProperties: false,
+    },
+  },
 ];
 
 /**
@@ -1723,6 +2028,49 @@ function connectedAgents() {
  * Only the hub ever gets here: peers forward to it, so there is exactly one
  * arbiter no matter how many agent processes are running.
  */
+function withAgentMe(name, params, label) {
+  if (!BOARD_ME_TOOLS.has(name)) return { ...params };
+  const next = { ...params };
+  if (next.me === undefined || next.me === null || next.me === '') {
+    next.me = label;
+  }
+  if (typeof next.me !== 'string' || !AGENT_NAME_RE.test(next.me)) {
+    throw new Error(
+      'INVALID: "me" must match ^[a-z0-9][a-z0-9._-]{0,39}$ (powerboard convention)',
+    );
+  }
+  next.actor = next.me;
+  return next;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function pollBoardUpdates(args) {
+  const wait = Math.min(Math.max(0, Number(args.wait_seconds) || 0), 300);
+  const started = Date.now();
+  const params = { ...args };
+  delete params.wait_seconds;
+  let since = params.since;
+
+  while (true) {
+    const response = await callApp('board_updates', { ...params, since });
+    const result = unwrap(response);
+    if (result && Array.isArray(result.events) && result.events.length > 0) {
+      return result;
+    }
+    if (since === undefined && result && typeof result.cursor === 'number') {
+      since = result.cursor;
+    }
+    if (wait <= 0) return result;
+    if (Date.now() - started >= wait * 1000) {
+      return result || { events: [], cursor: since ?? 0 };
+    }
+    await sleep(1000);
+  }
+}
+
 async function runToolAsAgent(name, params, agentId, label) {
   if (name === 'bridge_status') {
     const st = lockStatus();
@@ -1745,6 +2093,7 @@ async function runToolAsAgent(name, params, agentId, label) {
   const route = TOOL_ROUTES[name];
   const cmd = route ? route.cmd : name;
   let args = route ? { ...params, ...route.params } : params;
+  args = withAgentMe(name, args ?? {}, label);
   if (name === 'insert_image') {
     args = await prepareInsertImageParams(args);
   }
@@ -1756,6 +2105,9 @@ async function runToolAsAgent(name, params, agentId, label) {
       delete appArgs.out_path;
       const response = await callApp(cmd, appArgs);
       return await writeReadImageFile(unwrap(response), args);
+    }
+    if (name === 'board_updates') {
+      return await pollBoardUpdates(args);
     }
     const response = await callApp(cmd, args);
     return unwrap(response);

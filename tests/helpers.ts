@@ -157,6 +157,22 @@ export async function waitForCanvasReady(page: Page) {
   await page.locator('[data-testid="canvas-container"] canvas').first().waitFor({ state: 'visible' });
 }
 
+/** Presence store used by the live board (agents strip / active cards). */
+export async function getPresenceStore(page: Page) {
+  return page.evaluate(() => {
+    const store =
+      (window as any).__POWERNOTE_AGENT_PRESENCE__
+      ?? (window as any).__POWERNOTE_STORES__?.agentPresence;
+    if (!store) throw new Error('Agent presence store is not exposed');
+    const state = store.getState();
+    return {
+      connected: state.connected,
+      actors: state.actors,
+      now: state.now,
+    };
+  });
+}
+
 /**
  * Activate a tool by clicking its NavRail button
  */

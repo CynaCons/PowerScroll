@@ -3,6 +3,7 @@ import type { BoardCard } from '../../types/data';
 import {
   avatarColor,
   avatarInitial,
+  colorWithAlpha,
   displayName,
   relativeTime,
 } from './boardUi';
@@ -10,6 +11,9 @@ import {
 interface BoardCardFaceProps {
   card: BoardCard;
   dragging: boolean;
+  active?: boolean;
+  fading?: boolean;
+  flashing?: boolean;
   onOpen: () => void;
   onPointerDown: (event: React.PointerEvent<HTMLButtonElement>) => void;
   onKeyDown: (event: React.KeyboardEvent<HTMLButtonElement>) => void;
@@ -18,6 +22,9 @@ interface BoardCardFaceProps {
 export function BoardCardFace({
   card,
   dragging,
+  active = false,
+  fading = false,
+  flashing = false,
   onOpen,
   onPointerDown,
   onKeyDown,
@@ -28,13 +35,26 @@ export function BoardCardFace({
     : card.notes.length
       ? `${card.notes.length} notes`
       : '';
+  const agentColor = avatarColor(card.assignee);
+  const className = [
+    'board-card',
+    dragging ? 'board-card--dragging' : '',
+    active ? 'board-card--active' : '',
+    fading ? 'board-card--fading' : '',
+    flashing ? 'board-card--flash' : '',
+  ].filter(Boolean).join(' ');
 
   return (
     <button
       type="button"
-      className={`board-card${dragging ? ' board-card--dragging' : ''}`}
+      className={className}
       data-testid={`board-card-${card.number}`}
       data-board-card={card.id}
+      data-active={active ? 'true' : 'false'}
+      style={active || fading ? {
+        ['--agent-color' as string]: agentColor,
+        ['--agent-glow' as string]: colorWithAlpha(agentColor, 0.22),
+      } : undefined}
       onPointerDown={onPointerDown}
       onPointerUp={onOpen}
       onKeyDown={onKeyDown}
@@ -65,8 +85,17 @@ export function BoardCardFace({
           {avatarInitial(card.assignee)}
         </span>
         <span className="board-card__assignee">
-          {card.assignee ? `${displayName(card.assignee)} · ` : ''}
-          {relativeTime(card.updatedAt)}
+          {active && card.assignee ? (
+            <>
+              <span className="board-agent-dot board-agent-dot--active" />
+              {`${displayName(card.assignee)} · working now`}
+            </>
+          ) : (
+            <>
+              {card.assignee ? `${displayName(card.assignee)} · ` : ''}
+              {relativeTime(card.updatedAt)}
+            </>
+          )}
         </span>
         {metadata && (
           <span className="board-card__counts">

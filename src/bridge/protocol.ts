@@ -52,7 +52,21 @@ export type BridgeCommandName =
   | 'rename_notebook'
   | 'save_notebook'
   | 'check_update'
-  | 'run_update';
+  | 'run_update'
+  | 'board_list'
+  | 'board_create'
+  | 'board_read'
+  | 'board_updates'
+  | 'card_create'
+  | 'card_get'
+  | 'card_update'
+  | 'card_claim'
+  | 'card_release'
+  | 'card_move'
+  | 'card_note'
+  | 'card_check'
+  | 'card_checklist_add'
+  | 'agent_status';
 
 /**
  * Hard cap on a serialized read payload, in characters.
@@ -117,8 +131,22 @@ export interface BridgeDisplaced {
   reason: string;
 }
 
+/**
+ * Presence of MCP agents connected to this notebook. Pushed whenever the app
+ * connects and whenever a peer joins or leaves.
+ */
+export interface BridgeAgents {
+  v: number;
+  type: 'agents';
+  agents: Array<{
+    label: string;
+    role: string;
+    connectedAt: number;
+  }>;
+}
+
 /** Control frames the server can push outside of request/response. */
-export type BridgeControlFrame = BridgeDisplaced;
+export type BridgeControlFrame = BridgeDisplaced | BridgeAgents;
 
 export interface BridgeRequest {
   v: number;
@@ -129,10 +157,12 @@ export interface BridgeRequest {
 
 export type BridgeErrorCode =
   | 'BAD_PARAMS'
+  | 'INVALID'
   | 'NOT_FOUND'
   | 'UNSUPPORTED'
   /** Command is valid but the app cannot run it in its current state. */
   | 'PRECONDITION'
+  | 'QUESTION_REQUIRED'
   | 'INTERNAL';
 
 export interface BridgeOk<T = unknown> {
@@ -147,6 +177,15 @@ export interface BridgeErr {
   id: string;
   ok: false;
   error: { code: BridgeErrorCode; message: string };
+}
+
+export class BridgeCommandError extends Error {
+  code: BridgeErrorCode;
+  constructor(code: BridgeErrorCode, message: string) {
+    super(message);
+    this.code = code;
+    this.name = 'BridgeCommandError';
+  }
 }
 
 export type BridgeResponse<T = unknown> = BridgeOk<T> | BridgeErr;
@@ -598,4 +637,112 @@ export interface RunUpdateResult {
 
 export function isBridgeErr(r: BridgeResponse): r is BridgeErr {
   return r.ok === false;
+}
+
+// ── Board / card payloads ───────────────────────────────────
+
+export interface BoardColumnCounts {
+  todo: number;
+  doing: number;
+  waiting: number;
+  done: number;
+}
+
+export interface BoardListEntry {
+  id: string;
+  title: string;
+  sectionId: string;
+  section: string;
+  counts: BoardColumnCounts;
+}
+
+export interface BoardListResult {
+  boards: BoardListEntry[];
+}
+
+export interface BoardCreateResult {
+  boardId: string;
+  title: string;
+  sectionId: string;
+}
+
+export interface CardNoteSummary {
+  author: string;
+  text: string;
+  at: number;
+}
+
+export interface CardListEntry {
+  id: string;
+  number: number;
+  title: string;
+  column: string;
+  order: number;
+  assignee?: string;
+  labels: string[];
+  checklist: { done: number; total: number };
+  question?: string;
+  lastNote?: CardNoteSummary;
+  updatedAt: number;
+}
+
+export interface BoardReadResult {
+  boardId: string;
+  title: string;
+  cards: CardListEntry[];
+}
+
+export interface BoardCardDetail {
+  id: string;
+  number: number;
+  title: string;
+  description: string;
+  column: string;
+  order: number;
+  assignee?: string;
+  labels: string[];
+  checklist: Array<{ id: string; text: string; done: boolean }>;
+  notes: Array<{ id: string; author: string; at: number; text: string }>;
+  question?: string;
+  createdBy: string;
+  createdAt: number;
+  updatedAt: number;
+  history: Array<{
+    seq: number;
+    at: number;
+    actor: string;
+    type: string;
+    from?: string;
+    to?: string;
+    text?: string;
+  }>;
+}
+
+export interface CardGetResult {
+  boardId: string;
+  card: BoardCardDetail;
+}
+
+export interface BoardEventEntry {
+  seq: number;
+  at: number;
+  actor: string;
+  type: string;
+  cardId?: string;
+  card?: number;
+  from?: string;
+  to?: string;
+  text?: string;
+}
+
+export interface BoardUpdatesResult {
+  events: BoardEventEntry[];
+  cursor: number;
+}
+
+export interface AgentStatusResult {
+  me: string;
+  text: string;
+  boardId?: string;
+  cardId?: string;
 }

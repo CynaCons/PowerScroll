@@ -83,6 +83,17 @@ socket on their machine.
 | `bridge_status` | Who else is working in this notebook, and who holds it. Never blocked. |
 | `check_update` | Is a newer PowerScroll release available? |
 | `run_update` | Install it. Overwrites the file and reloads the app. |
+| `board_list` | Boards in the notebook: id, title, section, counts per column. |
+| `board_create` | New board page. Does **not** switch the owner's active page. |
+| `board_read` | Cards on a board (filter by `column` / `assignee`). |
+| `card_create` / `card_get` / `card_update` | Create, read (id or `#15`) and edit a card. |
+| `card_claim` / `card_release` | Assign the card to `me` / clear the assignee. |
+| `card_move` | Move to todo/doing/waiting/done. `question` is required for waiting. |
+| `card_note` / `card_check` / `card_checklist_add` | Signed notes and checklist ticks (`item` is id or 1-based index). |
+| `agent_status` | One-line status for the agents strip; naming a card marks you active on it. |
+| `board_updates` | Events after `since` (omit for cursor only). `mine` + `wait_seconds` long-polls the owner's replies. |
+
+Board writes take `me` (defaults to `POWERNOTE_AGENT_NAME` / the process label). Use the same short name on every call (`^[a-z0-9][a-z0-9._-]{0,39}$`). Workflow: `board_read` → `card_claim` → `card_move` to doing → work with `card_check` / `card_note` and `agent_status` → `card_move` to waiting with a `question` → `board_updates {mine:true, wait_seconds}` → `card_move` to done.
 
 ### Diagrams
 

@@ -66,13 +66,17 @@ function connect(notebook) {
   });
 }
 
-function nextMessage(ws, timeoutMs = 5000) {
+function nextMessage(ws, timeoutMs = 5000, ignoreTypes = ['agents']) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('no message received')), timeoutMs);
-    ws.once('message', (raw) => {
+    const onMsg = (raw) => {
+      const msg = JSON.parse(raw.toString());
+      if (ignoreTypes.includes(msg.type)) return;
       clearTimeout(timer);
-      resolve(JSON.parse(raw.toString()));
-    });
+      ws.off('message', onMsg);
+      resolve(msg);
+    };
+    ws.on('message', onMsg);
   });
 }
 
@@ -112,8 +116,9 @@ test('the displaced frame arrives before the socket closes', async () => {
   const second = await connect('B');
   await nextClose(first);
 
+  const withoutAgents = events.filter((type) => type !== 'agents');
   assert.deepEqual(
-    events,
+    withoutAgents,
     ['displaced', 'close'],
     'ordering matters — a client that sees only the close would retry and flip-flop',
   );
