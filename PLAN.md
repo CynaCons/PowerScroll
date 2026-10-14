@@ -1580,7 +1580,7 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] SRS_SHAPES row for live preview above content; T205 spec [agent: codex+claude-opus-5.5 b44cc05]
 - [x] Smoke test: npm run dev launches with zero console errors; affected specs green [agent: codex+claude-opus-5.5 b44cc05]
 
-### v0.80.0 — Freehand ink back to the pre-Excalidraw renderer, precise pen cursor (2026-10-14) (planning)
+### v0.80.0 — Freehand ink back to the pre-Excalidraw renderer, precise pen cursor (2026-10-14) (planning) (current) (ACTIVE)
 **Goal:** Owner request 2026-10-14: the perfect-freehand drawing (v0.69.1, v0.74.0) is "disturbing and disforming the shape ... the movements that I do with the pen don't reflect properly on the canvas. We have to revert that change and get back to a normal drawing style, like it was before." Only change: the drawing cursor must feel "very precise and accurate".
 - [x] Restore the pre-5ccecf7 renderer: Konva Line (tension 0.3, round caps/joins) for mouse and finger, the pressure ribbon only for real pen pressure; stop baking at commit; live ink uses the same renderer so the stroke does not change shape on release [agent: codex+claude-opus-5.5 f023fae draw+shapes 94/94]
 - [x] Data compatibility: strokes saved with baked:true keep loading; their simulated pressures are ignored so they draw as constant-width lines (veto-able: pen strokes drawn during v0.69-v0.78 lose their width variation) [agent: codex+claude-opus-5.5 f023fae draw+shapes 94/94]
@@ -1590,7 +1590,7 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Supersede REQ-DRAW-020..024; rewrite T190/T196, update T135 and T81; new spec T206 for renderer + cursor [agent: codex+claude-opus-5.5 f023fae draw+shapes 94/94]
 - [ ] Smoke test: npm run dev launches with zero console errors; draw specs green; owner draws with the pen and confirms - fixed f023fae, awaiting owner verification
 
-### v0.81.0 — Settings as a full overlay (2026-10-14) (planning)
+### v0.81.0 — Settings as a full overlay (2026-10-14) (planning) (2026-10-14 · released v0.81.0 @925bf61 · 812/812 · showcase https://claude.ai/artifact/FCNM5qiqaf5JkRGapEZNEu) (COMPLETE)
 **Goal:** Owner request 2026-10-14: replace the tiny pop-up on the left with "a full view overlay, not covering the entirety of the screen, but maybe 80% ... a pop-up overlay with a cross at the top right to close it and a proper layout for the settings." Owner picks the visual direction from drafts first.
 - [x] Drafts: today's panel captured from the running app plus three directions at 80% of the window (A side index, B one sheet, C scrolls grouped by where a setting is kept) - https://claude.ai/artifact/X3Ef53PRNxGMerWLAgFgaF [agent: claude-opus-5.5]
 - [x] Owner picks a direction: A, but as one continuously scrolling page like VS Code settings, not tabs (2026-10-14) [agent: claude-opus-5.5 f2413b1]
@@ -1599,7 +1599,7 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] SRS_SETTINGS rows for the overlay (size, close affordances, focus); T207 spec [agent: claude-opus-5.5 f2413b1]
 - [x] Showcase artifact with real captures, light and dark; smoke test: npm run dev launches with zero console errors; full Playwright campaign green [agent: claude-opus-5.5 812/812, showcase https://claude.ai/artifact/FCNM5qiqaf5JkRGapEZNEu, 06f8246]
 - [x] Owner 2026-10-14: 'continue with all the features until you are able to release ... I will test after the release'. Commit the finished but uncommitted v0.77.0 brand mark and v0.78.0 scroll header work on its own after the full campaign [agent: claude-opus-5.5 812/812, showcase https://claude.ai/artifact/FCNM5qiqaf5JkRGapEZNEu, 06f8246]
-- [ ] Release v0.81.0 (app-only, docs/RELEASING.md): version 0.81.0 in src/version.ts + package.json/lock, build:template, typecheck, lint, MCP package tests, bridge tests, template smoke; commit dist-template; push main; tag v0.81.0; verify GitHub release assets, Pages and the in-app update path; update docs/DEPLOYMENTS.md
+- [x] Release v0.81.0 (app-only, docs/RELEASING.md): version 0.81.0 in src/version.ts + package.json/lock, build:template, typecheck, lint, MCP package tests, bridge tests, template smoke; commit dist-template; push main; tag v0.81.0; verify GitHub release assets, Pages and the in-app update path; update docs/DEPLOYMENTS.md [agent: claude-opus-5.5 tag v0.81.0 @925bf61, release 3 assets, Pages+CI green, ledger e58d167]
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.
@@ -1622,3 +1622,4 @@ See `docs/VISION.md` for deferred post-MVP items (cloud sync, collaboration, pai
 - Stencil-pack extension: vendor common drawio stencil XMLs (aws4, azure, cisco) so mxStencilRegistry can resolve library icons offline (v0.64 renders them as styled box + label, dynamicLoading=false). Also: math typesetting in drawio labels is disabled offline (DRAW_MATH_URL no-op) — could ship MathJax as an extension later.
 - Recent notebooks: show the linked file name on each browser copy - autosave calls saveRecovery(workspace) without the handle name, so RecoveryEntry.fileName stays empty (REQ-FILE-033). Found in the v0.81.0 showcase, left out to keep the release equal to the tested build
 - Top bar: while a stored link needs permission (hosted app), the path still reads 'Not linked to a file' next to 'Reconnect to <file>' - show the linked file name instead
+- Dependabot reports 40 alerts on main after the v0.81.0 push (1 critical, 18 high, 20 moderate, 1 low) - triage which ship in the single-file build vs dev-only, and merge the open bump PRs (2026-10-14)
