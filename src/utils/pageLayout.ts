@@ -109,28 +109,30 @@ export const MAX_TEXT_WIDTH = 5000;
 /** Minimum text block height after content measure */
 export const MIN_TEXT_HEIGHT = 24;
 
-/** Canvas y a scroll title rests at when the page is scrolled to the top. */
+/** Canvas y of the scroll header's resting row. */
 export const SCROLL_TITLE_RESTING_Y = 12;
-/** Gap kept between a held title and the top of the viewport. */
+/** Gap retained by scrollTitleY for callers which position a held header. */
 export const SCROLL_TITLE_PIN_INSET = 10;
 
-/**
- * One bar, rest and pin (v0.62). Same type size so pinning is a hold, not a
- * costume change. Opaque TINT so body Html cannot collide with the name.
- */
-export const SCROLL_TITLE_RESTING_FONT_SIZE = 16;
-export const SCROLL_TITLE_PINNED_FONT_SIZE = 16;
-/**
- * Konva Text `fontStyle`. This codebase already passes numeric weights
- * (DiagramNode uses `"600"`); the canvas font string accepts them as weight.
- */
-export const SCROLL_TITLE_FONT_STYLE = '600';
-/** Written-title ink at rest; same ink when pinned so the name does not change colour. */
+/** Resting headers are document headings in canvas units. */
+export const SCROLL_TITLE_RESTING_HEIGHT = 34;
+export const SCROLL_TITLE_RESTING_FONT_SIZE = 24;
+export const SCROLL_TITLE_RESTING_FONT_STYLE = '700';
+export const SCROLL_TITLE_RESTING_LETTER_SPACING = -0.015;
+/** Held headers are screen-constant so they remain legible at every zoom. */
+export const SCROLL_TITLE_HELD_HEIGHT_SCREEN = 32;
+export const SCROLL_TITLE_HELD_FONT_SIZE_SCREEN = 15;
+export const SCROLL_TITLE_HELD_FONT_STYLE = '600';
+export const SCROLL_TITLE_HELD_FADE_SCREEN_HEIGHT = 22;
+export const SCROLL_TITLE_PROGRESS_SCREEN_HEIGHT = 2;
+/** Compatibility exports for external callers that still import the v0.62 names. */
+export const SCROLL_TITLE_PINNED_FONT_SIZE = SCROLL_TITLE_HELD_FONT_SIZE_SCREEN;
+export const SCROLL_TITLE_FONT_STYLE = SCROLL_TITLE_HELD_FONT_STYLE;
+export const SCROLL_TITLE_PINNED_STRIP_HEIGHT = SCROLL_TITLE_HELD_HEIGHT_SCREEN;
 export const SCROLL_TITLE_INK = '#14181A';
-export const SCROLL_TITLE_PINNED_FILL = '#EEF1F0';
+export const SCROLL_TITLE_HELD_FILL = '#FFFFFF';
+export const SCROLL_TITLE_PINNED_FILL = SCROLL_TITLE_HELD_FILL;
 export const SCROLL_TITLE_PINNED_OPACITY = 1;
-/** Tall enough that a line of body cannot share pixels with the name. */
-export const SCROLL_TITLE_PINNED_STRIP_HEIGHT = 32;
 export const SCROLL_TITLE_HAIRLINE = '#C3CBC9';
 export const SCROLL_TITLE_HAIRLINE_WIDTH = 1;
 /** Active-scroll mark on the bar. INK, never ACCENT. */
@@ -154,15 +156,16 @@ export function scrollTitleY(
   holding: boolean;
 } {
   const viewportTop = -viewport.y / (viewport.scale || 1);
-  // When a ceiling exists the rest row is AT the ceiling for every scroll.
-  // Pin-when-scrolled-down is unchanged (v0.35): once the viewport top passes
-  // the rest row, the title holds just below the top edge.
+  // At rest the header TOP is the ceiling row itself (T150) — including a
+  // negative ceiling over legacy content, which a clamp would bury. Without a
+  // ceiling the pre-existing 12-unit inset applies.
+  const restRow = ceiling ?? SCROLL_TITLE_RESTING_Y;
   if (ceiling != null) {
-    if (viewportTop > ceiling) {
+    if (viewportTop > restRow) {
       return { y: viewportTop + SCROLL_TITLE_PIN_INSET, holding: true };
     }
-    return { y: ceiling, holding: false };
+    return { y: restRow, holding: false };
   }
-  const y = Math.max(SCROLL_TITLE_RESTING_Y, viewportTop + SCROLL_TITLE_PIN_INSET);
-  return { y, holding: y > SCROLL_TITLE_RESTING_Y + 0.5 };
+  const y = Math.max(restRow, viewportTop + SCROLL_TITLE_PIN_INSET);
+  return { y, holding: y > restRow + 0.5 };
 }

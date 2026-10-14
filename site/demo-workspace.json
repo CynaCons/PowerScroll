@@ -1,88 +1,379 @@
 {
-  "version": "1",
+  "version": "0.2.0",
   "filename": "Welcome to PowerScroll",
-  "editorVersion": "0.67.0",
-  "saveRevision": 0,
-  "settings": {
-    "backgroundMode": "scroll",
-    "bgColor": "#f7f5ef"
-  },
   "sections": [
     {
-      "id": "welcome-section",
+      "id": "C2HQMHY36Q_U",
       "title": "Welcome",
       "pages": [
         {
-          "id": "welcome-page",
+          "id": "ypHtCrkpVlu9",
           "title": "Start here",
-          "scrolls": [
-            { "id": "human-scroll", "title": "Your canvas", "column": 0 },
-            { "id": "agent-scroll", "title": "Agent workspace", "column": 1 }
-          ],
           "nodes": [
             {
-              "id": "welcome-title",
+              "id": "PU05E9imoQpI",
               "type": "text",
-              "x": 48,
-              "y": 88,
-              "width": 698,
+              "x": 60,
+              "y": 48,
+              "width": 794,
+              "height": 91,
+              "layer": 3,
+              "data": {
+                "fontSize": 16,
+                "fontFamily": "Inter, system-ui, sans-serif",
+                "fontStyle": "normal",
+                "fill": "#1a1a1a",
+                "text": "# Welcome to PowerScroll\n\nA visual notebook that lives in **one editable HTML file**. This page is a canvas; the columns on it are **scrolls**, each a named vertical workstream with its own title."
+              }
+            },
+            {
+              "id": "siqMgXAAWZWj",
+              "type": "text",
+              "x": 60,
+              "y": 151,
+              "width": 794,
+              "height": 165,
+              "layer": 3,
+              "data": {
+                "fontSize": 16,
+                "fontFamily": "Inter, system-ui, sans-serif",
+                "fontStyle": "normal",
+                "fill": "#1a1a1a",
+                "text": "## Try four things\n\n- Double-click this text to edit the Markdown\n- Press **T**, then click the canvas to add a block\n- Drag the bar at the right of a scroll title to make the scroll wider\n- Press **P** and draw; the pen has pressure and an eraser\n\nPress **Ctrl+S** when you want to keep your notebook. Everything, editor included, is written to one file."
+              }
+            },
+            {
+              "id": "BUlXFuvEGYqC",
+              "type": "text",
+              "x": 60,
+              "y": 328,
+              "width": 794,
+              "height": 215,
+              "layer": 3,
+              "data": {
+                "fontSize": 16,
+                "fontFamily": "Inter, system-ui, sans-serif",
+                "fontStyle": "normal",
+                "fill": "#1a1a1a",
+                "text": "## What a scroll is for\n\nGive a scroll to a topic, a week, or a person. The outline in the sidebar lists every scroll on the page, and an agent can be told which scroll to write into.\n\n| Do this | With |\n|---|---|\n| Rename a scroll | double-click its title |\n| Add a scroll | **+ New scroll** in the sidebar |\n| Move or delete one | right-click its title |"
+              }
+            },
+            {
+              "id": "UeTHz_S-QdvG",
+              "type": "text",
+              "x": 894,
+              "y": 48,
+              "width": 794,
+              "height": 114,
+              "layer": 3,
+              "data": {
+                "fontSize": 16,
+                "fontFamily": "Inter, system-ui, sans-serif",
+                "fontStyle": "normal",
+                "fill": "#1a1a1a",
+                "text": "# Work with an agent\n\nRun `npx -y powerscroll-mcp`, then turn on **Settings → Agent bridge → Let a local agent write into this notebook**. Your agent can read this page, add blocks, place images, and draw editable diagrams like the one below."
+              }
+            },
+            {
+              "id": "m8InZOtWLJKZ",
+              "type": "diagram",
+              "x": 894,
+              "y": 174,
+              "width": 778,
+              "height": 99.37956204379562,
+              "layer": 2,
+              "groupId": "m8InZOtWLJKZ",
+              "data": {
+                "source": "flowchart LR\n  A[Edit the canvas] --> B[Press Ctrl+S]\n  B --> C[App + data in one HTML file]\n  C --> D[Open it anywhere, still editable]",
+                "title": "One-file notebook"
+              }
+            },
+            {
+              "id": "T5TZf-NJyO8a",
+              "type": "shape",
+              "x": 908.1970802919708,
+              "y": 212.33211678832117,
+              "width": 101.50912408759125,
+              "height": 46.85036496350365,
+              "layer": 3,
+              "groupId": "m8InZOtWLJKZ",
+              "data": {
+                "shapeType": "rect",
+                "fill": "#EEF1F0",
+                "stroke": "#14181A",
+                "strokeWidth": 1.6,
+                "strokeDash": [],
+                "cornerRadius": 6
+              }
+            },
+            {
+              "id": "-gAi1GykidZs",
+              "type": "text",
+              "x": 937.6560218978102,
+              "y": 218.0109489051095,
+              "width": 42.591240875912405,
+              "height": 24,
+              "layer": 5,
+              "groupId": "m8InZOtWLJKZ",
+              "data": {
+                "text": "«step»",
+                "fontSize": 7.8083941605839415,
+                "fontFamily": "Inter, system-ui, sans-serif",
+                "fontStyle": "normal",
+                "fill": "#8A9295"
+              }
+            },
+            {
+              "id": "PVrEbmRNxWtU",
+              "type": "text",
+              "x": 918.8448905109489,
+              "y": 230.78832116788323,
+              "width": 80.21350364963503,
+              "height": 24,
+              "layer": 5,
+              "groupId": "m8InZOtWLJKZ",
+              "data": {
+                "text": "Edit the canvas",
+                "fontSize": 9.937956204379562,
+                "fontFamily": "Inter, system-ui, sans-serif",
+                "fontStyle": "bold",
+                "fill": "#14181A"
+              }
+            },
+            {
+              "id": "wHey6xPivHCJ",
+              "type": "shape",
+              "x": 1080.691605839416,
+              "y": 212.33211678832117,
+              "width": 99.37956204379562,
+              "height": 46.85036496350365,
+              "layer": 3,
+              "groupId": "m8InZOtWLJKZ",
+              "data": {
+                "shapeType": "rect",
+                "fill": "#EEF1F0",
+                "stroke": "#14181A",
+                "strokeWidth": 1.6,
+                "strokeDash": [],
+                "cornerRadius": 6
+              }
+            },
+            {
+              "id": "8u1cqdrcyW2c",
+              "type": "text",
+              "x": 1109.0857664233577,
+              "y": 218.0109489051095,
+              "width": 42.591240875912405,
+              "height": 24,
+              "layer": 5,
+              "groupId": "m8InZOtWLJKZ",
+              "data": {
+                "text": "«step»",
+                "fontSize": 7.8083941605839415,
+                "fontFamily": "Inter, system-ui, sans-serif",
+                "fontStyle": "normal",
+                "fill": "#8A9295"
+              }
+            },
+            {
+              "id": "wfyd6-v47pLb",
+              "type": "text",
+              "x": 1097.0182481751824,
+              "y": 230.78832116788323,
+              "width": 66.72627737226277,
+              "height": 24,
+              "layer": 5,
+              "groupId": "m8InZOtWLJKZ",
+              "data": {
+                "text": "Press Ctrl+S",
+                "fontSize": 9.937956204379562,
+                "fontFamily": "Inter, system-ui, sans-serif",
+                "fontStyle": "bold",
+                "fill": "#14181A"
+              }
+            },
+            {
+              "id": "LXviglShRlE5",
+              "type": "shape",
+              "x": 1251.0565693430658,
+              "y": 212.33211678832117,
+              "width": 161.84671532846716,
+              "height": 46.85036496350365,
+              "layer": 3,
+              "groupId": "m8InZOtWLJKZ",
+              "data": {
+                "shapeType": "rect",
+                "fill": "#EEF1F0",
+                "stroke": "#14181A",
+                "strokeWidth": 1.6,
+                "strokeDash": [],
+                "cornerRadius": 6
+              }
+            },
+            {
+              "id": "St7ZntMTdkS9",
+              "type": "text",
+              "x": 1310.684306569343,
+              "y": 218.0109489051095,
+              "width": 42.591240875912405,
+              "height": 24,
+              "layer": 5,
+              "groupId": "m8InZOtWLJKZ",
+              "data": {
+                "text": "«step»",
+                "fontSize": 7.8083941605839415,
+                "fontFamily": "Inter, system-ui, sans-serif",
+                "fontStyle": "normal",
+                "fill": "#8A9295"
+              }
+            },
+            {
+              "id": "Hwdnu0RjnMx9",
+              "type": "text",
+              "x": 1260.639598540146,
+              "y": 230.78832116788323,
+              "width": 142.68065693430657,
+              "height": 24,
+              "layer": 5,
+              "groupId": "m8InZOtWLJKZ",
+              "data": {
+                "text": "App + data in one HTML file",
+                "fontSize": 9.937956204379562,
+                "fontFamily": "Inter, system-ui, sans-serif",
+                "fontStyle": "bold",
+                "fill": "#14181A"
+              }
+            },
+            {
+              "id": "gbdPNLjchJDo",
+              "type": "shape",
+              "x": 1483.8886861313867,
+              "y": 212.33211678832117,
+              "width": 173.91423357664235,
+              "height": 46.85036496350365,
+              "layer": 3,
+              "groupId": "m8InZOtWLJKZ",
+              "data": {
+                "shapeType": "rect",
+                "fill": "#EEF1F0",
+                "stroke": "#14181A",
+                "strokeWidth": 1.6,
+                "strokeDash": [],
+                "cornerRadius": 6
+              }
+            },
+            {
+              "id": "zrXhVGfNJ9FJ",
+              "type": "text",
+              "x": 1549.5501824817518,
+              "y": 218.0109489051095,
+              "width": 42.591240875912405,
+              "height": 24,
+              "layer": 5,
+              "groupId": "m8InZOtWLJKZ",
+              "data": {
+                "text": "«step»",
+                "fontSize": 7.8083941605839415,
+                "fontFamily": "Inter, system-ui, sans-serif",
+                "fontStyle": "normal",
+                "fill": "#8A9295"
+              }
+            },
+            {
+              "id": "V8a-vTcYoeai",
+              "type": "text",
+              "x": 1493.1167883211679,
+              "y": 230.78832116788323,
+              "width": 155.4580291970803,
+              "height": 24,
+              "layer": 5,
+              "groupId": "m8InZOtWLJKZ",
+              "data": {
+                "text": "Open it anywhere, still editable",
+                "fontSize": 9.937956204379562,
+                "fontFamily": "Inter, system-ui, sans-serif",
+                "fontStyle": "bold",
+                "fill": "#14181A"
+              }
+            },
+            {
+              "id": "_FvURuSOw7Pg",
+              "type": "shape",
+              "x": 1009.706204379562,
+              "y": 235.757299270073,
+              "width": 70.98540145985402,
+              "height": 0,
+              "layer": 4,
+              "groupId": "m8InZOtWLJKZ",
+              "data": {
+                "shapeType": "arrow",
+                "fill": "transparent",
+                "stroke": "#14181A",
+                "strokeWidth": 1.4,
+                "strokeDash": []
+              }
+            },
+            {
+              "id": "W7s-kSJyLbsL",
+              "type": "shape",
+              "x": 1180.0711678832117,
+              "y": 235.757299270073,
+              "width": 70.98540145985402,
+              "height": 0,
+              "layer": 4,
+              "groupId": "m8InZOtWLJKZ",
+              "data": {
+                "shapeType": "arrow",
+                "fill": "transparent",
+                "stroke": "#14181A",
+                "strokeWidth": 1.4,
+                "strokeDash": []
+              }
+            },
+            {
+              "id": "gjsdXHJjyq5S",
+              "type": "shape",
+              "x": 1412.9032846715327,
+              "y": 235.757299270073,
+              "width": 70.98540145985402,
+              "height": 0,
+              "layer": 4,
+              "groupId": "m8InZOtWLJKZ",
+              "data": {
+                "shapeType": "arrow",
+                "fill": "transparent",
+                "stroke": "#14181A",
+                "strokeWidth": 1.4,
+                "strokeDash": []
+              }
+            },
+            {
+              "id": "0WhMlG89x416",
+              "type": "text",
+              "x": 894,
+              "y": 329.7299270072992,
+              "width": 794,
               "height": 120,
               "layer": 3,
               "data": {
-                "text": "# Welcome to PowerScroll\n\nA visual notebook that lives in **one editable HTML file**.",
-                "fontSize": 20,
-                "fontFamily": "Inter, system-ui, sans-serif",
-                "fontStyle": "normal",
-                "fill": "#14181a"
-              }
-            },
-            {
-              "id": "welcome-steps",
-              "type": "text",
-              "x": 48,
-              "y": 250,
-              "width": 698,
-              "height": 260,
-              "layer": 3,
-              "data": {
-                "text": "## Try three things\n\n- Double-click this text to edit Markdown\n- Press **T**, then click the canvas to add a block\n- Drag the right edge of a scroll title to resize its workspace\n\nPress **Ctrl+S** when you want to keep your notebook.",
                 "fontSize": 16,
                 "fontFamily": "Inter, system-ui, sans-serif",
                 "fontStyle": "normal",
-                "fill": "#14181a"
+                "fill": "#1a1a1a",
+                "text": "## A useful first prompt\n\n```text\nRead the open PowerScroll page. In the \"Agent workspace\" scroll, add a short\nplan for the next three steps and draw a Mermaid flowchart of them.\n```\n\nAgent edits use the same undo history and the same save path as yours."
               }
+            }
+          ],
+          "scrolls": [
+            {
+              "id": "IdvHR68bN8Is",
+              "title": "Your canvas",
+              "column": 0
             },
             {
-              "id": "agent-title",
-              "type": "text",
-              "x": 842,
-              "y": 88,
-              "width": 698,
-              "height": 150,
-              "layer": 3,
-              "data": {
-                "text": "# Work with an agent\n\nEnable the local bridge in **Settings → Agent bridge**. Your agent can read this page, add blocks, place images, and draw editable diagrams.",
-                "fontSize": 18,
-                "fontFamily": "Inter, system-ui, sans-serif",
-                "fontStyle": "normal",
-                "fill": "#14181a"
-              }
-            },
-            {
-              "id": "agent-example",
-              "type": "text",
-              "x": 842,
-              "y": 290,
-              "width": 698,
-              "height": 250,
-              "layer": 3,
-              "data": {
-                "text": "## A useful first prompt\n\n```text\nRead the open PowerScroll page. Add a third scroll called Questions, summarize what is here, and draw a small Mermaid flowchart showing how this notebook is saved.\n```\n\nEverything the agent creates remains ordinary canvas content you can move and edit.",
-                "fontSize": 16,
-                "fontFamily": "Inter, system-ui, sans-serif",
-                "fontStyle": "normal",
-                "fill": "#14181a"
-              }
+              "id": "kfZQbLlQH9rc",
+              "title": "Agent workspace",
+              "column": 1
             }
           ],
           "strokes": []
@@ -90,34 +381,1234 @@
       ]
     },
     {
-      "id": "examples-section",
+      "id": "f-zmZiWvRwHh",
       "title": "Examples",
       "pages": [
         {
-          "id": "architecture-page",
-          "title": "Architecture workspace",
-          "scrolls": [{ "id": "architecture-scroll", "title": "System design", "column": 0 }],
+          "id": "NesBSz8w8V_L",
+          "title": "Telemetry gateway",
           "nodes": [
             {
-              "id": "architecture-copy",
+              "id": "JxlRgkvmZM9b",
               "type": "text",
-              "x": 48,
-              "y": 88,
-              "width": 698,
-              "height": 210,
+              "x": 60,
+              "y": 48,
+              "width": 794,
+              "height": 302,
               "layer": 3,
               "data": {
-                "text": "# Architecture workspace\n\nUse this page for requirements, diagrams, decisions, screenshots, and agent-generated analysis. Add independent scrolls when two workstreams should grow beside each other.",
-                "fontSize": 18,
+                "fontSize": 16,
+                "fontFamily": "Inter, system-ui, sans-serif",
+                "fontStyle": "normal",
+                "fill": "#1a1a1a",
+                "text": "# Telemetry gateway\n\nStore-and-forward for the field units. Each unit publishes over MQTT; the gateway buffers when the uplink drops and replays in order once it returns.\n\n## Open points\n\n- [x] Broker sizing for 400 units at 1 Hz\n- [x] Replay ordering across reconnects\n- [ ] Buffer overflow policy: drop oldest, or refuse new?\n\n| Link | Rate | Budget |\n|---|---|---|\n| Unit to gateway | 1 Hz | 12 kB/s |\n| Gateway to storage | burst | 2 MB/s |"
+              }
+            },
+            {
+              "id": "SHrENJ6rUj5-",
+              "type": "text",
+              "x": 60,
+              "y": 362,
+              "width": 794,
+              "height": 140,
+              "layer": 3,
+              "data": {
+                "fontSize": 16,
+                "fontFamily": "Inter, system-ui, sans-serif",
+                "fontStyle": "normal",
+                "fill": "#1a1a1a",
+                "text": "## Decision log\n\n**2026-09-02** Drop-oldest chosen for the overflow policy: the newest state is worth more than the oldest history for this fleet.\n\nMath renders too: the ring holds $t = \\frac{S}{r \\cdot f}$ seconds of frames for a buffer of $S$ bytes at $r$ bytes per frame and $f$ frames per second."
+              }
+            },
+            {
+              "id": "Sa13fJQ3ZOev",
+              "type": "diagram",
+              "x": 894,
+              "y": 48,
+              "width": 713,
+              "height": 210,
+              "layer": 2,
+              "groupId": "Sa13fJQ3ZOev",
+              "data": {
+                "source": "@startuml\ncomponent \"gateway\" as gw {\n  portin telemetry\n  portout storage\n  component \"broker : MqttBroker [1]\" as broker\n  component \"buffer : StoreForward [1..*]\" as buffer\n  broker --> buffer : Queue\n  telemetry --> broker\n  buffer --> storage\n}\n@enduml",
+                "title": "Gateway internals"
+              }
+            },
+            {
+              "id": "CD-TtBmKswTZ",
+              "type": "shape",
+              "x": 920,
+              "y": 102,
+              "width": 534,
+              "height": 136,
+              "layer": 2,
+              "groupId": "Sa13fJQ3ZOev",
+              "data": {
+                "shapeType": "rect",
+                "fill": "#FFFFFF",
+                "stroke": "#C3CBC9",
+                "strokeWidth": 1,
+                "strokeDash": [],
+                "cornerRadius": 8
+              }
+            },
+            {
+              "id": "qFPbCFybpoZC",
+              "type": "text",
+              "x": 930.986083984375,
+              "y": 107,
+              "width": 81,
+              "height": 24,
+              "layer": 5,
+              "groupId": "Sa13fJQ3ZOev",
+              "data": {
+                "text": "«component»",
+                "fontSize": 11,
+                "fontFamily": "Inter, system-ui, sans-serif",
+                "fontStyle": "normal",
+                "fill": "#8A9295"
+              }
+            },
+            {
+              "id": "PRsKES46sgy_",
+              "type": "text",
+              "x": 930.69921875,
+              "y": 125,
+              "width": 70,
+              "height": 28,
+              "layer": 5,
+              "groupId": "Sa13fJQ3ZOev",
+              "data": {
+                "text": "gateway",
+                "fontSize": 14,
+                "fontFamily": "Inter, system-ui, sans-serif",
+                "fontStyle": "bold",
+                "fill": "#14181A"
+              }
+            },
+            {
+              "id": "GlahdZ4ocbAd",
+              "type": "shape",
+              "x": 914,
+              "y": 164,
+              "width": 12,
+              "height": 12,
+              "layer": 4,
+              "groupId": "Sa13fJQ3ZOev",
+              "data": {
+                "shapeType": "rect",
+                "fill": "#FFFFFF",
+                "stroke": "#14181A",
+                "strokeWidth": 1.6,
+                "strokeDash": [],
+                "cornerRadius": 0
+              }
+            },
+            {
+              "id": "Nztju1D0ffh9",
+              "type": "text",
+              "x": 846.41015625,
+              "y": 157.5,
+              "width": 65,
+              "height": 25,
+              "layer": 5,
+              "groupId": "Sa13fJQ3ZOev",
+              "data": {
+                "text": "telemetry",
+                "fontSize": 12,
+                "fontFamily": "Inter, system-ui, sans-serif",
+                "fontStyle": "normal",
+                "fill": "#5C6467"
+              }
+            },
+            {
+              "id": "VHTzY2wMfYEq",
+              "type": "shape",
+              "x": 1448,
+              "y": 164,
+              "width": 12,
+              "height": 12,
+              "layer": 4,
+              "groupId": "Sa13fJQ3ZOev",
+              "data": {
+                "shapeType": "rect",
+                "fill": "#FFFFFF",
+                "stroke": "#14181A",
+                "strokeWidth": 1.6,
+                "strokeDash": [],
+                "cornerRadius": 0
+              }
+            },
+            {
+              "id": "nLOu03NiKZxT",
+              "type": "text",
+              "x": 1459.904296875,
+              "y": 157.5,
+              "width": 60,
+              "height": 25,
+              "layer": 5,
+              "groupId": "Sa13fJQ3ZOev",
+              "data": {
+                "text": "storage",
+                "fontSize": 12,
+                "fontFamily": "Inter, system-ui, sans-serif",
+                "fontStyle": "normal",
+                "fill": "#5C6467"
+              }
+            },
+            {
+              "id": "825qX34GvhMQ",
+              "type": "shape",
+              "x": 938,
+              "y": 154,
+              "width": 201,
+              "height": 66,
+              "layer": 3,
+              "groupId": "Sa13fJQ3ZOev",
+              "data": {
+                "shapeType": "rect",
+                "fill": "#EEF1F0",
+                "stroke": "#14181A",
+                "strokeWidth": 1.6,
+                "strokeDash": [],
+                "cornerRadius": 6
+              }
+            },
+            {
+              "id": "l1C6TzF_7msB",
+              "type": "text",
+              "x": 1008.5,
+              "y": 162,
+              "width": 60,
+              "height": 24,
+              "layer": 5,
+              "groupId": "Sa13fJQ3ZOev",
+              "data": {
+                "text": "«part»",
+                "fontSize": 11,
+                "fontFamily": "Inter, system-ui, sans-serif",
+                "fontStyle": "normal",
+                "fill": "#8A9295"
+              }
+            },
+            {
+              "id": "9wJ488MahngF",
+              "type": "text",
+              "x": 965.5,
+              "y": 180,
+              "width": 146,
+              "height": 28,
+              "layer": 5,
+              "groupId": "Sa13fJQ3ZOev",
+              "data": {
+                "text": "broker : MqttBroker",
+                "fontSize": 14,
+                "fontFamily": "Inter, system-ui, sans-serif",
+                "fontStyle": "bold",
+                "fill": "#14181A"
+              }
+            },
+            {
+              "id": "ienDa5cMp0sG",
+              "type": "text",
+              "x": 1090.14453125,
+              "y": 157.5,
+              "width": 60,
+              "height": 25,
+              "layer": 5,
+              "groupId": "Sa13fJQ3ZOev",
+              "data": {
+                "text": "[1]",
+                "fontSize": 12,
+                "fontFamily": "Inter, system-ui, sans-serif",
+                "fontStyle": "normal",
+                "fill": "#5C6467"
+              }
+            },
+            {
+              "id": "B_E_-mbP8Ysr",
+              "type": "shape",
+              "x": 1215,
+              "y": 154,
+              "width": 221,
+              "height": 66,
+              "layer": 3,
+              "groupId": "Sa13fJQ3ZOev",
+              "data": {
+                "shapeType": "rect",
+                "fill": "#EEF1F0",
+                "stroke": "#14181A",
+                "strokeWidth": 1.6,
+                "strokeDash": [],
+                "cornerRadius": 6
+              }
+            },
+            {
+              "id": "vri7vnwy9VVu",
+              "type": "text",
+              "x": 1295.5,
+              "y": 162,
+              "width": 60,
+              "height": 24,
+              "layer": 5,
+              "groupId": "Sa13fJQ3ZOev",
+              "data": {
+                "text": "«part»",
+                "fontSize": 11,
+                "fontFamily": "Inter, system-ui, sans-serif",
+                "fontStyle": "normal",
+                "fill": "#8A9295"
+              }
+            },
+            {
+              "id": "jConAoP7XqSk",
+              "type": "text",
+              "x": 1247.5,
+              "y": 180,
+              "width": 156,
+              "height": 28,
+              "layer": 5,
+              "groupId": "Sa13fJQ3ZOev",
+              "data": {
+                "text": "buffer : StoreForward",
+                "fontSize": 14,
+                "fontFamily": "Inter, system-ui, sans-serif",
+                "fontStyle": "bold",
+                "fill": "#14181A"
+              }
+            },
+            {
+              "id": "CKET2Vo0LGqF",
+              "type": "text",
+              "x": 1382.041015625,
+              "y": 157.5,
+              "width": 60,
+              "height": 25,
+              "layer": 5,
+              "groupId": "Sa13fJQ3ZOev",
+              "data": {
+                "text": "[1..*]",
+                "fontSize": 12,
+                "fontFamily": "Inter, system-ui, sans-serif",
+                "fontStyle": "normal",
+                "fill": "#5C6467"
+              }
+            },
+            {
+              "id": "ZY8labMca4ku",
+              "type": "shape",
+              "x": 1139,
+              "y": 187,
+              "width": 26,
+              "height": 0,
+              "layer": 4,
+              "groupId": "Sa13fJQ3ZOev",
+              "data": {
+                "shapeType": "line",
+                "fill": "transparent",
+                "stroke": "#14181A",
+                "strokeWidth": 1.4,
+                "strokeDash": []
+              }
+            },
+            {
+              "id": "oPM9OSqG5OCF",
+              "type": "shape",
+              "x": 1215,
+              "y": 187,
+              "width": -32,
+              "height": 0,
+              "layer": 4,
+              "groupId": "Sa13fJQ3ZOev",
+              "data": {
+                "shapeType": "line",
+                "fill": "transparent",
+                "stroke": "#14181A",
+                "strokeWidth": 1.4,
+                "strokeDash": []
+              }
+            },
+            {
+              "id": "8n5Kz8avWq_W",
+              "type": "shape",
+              "x": 1165,
+              "y": 175,
+              "width": 24,
+              "height": 24,
+              "layer": 4,
+              "groupId": "Sa13fJQ3ZOev",
+              "data": {
+                "shapeType": "arc",
+                "fill": "transparent",
+                "stroke": "#14181A",
+                "strokeWidth": 1.6,
+                "strokeDash": [],
+                "rotation": 90
+              }
+            },
+            {
+              "id": "wrPZ7Es1Xubk",
+              "type": "shape",
+              "x": 1171,
+              "y": 181,
+              "width": 12,
+              "height": 12,
+              "layer": 4,
+              "groupId": "Sa13fJQ3ZOev",
+              "data": {
+                "shapeType": "circle",
+                "fill": "#FFFFFF",
+                "stroke": "#14181A",
+                "strokeWidth": 1.6,
+                "strokeDash": []
+              }
+            },
+            {
+              "id": "ChNf_mJWx543",
+              "type": "text",
+              "x": 1147,
+              "y": 150.5,
+              "width": 60,
+              "height": 25,
+              "layer": 5,
+              "groupId": "Sa13fJQ3ZOev",
+              "data": {
+                "text": "Queue",
+                "fontSize": 12,
+                "fontFamily": "Inter, system-ui, sans-serif",
+                "fontStyle": "normal",
+                "fill": "#5C6467"
+              }
+            },
+            {
+              "id": "81BzxR2ivyVo",
+              "type": "shape",
+              "x": 920,
+              "y": 170,
+              "width": 18,
+              "height": 2.582278481012665,
+              "layer": 4,
+              "groupId": "Sa13fJQ3ZOev",
+              "data": {
+                "shapeType": "arrow",
+                "fill": "transparent",
+                "stroke": "#14181A",
+                "strokeWidth": 1.4,
+                "strokeDash": []
+              }
+            },
+            {
+              "id": "RagHLDOMGt4W",
+              "type": "shape",
+              "x": 1436,
+              "y": 172.38132295719845,
+              "width": 18,
+              "height": -2.3813229571984493,
+              "layer": 4,
+              "groupId": "Sa13fJQ3ZOev",
+              "data": {
+                "shapeType": "arrow",
+                "fill": "transparent",
+                "stroke": "#14181A",
+                "strokeWidth": 1.4,
+                "strokeDash": []
+              }
+            },
+            {
+              "id": "demo-rect",
+              "type": "shape",
+              "x": 940,
+              "y": 328,
+              "width": 170,
+              "height": 66,
+              "layer": 3,
+              "data": {
+                "fill": "#dbeafe",
+                "stroke": "#2563eb",
+                "strokeWidth": 2,
+                "strokeDash": [],
+                "shapeType": "rect",
+                "label": {
+                  "text": "Uplink monitor",
+                  "fontSize": 14
+                }
+              },
+              "boundElements": [
+                {
+                  "id": "demo-arrow",
+                  "type": "arrow"
+                }
+              ]
+            },
+            {
+              "id": "demo-diamond",
+              "type": "shape",
+              "x": 1240,
+              "y": 316,
+              "width": 150,
+              "height": 90,
+              "layer": 3,
+              "data": {
+                "fill": "#dbeafe",
+                "stroke": "#2563eb",
+                "strokeWidth": 2,
+                "strokeDash": [],
+                "shapeType": "diamond",
+                "label": {
+                  "text": "Link up?",
+                  "fontSize": 14
+                }
+              },
+              "boundElements": [
+                {
+                  "id": "demo-arrow",
+                  "type": "arrow"
+                }
+              ]
+            },
+            {
+              "id": "demo-arrow",
+              "type": "shape",
+              "x": 1110,
+              "y": 361,
+              "width": 130,
+              "height": 0,
+              "layer": 3,
+              "data": {
+                "shapeType": "arrow",
+                "fill": "transparent",
+                "stroke": "#14181a",
+                "strokeWidth": 2,
+                "strokeDash": [],
+                "startBinding": {
+                  "elementId": "demo-rect",
+                  "fixedPoint": [
+                    1,
+                    0.5
+                  ]
+                },
+                "endBinding": {
+                  "elementId": "demo-diamond",
+                  "fixedPoint": [
+                    0,
+                    0.5
+                  ]
+                }
+              }
+            },
+            {
+              "id": "demo-shapes-note",
+              "type": "text",
+              "x": 940,
+              "y": 438,
+              "width": 560,
+              "height": 28,
+              "layer": 3,
+              "data": {
+                "text": "Shapes carry labels, and the arrow stays attached when you drag either end. Try it.",
+                "fontSize": 14,
+                "fontFamily": "Inter, system-ui, sans-serif",
+                "fontStyle": "normal",
+                "fill": "#5c6467"
+              }
+            }
+          ],
+          "scrolls": [
+            {
+              "id": "x7FNDw8XGiH-",
+              "title": "Requirements",
+              "column": 0
+            },
+            {
+              "id": "nCZ4-iQ8qPLZ",
+              "title": "Design",
+              "column": 1
+            }
+          ],
+          "strokes": [
+            {
+              "id": "9D4GP8a0vDqs",
+              "points": [
+                292,
+                214,
+                308.72113390333647,
+                213.2756845659597,
+                328.4298636947116,
+                212.02696747136943,
+                349.89425646522244,
+                212.2271014768461,
+                374.9574045284337,
+                214.48416172742978,
+                398.6418515298627,
+                217.0305684077258,
+                417.43278290054576,
+                218.24196672655614,
+                435.4782803476151,
+                218.9620482960152,
+                454.0532447135743,
+                221.21373862976515,
+                467.80315273071744,
+                225.1795433404639,
+                476.1393992603055,
+                228.87316689595008,
+                484.01838042408855,
+                230.9834028761674,
+                490.3324544329837,
+                232.7246419534098,
+                490.12005406489976,
+                235.98400077939326,
+                485.6061406819171,
+                240.48070849449263,
+                481.148131689301,
+                244.10051969208362,
+                473.4976234345109,
+                245.91653854442225,
+                459.3618996817035,
+                247.47224284113116,
+                443.18966487666745,
+                250.44835312888227,
+                427.5971625180883,
+                254.13281871321365,
+                408.0414617037446,
+                256.40155574601897,
+                383.757040937164,
+                256.77422157345046,
+                360.25262407249664,
+                257.0692670797053,
+                337.7180378515308,
+                258.69944619753585,
+                311.50036195582913,
+                260.5705596799098,
+                283.5588925080401,
+                260.66231856720435,
+                259.0209171633019,
+                258.9757375024599,
+                235.59753503350157,
+                257.529330832448,
+                209.73834098023985,
+                257.4097238669778,
+                185.61272247386884,
+                257.1974082859116,
+                166.62427254327113,
+                255.0736114741007,
+                148.60026388380692,
+                251.521244396141,
+                130.01728369682888,
+                248.66240951861732,
+                116.16295377417127,
+                247.20225171474428,
+                107.8255069904645,
+                245.45551540849084,
+                100.0359041330645,
+                241.88088431789143,
+                93.69347359406851,
+                237.40917050172447,
+                93.82102970532166,
+                234.15334989467152,
+                98.38398447483164,
+                232.3889846535821,
+                102.91369940490604,
+                230.22742134786316,
+                110.49647556268559,
+                226.45921467492678,
+                124.57785671961541,
+                222.40084464103373,
+                140.83178865878406,
+                220.03800104532678,
+                156.45756481951037,
+                219.18429709222218,
+                175.92298726200693,
+                217.8167440597851,
+                200.19739501702398,
+                215.09544786695128,
+                223.79466924186755,
+                212.64270659026639,
+                246.31533962201013,
+                212.20679564420007,
+                272.44374388988984,
+                213.13230860143156
+              ],
+              "color": "#b4552d",
+              "strokeWidth": 3,
+              "pressures": [
+                0.25,
+                0.283,
+                0.315,
+                0.348,
+                0.379,
+                0.411,
+                0.441,
+                0.471,
+                0.5,
+                0.528,
+                0.554,
+                0.58,
+                0.604,
+                0.626,
+                0.647,
+                0.666,
+                0.683,
+                0.698,
+                0.712,
+                0.723,
+                0.733,
+                0.74,
+                0.746,
+                0.749,
+                0.75,
+                0.749,
+                0.746,
+                0.74,
+                0.733,
+                0.723,
+                0.712,
+                0.698,
+                0.683,
+                0.666,
+                0.647,
+                0.626,
+                0.604,
+                0.58,
+                0.554,
+                0.528,
+                0.5,
+                0.471,
+                0.441,
+                0.411,
+                0.379,
+                0.348,
+                0.315,
+                0.283,
+                0.25
+              ],
+              "baked": true
+            }
+          ]
+        },
+        {
+          "id": "VuUCV-2pX43C",
+          "title": "Whiteboard",
+          "nodes": [
+            {
+              "id": "wb-title",
+              "type": "text",
+              "x": 80,
+              "y": 60,
+              "width": 620,
+              "height": 90,
+              "layer": 3,
+              "data": {
+                "text": "# Whiteboard\n\nNo columns here: this page has its guide style set to **none**, so it is an open canvas. Shapes, arrows, ink and text can go anywhere.",
+                "fontSize": 16,
+                "fontFamily": "Inter, system-ui, sans-serif",
+                "fontStyle": "normal",
+                "fill": "#14181a"
+              }
+            },
+            {
+              "id": "wb-idea",
+              "type": "shape",
+              "x": 120,
+              "y": 220,
+              "width": 150,
+              "height": 150,
+              "layer": 3,
+              "data": {
+                "shapeType": "circle",
+                "fill": "#eef1f0",
+                "stroke": "#14181a",
+                "strokeWidth": 1.6,
+                "strokeDash": [],
+                "label": {
+                  "text": "Idea",
+                  "fontSize": 14
+                }
+              },
+              "boundElements": [
+                {
+                  "id": "wb-a1",
+                  "type": "arrow"
+                }
+              ]
+            },
+            {
+              "id": "wb-plan",
+              "type": "shape",
+              "x": 420,
+              "y": 250,
+              "width": 190,
+              "height": 80,
+              "layer": 3,
+              "data": {
+                "shapeType": "rect",
+                "fill": "#eef1f0",
+                "stroke": "#14181a",
+                "strokeWidth": 1.6,
+                "strokeDash": [],
+                "label": {
+                  "text": "Plan the bench",
+                  "fontSize": 14
+                }
+              },
+              "boundElements": [
+                {
+                  "id": "wb-a1",
+                  "type": "arrow"
+                },
+                {
+                  "id": "wb-a2",
+                  "type": "arrow"
+                }
+              ]
+            },
+            {
+              "id": "wb-check",
+              "type": "shape",
+              "x": 760,
+              "y": 235,
+              "width": 170,
+              "height": 110,
+              "layer": 3,
+              "data": {
+                "shapeType": "diamond",
+                "fill": "#eef1f0",
+                "stroke": "#14181a",
+                "strokeWidth": 1.6,
+                "strokeDash": [],
+                "label": {
+                  "text": "Passed?",
+                  "fontSize": 14
+                }
+              },
+              "boundElements": [
+                {
+                  "id": "wb-a2",
+                  "type": "arrow"
+                },
+                {
+                  "id": "wb-a3",
+                  "type": "arrow"
+                },
+                {
+                  "id": "wb-a4",
+                  "type": "arrow"
+                }
+              ]
+            },
+            {
+              "id": "wb-ship",
+              "type": "shape",
+              "x": 1080,
+              "y": 250,
+              "width": 170,
+              "height": 80,
+              "layer": 3,
+              "data": {
+                "shapeType": "rect",
+                "fill": "#dbeafe",
+                "stroke": "#2563eb",
+                "strokeWidth": 2,
+                "strokeDash": [],
+                "label": {
+                  "text": "Ship",
+                  "fontSize": 14
+                }
+              },
+              "boundElements": [
+                {
+                  "id": "wb-a3",
+                  "type": "arrow"
+                }
+              ]
+            },
+            {
+              "id": "wb-fix",
+              "type": "shape",
+              "x": 760,
+              "y": 460,
+              "width": 170,
+              "height": 70,
+              "layer": 3,
+              "data": {
+                "shapeType": "rect",
+                "fill": "#eef1f0",
+                "stroke": "#14181a",
+                "strokeWidth": 1.6,
+                "strokeDash": [],
+                "label": {
+                  "text": "Fix and rerun",
+                  "fontSize": 14
+                }
+              },
+              "boundElements": [
+                {
+                  "id": "wb-a4",
+                  "type": "arrow"
+                }
+              ]
+            },
+            {
+              "id": "wb-a1",
+              "type": "shape",
+              "x": 270,
+              "y": 295,
+              "width": 150,
+              "height": 0,
+              "layer": 3,
+              "data": {
+                "shapeType": "arrow",
+                "fill": "transparent",
+                "stroke": "#14181a",
+                "strokeWidth": 2,
+                "strokeDash": [],
+                "startBinding": {
+                  "elementId": "wb-idea",
+                  "fixedPoint": [
+                    1,
+                    0.5
+                  ]
+                },
+                "endBinding": {
+                  "elementId": "wb-plan",
+                  "fixedPoint": [
+                    0,
+                    0.5
+                  ]
+                }
+              }
+            },
+            {
+              "id": "wb-a2",
+              "type": "shape",
+              "x": 610,
+              "y": 290,
+              "width": 150,
+              "height": 0,
+              "layer": 3,
+              "data": {
+                "shapeType": "arrow",
+                "fill": "transparent",
+                "stroke": "#14181a",
+                "strokeWidth": 2,
+                "strokeDash": [],
+                "startBinding": {
+                  "elementId": "wb-plan",
+                  "fixedPoint": [
+                    1,
+                    0.5
+                  ]
+                },
+                "endBinding": {
+                  "elementId": "wb-check",
+                  "fixedPoint": [
+                    0,
+                    0.5
+                  ]
+                }
+              }
+            },
+            {
+              "id": "wb-a3",
+              "type": "shape",
+              "x": 930,
+              "y": 290,
+              "width": 150,
+              "height": 0,
+              "layer": 3,
+              "data": {
+                "shapeType": "arrow",
+                "fill": "transparent",
+                "stroke": "#14181a",
+                "strokeWidth": 2,
+                "strokeDash": [],
+                "startBinding": {
+                  "elementId": "wb-check",
+                  "fixedPoint": [
+                    1,
+                    0.5
+                  ]
+                },
+                "endBinding": {
+                  "elementId": "wb-ship",
+                  "fixedPoint": [
+                    0,
+                    0.5
+                  ]
+                }
+              }
+            },
+            {
+              "id": "wb-a4",
+              "type": "shape",
+              "x": 845,
+              "y": 345,
+              "width": 0,
+              "height": 115,
+              "layer": 3,
+              "data": {
+                "shapeType": "arrow",
+                "fill": "transparent",
+                "stroke": "#14181a",
+                "strokeWidth": 2,
+                "strokeDash": [],
+                "startBinding": {
+                  "elementId": "wb-check",
+                  "fixedPoint": [
+                    0.5,
+                    1
+                  ]
+                },
+                "endBinding": {
+                  "elementId": "wb-fix",
+                  "fixedPoint": [
+                    0.5,
+                    0
+                  ]
+                }
+              }
+            },
+            {
+              "id": "wb-yes",
+              "type": "text",
+              "x": 990,
+              "y": 262,
+              "width": 60,
+              "height": 24,
+              "layer": 3,
+              "data": {
+                "text": "yes",
+                "fontSize": 12,
+                "fontFamily": "Inter, system-ui, sans-serif",
+                "fontStyle": "normal",
+                "fill": "#5c6467"
+              }
+            },
+            {
+              "id": "wb-no",
+              "type": "text",
+              "x": 860,
+              "y": 380,
+              "width": 60,
+              "height": 24,
+              "layer": 3,
+              "data": {
+                "text": "no",
+                "fontSize": 12,
+                "fontFamily": "Inter, system-ui, sans-serif",
+                "fontStyle": "normal",
+                "fill": "#5c6467"
+              }
+            },
+            {
+              "id": "wb-note",
+              "type": "text",
+              "x": 120,
+              "y": 620,
+              "width": 520,
+              "height": 104,
+              "layer": 3,
+              "data": {
+                "text": "## Notes\n\n- The ink strokes here were drawn with the pen tool; the eraser cuts them\n- Arrows bind to shapes; drag a shape and its arrows follow\n- Press **1** to **6** to pick a shape, then draw it",
+                "fontSize": 14,
                 "fontFamily": "Inter, system-ui, sans-serif",
                 "fontStyle": "normal",
                 "fill": "#14181a"
               }
             }
           ],
-          "strokes": []
+          "scrolls": [
+            {
+              "id": "xIj3XIBfQo9R",
+              "title": "",
+              "column": 0
+            }
+          ],
+          "strokes": [
+            {
+              "id": "LIb21epPdeMa",
+              "points": [
+                1330,
+                160,
+                1335.7456008411589,
+                175.0918588799849,
+                1354.316180232281,
+                182.30664915336982,
+                1349.6309540455047,
+                195.50096701019726,
+                1351.8622162720665,
+                216.69530184995762,
+                1339.2914419156282,
+                216.87050328623198,
+                1320.4298020114152,
+                225.77735476727239,
+                1316.6360884080664,
+                213.97601689610585,
+                1302.4460376986397,
+                198.83241631022122,
+                1312.5439651807628,
+                191.5956358118289,
+                1322.5811852018242,
+                173.4281452200273
+              ],
+              "color": "#14181a",
+              "strokeWidth": 3,
+              "pressures": [
+                0.35,
+                0.458,
+                0.556,
+                0.633,
+                0.683,
+                0.7,
+                0.683,
+                0.633,
+                0.556,
+                0.458,
+                0.35
+              ],
+              "baked": true
+            },
+            {
+              "id": "OtLqY2YkIH_j",
+              "points": [
+                620,
+                640,
+                619.3571418530323,
+                643.9090649788432,
+                616.1287983813063,
+                647.4043324377135,
+                610.8955027483868,
+                650.582324727528,
+                604.9230097031376,
+                653.4423887912092,
+                599.0495425049951,
+                655.947080215107,
+                593.0142623941639,
+                658.0487416224033,
+                585.8299098070722,
+                659.7015801206551,
+                576.8486369699217,
+                660.8674290598069,
+                566.5350464346939,
+                661.5186573504179,
+                556.2304169533236,
+                661.6396868824561,
+                547.1197820435264,
+                661.2277318561775,
+                539.3464272198349,
+                660.2930185698583,
+                532.0828388233887,
+                658.8585978710329,
+                524.487853565185,
+                656.9598048771987,
+                516.6651626451031,
+                654.6434005143093,
+                509.73736192400867,
+                651.9664250402868,
+                504.9632936717335,
+                648.9947956209651,
+                502.70651085106687,
+                645.801684121669,
+                502.2001541500402,
+                642.4657157517094,
+                502.3219717475513,
+                639.0690332117175,
+                502.6652091748425,
+                635.6952741361368,
+                503.91983535000793,
+                632.4275116861529,
+                507.21342860151003,
+                629.3462090251152,
+                513.0183186920934,
+                626.5272380536641,
+                520.6311364581009,
+                624.0400111939641,
+                528.7053930713437,
+                621.9457722264519,
+                536.3502474059394,
+                620.2960882651084,
+                543.7886871367914,
+                619.1315800041426,
+                551.9739556654296,
+                618.4809215017606,
+                561.521276909574,
+                618.3601341297198,
+                571.9417696759326,
+                618.7721920739972,
+                581.887822992409,
+                619.706949100466,
+                590.1893610649022,
+                621.1413883888549,
+                596.7332523335988,
+                623.0401892832535,
+                602.3821728662556,
+                625.3565970038829,
+                608.0120796992967,
+                628.033573904945,
+                613.5574075498997,
+                631.0052039307585,
+                617.9455106534663,
+                634.1983156878134,
+                619.9837221622745,
+                637.5342841673207
+              ],
+              "color": "#14181a",
+              "strokeWidth": 3,
+              "pressures": [
+                0.3,
+                0.363,
+                0.393,
+                0.424,
+                0.453,
+                0.482,
+                0.509,
+                0.535,
+                0.56,
+                0.583,
+                0.604,
+                0.624,
+                0.641,
+                0.656,
+                0.67,
+                0.68,
+                0.689,
+                0.695,
+                0.699,
+                0.7,
+                0.699,
+                0.695,
+                0.689,
+                0.68,
+                0.67,
+                0.656,
+                0.641,
+                0.624,
+                0.604,
+                0.583,
+                0.56,
+                0.535,
+                0.509,
+                0.482,
+                0.453,
+                0.424,
+                0.393,
+                0.363,
+                0.331,
+                0.3
+              ],
+              "baked": true
+            }
+          ],
+          "settings": {
+            "backgroundMode": "none"
+          }
         }
       ]
     }
-  ]
+  ],
+  "editorVersion": "0.73.0",
+  "saveRevision": 0,
+  "settings": {
+    "backgroundMode": "scroll",
+    "bgColor": "#ffffff"
+  }
 }

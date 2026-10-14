@@ -1,4 +1,4 @@
-import { Layers, Library, MousePointer2, Hand, Type, Pen, ImageIcon, Shapes, Settings, GanttChartSquare, Workflow } from 'lucide-react';
+import { Scroll, Library, MousePointer2, Hand, Type, Pen, ImageIcon, Shapes, Settings, GanttChartSquare, Workflow } from 'lucide-react';
 import { useToolStore } from '../../stores/useToolStore';
 import './NavRail.css';
 
@@ -29,7 +29,7 @@ export function NavRail({
           data-testid="nav-hierarchy"
           onClick={onToggleHierarchy}
         >
-          <Layers size={20} />
+          <Scroll size={20} />
         </button>
         <button
           className={`nav-rail__btn ${isLibraryOpen ? 'nav-rail__btn--active' : ''}`}

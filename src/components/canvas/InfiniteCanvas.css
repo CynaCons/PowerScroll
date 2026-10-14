@@ -6,17 +6,24 @@
 .scroll-title-strip {
   position: relative;
   z-index: 6;
+  color: #14181A;
+  font-family: Inter, system-ui, sans-serif;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .scroll-header__input {
-  font-size: 16px;
   font-family: Inter, system-ui, sans-serif;
-  font-weight: 600;
   color: #14181A;
-  padding: 2px 6px;
-  border: 1px solid #C3CBC9;
+  box-sizing: border-box;
+  display: block;
+  padding: 0;
+  line-height: 1.1;
+  border: 0;
+  border-bottom: 2px solid #2563EB;
   border-radius: 0;
-  background: #EEF1F0;
+  background: transparent;
   outline: none;
 }
 

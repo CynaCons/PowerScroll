@@ -185,7 +185,7 @@ h2.display { font-size: clamp(28px, 3.2vw, 42px); }
 .actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .fine {
   margin: 0; font-family: var(--mono); font-variation-settings: var(--mono-axes);
-  font-size: 11.5px; line-height: 1.5; color: var(--faint);
+  font-size: 11.5px; line-height: 1.5; color: var(--muted);
 }
 .scroll-lead { margin: 0; font-size: 15px; }
 .scroll-caption { margin: 0; font-size: 14px; line-height: 1.5; color: var(--muted); }
@@ -193,7 +193,7 @@ h2.display { font-size: clamp(28px, 3.2vw, 42px); }
 .stage-hint {
   margin: 0; padding: 0 var(--gutter) 22px;
   font-family: var(--mono); font-variation-settings: var(--mono-axes);
-  font-size: 11.5px; color: var(--faint);
+  font-size: 11.5px; color: var(--muted);
 }
 .stage-end .stage-inner { justify-content: center; padding-top: 56px; padding-bottom: 56px; }
 .scroll-end { flex: 0 1 640px; min-height: 0; }

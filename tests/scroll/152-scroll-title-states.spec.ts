@@ -2,8 +2,8 @@
  * Test 152: Scroll title resting vs pinned visual states
  * Covers: REQ-HIER-019
  *
- * One TINT bar, rest and pin. Type size does not change. Untitled scrolls
- * still draw nothing.
+ * Rest is a document heading; held is the compact reading band. Untitled
+ * scrolls still draw nothing.
  */
 import { test, expect } from '@playwright/test';
 import { waitForCanvasReady } from '../helpers';
@@ -62,12 +62,13 @@ async function titleMetrics(page: import('@playwright/test').Page) {
     const layout = await import('/src/utils/pageLayout.ts');
     return {
       resting: layout.SCROLL_TITLE_RESTING_FONT_SIZE,
-      pinned: layout.SCROLL_TITLE_PINNED_FONT_SIZE,
-      style: layout.SCROLL_TITLE_FONT_STYLE,
+      held: layout.SCROLL_TITLE_HELD_FONT_SIZE_SCREEN,
+      restStyle: layout.SCROLL_TITLE_RESTING_FONT_STYLE,
+      heldStyle: layout.SCROLL_TITLE_HELD_FONT_STYLE,
       ink: layout.SCROLL_TITLE_INK,
-      opacity: layout.SCROLL_TITLE_PINNED_OPACITY,
-      strip: layout.SCROLL_TITLE_PINNED_STRIP_HEIGHT,
-      fill: layout.SCROLL_TITLE_PINNED_FILL,
+      restHeight: layout.SCROLL_TITLE_RESTING_HEIGHT,
+      heldHeight: layout.SCROLL_TITLE_HELD_HEIGHT_SCREEN,
+      fill: layout.SCROLL_TITLE_HELD_FILL,
     };
   });
 }
@@ -94,7 +95,7 @@ test.describe('152 - Scroll title resting vs pinned (REQ-HIER-019)', () => {
     await waitForCanvasReady(page);
   });
 
-  test('at rest the title is the TINT bar with a hairline', async ({ page }) => {
+  test('at rest the title is a paper heading with a hairline rule', async ({ page }) => {
     await titleScroll(page, 'Project notes');
     await waitForTitle(page, 'Project notes');
     const metrics = await titleMetrics(page);
@@ -102,17 +103,13 @@ test.describe('152 - Scroll title resting vs pinned (REQ-HIER-019)', () => {
 
     expect(snap).not.toBeNull();
     expect(snap!.fontSize).toBe(metrics.resting);
-    expect(snap!.fontSize).toBe(metrics.pinned);
-    expect(snap!.fontStyle).toBe(metrics.style);
+    expect(snap!.fontStyle).toBe(metrics.restStyle);
     expect(snap!.fill).toBe(metrics.ink);
-    expect(snap!.backing).not.toBeNull();
-    expect(snap!.backing!.fill).toBe(metrics.fill);
-    expect(snap!.backing!.opacity).toBeCloseTo(metrics.opacity, 5);
-    expect(snap!.backing!.height).toBe(metrics.strip);
+    expect(snap!.backing?.height).toBe(34); // resting backing is paper, 34 units, no shadow (REQ-SCROLL-033)
     expect(snap!.hairline).toBe(true);
   });
 
-  test('scrolled past the pin threshold: same bar, same type size, held over content', async ({ page }) => {
+  test('scrolled past the pin threshold: compact held band over content', async ({ page }) => {
     await titleScroll(page, 'Project notes');
     await waitForTitle(page, 'Project notes');
     const atRest = await snapTitle(page, 'Project notes');
@@ -123,16 +120,16 @@ test.describe('152 - Scroll title resting vs pinned (REQ-HIER-019)', () => {
     const snap = await snapTitle(page, 'Project notes');
 
     expect(snap).not.toBeNull();
-    expect(snap!.fontSize).toBe(metrics.pinned);
-    expect(snap!.fontSize).toBe(atRest!.fontSize);
+    expect(snap!.fontSize).toBe(metrics.held);
+    expect(snap!.fontSize).toBeLessThan(atRest!.fontSize);
+    expect(snap!.fontStyle).toBe(metrics.heldStyle);
     expect(snap!.backing).not.toBeNull();
-    expect(snap!.backing!.opacity).toBeCloseTo(metrics.opacity, 5);
-    expect(snap!.backing!.height).toBe(metrics.strip);
+    expect(snap!.backing!.height).toBe(metrics.heldHeight);
     expect(snap!.backing!.fill).toBe(metrics.fill);
     expect(snap!.hairline).toBe(true);
   });
 
-  test('scrolling back to the top keeps the same bar treatment', async ({ page }) => {
+  test('scrolling back to the top restores the document heading', async ({ page }) => {
     await titleScroll(page, 'Project notes');
     await waitForTitle(page, 'Project notes');
     await setCameraY(page, -600);
@@ -145,7 +142,7 @@ test.describe('152 - Scroll title resting vs pinned (REQ-HIER-019)', () => {
     const metrics = await titleMetrics(page);
     const rest = await snapTitle(page, 'Project notes');
     expect(rest!.fontSize).toBe(metrics.resting);
-    expect(rest!.backing).not.toBeNull();
+    expect(rest!.backing?.height).toBe(34);
     expect(rest!.hairline).toBe(true);
   });
 

@@ -66,8 +66,11 @@ test.describe('200 - Storefront', () => {
     for (let i = 0; i < 40; i++) await page.keyboard.press('Shift+ArrowRight');
     expect((await scroll.boundingBox())!.width).toBeLessThanOrEqual(900);
 
+    // Double-click resets to the natural width; the separator keeps reporting a value (a11y).
     await handle.dblclick();
-    await expect(handle).not.toHaveAttribute('aria-valuenow', /.+/);
+    expect(await scroll.evaluate((el) => (el as HTMLElement).style.width)).toBe('');
+    const natural = (await scroll.boundingBox())!;
+    await expect(handle).toHaveAttribute('aria-valuenow', String(Math.round(natural.width)));
   });
 
   test('discovery metadata and captured screenshots are intact, and the page loads clean', async ({ page }) => {

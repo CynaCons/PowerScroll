@@ -1,7 +1,7 @@
 # SRS: Scrolls
 
 **Project:** PowerScroll (formerly PowerNote)
-**Version:** 0.66.2
+**Version:** 0.78.0
 **Date:** 2026-08-21
 
 ## Purpose
@@ -83,11 +83,17 @@ past it.
 | REQ-SCROLL-021 | Committing a non-empty name shall create a scroll in the next free column and make it active | Must | T122 |
 | REQ-SCROLL-022 | An empty name, or Escape, shall cancel without creating — an unnamed scroll draws no header and would be invisible | Must | T122 |
 | REQ-SCROLL-023 | A scroll title shall hold at the top of the viewport once the viewport scrolls past its resting position, for every named scroll at once | Must | T123 |
-| REQ-SCROLL-024 | A held title shall be visually distinguished from a resting one, and shall draw above page content rather than beneath it | Must | T123 |
+| REQ-SCROLL-024 | A held title shall be visually distinguished from a resting one, and shall draw above page content rather than beneath it | Must | T123, T202 |
 | REQ-SCROLL-025 | Dragging a node shall snap its left edge to a scroll band's left, or its right edge to the band's right, within a threshold | Must | T124 |
 | REQ-SCROLL-026 | The snap shall release when dragged beyond the threshold, so a deliberate off-band placement holds | Must | T124 |
 | REQ-SCROLL-027 | The scroll snap shall not require a modifier key, unlike node-to-node snapping | Must | T124 |
 | REQ-SCROLL-028 | Sidebar scroll entries shall use a scroll glyph rather than a column-split glyph | Should | T122 |
+| REQ-SCROLL-033 | A resting named scroll shall draw its title at 24 canvas units, weight 700, on a hairline rule at the foot of a 34-unit resting header (rest row 12, rule at 46), so it never overlaps the first block, which sits at 48 in every existing notebook. | Must | T202 |
+| REQ-SCROLL-034 | A held scroll header shall be a 32 screen-pixel paper band with a 22 screen-pixel paper-to-transparent fade below it at every viewport scale. | Must | T202 |
+| REQ-SCROLL-035 | A held scroll header shall show a two screen-pixel progress rule derived from the visible position in that scroll's own content. | Must | T202 |
+| REQ-SCROLL-036 | Only the active scroll shall show its two canvas-unit ink spine from the resting row through its content. | Must | T202 |
+| REQ-SCROLL-037 | During manual scroll resize, the screen-constant pixel readout shall be rendered inside the header band before the grip. | Must | T202 |
+| REQ-SCROLL-038 | Scroll rename shall edit in the title's exact current-state box without changing its type scale. | Must | T202 |
 
 Vertical position is never snapped: blocks stack freely down a band, and
 snapping y would fight that.
@@ -97,3 +103,4 @@ snapping y would fight that.
 - T122 — `tests/scroll/122-scroll-create-pin-snap.spec.ts` (creation, icon)
 - T123 — same file (pinned titles)
 - T124 — same file (magnetic snap)
+- T202 — `tests/scroll/202-scroll-header-states.spec.ts`

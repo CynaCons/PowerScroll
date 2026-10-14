@@ -267,8 +267,10 @@
           function reset() {
             scroll.style.flex = '';
             scroll.style.width = '';
-            handle.removeAttribute('aria-valuenow');
+            handle.setAttribute('aria-valuenow', String(Math.round(scroll.getBoundingClientRect().width)));
           }
+          // A focusable separator must always report its current value.
+          handle.setAttribute('aria-valuenow', String(Math.round(scroll.getBoundingClientRect().width)));
           handle.addEventListener('pointerdown', function (e) {
             if (e.button !== 0) return;
             startX = e.clientX;

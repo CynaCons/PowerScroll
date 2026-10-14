@@ -7,7 +7,7 @@
 [Agent setup](#let-an-agent-work-in-your-notebook) ·
 [Report a problem](https://github.com/CynaCons/PowerScroll/issues/new/choose)
 
-![PowerScroll visual notebook showing structured pages, independent scrolls, markdown and an editable architecture diagram](site/assets/powerscroll-canvas.png)
+![The PowerScroll window: the notebook outline on the left; a page with two scrolls named Requirements and Design holding markdown with a checklist and a table, a pen ring around an open item, an editable PlantUML diagram, and labelled shapes joined by a bound arrow](site/assets/canvas-workspace.png)
 
 PowerScroll combines the hierarchy of OneNote, the freeform canvas of a
 whiteboard, and editable diagrams in a notebook you completely own. No account,
@@ -48,7 +48,7 @@ scrolls, insert images, create native editable diagrams, and save the notebook.
 Agent edits use the same in-memory stores, undo history, and save path as human
 edits—there is no shadow database to reconcile.
 
-![PowerScroll agent bridge and editable native diagram workflow](site/assets/powerscroll-agent.png)
+![The Agent workspace scroll: setup instructions, a Mermaid flowchart drawn by the bridge as native editable shapes, and a first prompt to try](site/assets/agent-workspace.png)
 
 ## Let an agent work in your notebook
 

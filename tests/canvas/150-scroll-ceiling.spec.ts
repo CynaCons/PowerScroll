@@ -444,14 +444,14 @@ test.describe('150 - Scroll ceiling (REQ-HIER-017, REQ-CANVAS-030)', () => {
         ceiling,
         ys,
         barYs,
-        stripH: layout.SCROLL_TITLE_PINNED_STRIP_HEIGHT,
-        fontSize: layout.SCROLL_TITLE_PINNED_FONT_SIZE,
+        stripH: layout.SCROLL_TITLE_RESTING_HEIGHT,
+        fontSize: layout.SCROLL_TITLE_RESTING_FONT_SIZE,
       };
     });
 
-    // v0.62 chrome: the title bar TOP rests on the ceiling row; the text is
-    // vertically centred inside the opaque strip (REQ-HIER-019), so the text
-    // itself sits (stripH - fontSize)/2 below the ceiling.
+    // v0.78 header: the resting header TOP rests on the ceiling row; the title
+    // is vertically centred inside the 34-unit resting header (REQ-HIER-019,
+    // REQ-SCROLL-033), so the text sits (stripH - fontSize)/2 below the ceiling.
     expect(row.barYs.length).toBe(2);
     expect(row.barYs[0]).toBeCloseTo(row.barYs[1], 5);
     expect(row.barYs[0]).toBeCloseTo(row.ceiling!, 5);

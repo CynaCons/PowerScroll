@@ -576,6 +576,10 @@ test.describe('161 - insert_block / move_block (REQ-AGENT-060..062)', () => {
   });
 
   test('stress: 60-block insert at 0, then 20 random moves undo exactly', async ({ page }) => {
+    // 60 bridge inserts with reflow take 27–33 s on a loaded machine, on the old
+    // header and the new one alike (measured 2026-09-05). The default 30 s budget
+    // fails correct-but-slow runs, which the config says it must not.
+    test.setTimeout(60_000);
     const scrollId = await defaultScrollId(page);
 
     await page.evaluate(() => {

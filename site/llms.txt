@@ -1,0 +1,22 @@
+# PowerScroll
+
+> A local-first visual notebook that lives in one editable HTML file, with an MCP bridge so AI agents can write into the same canvas a person is looking at. Free under the MIT licence. No account, no server.
+
+PowerScroll combines the hierarchy of OneNote (sections and pages), the freedom of a whiteboard (an infinite canvas with markdown, ink, images and shapes), and native editable diagrams from PlantUML, Mermaid, SVG and draw.io. Inside a page, named columns called scrolls are independent vertical workstreams. Pressing Ctrl+S writes the editor, the workspace, every image and ink stroke, and any installed extension into one self-contained HTML file that reopens anywhere, still editable.
+
+## Try it
+
+- [Open the hosted notebook](https://cynacons.github.io/PowerScroll/app/): runs in the browser; notebook content is never uploaded
+- [Download PowerScroll.html](https://github.com/CynaCons/PowerScroll/releases/latest/download/PowerScroll.html): the same application as a single file
+
+## For agents
+
+- [Agent setup guide](https://github.com/CynaCons/PowerScroll#let-an-agent-work-in-your-notebook): install with `npx -y powerscroll-mcp`, then enable Settings → Agent bridge inside the notebook
+- [powerscroll-mcp on npm](https://www.npmjs.com/package/powerscroll-mcp): the MCP server, listed in the official MCP Registry as `io.github.CynaCons/powerscroll`
+- Tools include list_pages, read_page, append_block, insert_block, update_block, move_block, insert_image, create_scroll, resize_scroll, create_diagram_plantuml, create_diagram_mermaid, create_diagram_svg, create_diagram_drawio, fit_diagram, set_background, rename_notebook and save_notebook
+
+## Source and policies
+
+- [Source repository](https://github.com/CynaCons/PowerScroll): MIT licence, releases, issues and discussions
+- [Security model](https://github.com/CynaCons/PowerScroll/blob/main/SECURITY.md): what talks to the network, and why a notebook is executable HTML
+- [Requirements and test traceability](https://github.com/CynaCons/PowerScroll/tree/main/docs): SRS documents per feature area

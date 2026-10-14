@@ -28,7 +28,7 @@ jobs:
       - name: Assemble site and live notebook
         run: |
           mkdir -p _site/app _site/assets
-          cp site/index.html site/styles.css site/robots.txt site/sitemap.xml _site/
+          cp site/index.html site/styles.css site/robots.txt site/sitemap.xml site/llms.txt _site/
           cp site/assets/* _site/assets/
           cp public/favicon.svg public/icons/icon-192.png public/icons/icon-512.png _site/assets/
           node scripts/build-pages-demo.mjs dist-template/index.html site/demo-workspace.json _site/app/index.html
