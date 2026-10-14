@@ -10,28 +10,45 @@ the live services before a new release.
 
 | Surface | Deployed state | Verification |
 |---|---|---|
-| Source repository | `CynaCons/PowerScroll`; app release source is tag `v0.84.0` at `f0f52d2` | [Repository](https://github.com/CynaCons/PowerScroll) |
-| Application release | `v0.84.0`, published 2026-10-14 10:42 UTC, non-draft, `Latest`; app reports `0.84.0` | [GitHub release](https://github.com/CynaCons/PowerScroll/releases/tag/v0.84.0) |
-| GitHub Pages | Public, HTTPS, workflow-deployed from `main` at `f0f52d2` (run succeeded 2026-10-14); live app reports `0.84.0` | [Storefront](https://cynacons.github.io/PowerScroll/) · [Live app](https://cynacons.github.io/PowerScroll/app/) · [deployments](https://github.com/CynaCons/PowerScroll/actions/workflows/pages.yml) |
-| npm | `powerscroll-mcp@0.67.1`; `latest` = `0.67.1`. **0.68.0 (board tools) is committed at `d9912d5` but NOT published**: npm was not signed in on the release machine (`npm whoami` 401) | [npm package](https://www.npmjs.com/package/powerscroll-mcp) |
-| Official MCP Registry | `io.github.CynaCons/powerscroll@0.67.1`, active. 0.68.0 waits for npm (Registry validation queries npm) | [Registry search](https://registry.modelcontextprotocol.io/?q=powerscroll) |
+| Source repository | `CynaCons/PowerScroll`; app release source is tag `v0.85.0` at `66ed75d` | [Repository](https://github.com/CynaCons/PowerScroll) |
+| Application release | `v0.85.0`, published 2026-10-14 12:01 UTC, non-draft, `Latest`; app reports `0.85.0` | [GitHub release](https://github.com/CynaCons/PowerScroll/releases/tag/v0.85.0) |
+| GitHub Pages | Public, HTTPS, workflow-deployed from `main` at `66ed75d` (run succeeded 2026-10-14); live app reports `0.85.0` | [Storefront](https://cynacons.github.io/PowerScroll/) · [Live app](https://cynacons.github.io/PowerScroll/app/) · [deployments](https://github.com/CynaCons/PowerScroll/actions/workflows/pages.yml) |
+| npm | `powerscroll-mcp@0.67.1`; `latest` = `0.67.1`. **0.69.0 (board tools incl. agent_leave, card_archive, card_restore) is committed at `66ed75d` but NOT published**: npm was not signed in on the release machine (`npm whoami` 401). 0.68.0 was never published and is skipped | [npm package](https://www.npmjs.com/package/powerscroll-mcp) |
+| Official MCP Registry | `io.github.CynaCons/powerscroll@0.67.1`, active. 0.69.0 waits for npm (Registry validation queries npm) | [Registry search](https://registry.modelcontextprotocol.io/?q=powerscroll) |
 
 The surfaces diverge on purpose at this snapshot: the app ships the board UI
-and the bridge commands, but agents only get the 14 board tools once
-`powerscroll-mcp@0.68.0` is on npm. Until then `npx -y powerscroll-mcp`
-resolves 0.67.1 (no board tools); a local checkout (`node powernote-mcp/server.js`)
-already has them.
+and its bridge commands, but agents only get the board tools once
+`powerscroll-mcp@0.69.0` is on npm. Until then `npx -y powerscroll-mcp`
+resolves 0.67.1; a local checkout (`node powernote-mcp/server.js`) already has
+them, and the release carries the 0.69.0 tarball as an asset.
 
 ## GitHub release assets
 
-The `v0.84.0` release contains (digests reported by the GitHub API; the HTML
+The `v0.85.0` release contains (digests reported by the GitHub API; the HTML
 size matches the committed `dist-template/index.html`):
 
 | Asset | Size | SHA-256 | Meaning |
 |---|---:|---|---|
-| `PowerScroll.html` | 2,666,755 bytes | `32316748ce1ddbb10b4e9977140258aa1707db3b15670c12b2c7d88d7170474f` | Primary self-contained notebook application |
-| `PowerNote.html` | 2,666,755 bytes | `32316748ce1ddbb10b4e9977140258aa1707db3b15670c12b2c7d88d7170474f` | Byte-identical compatibility alias for legacy updates |
-| `powerscroll-mcp.tgz` | 32,268 bytes | `e8b9d4934e38298521ec39b453ffa6f742aaf08673347a5e424d1768fbda7827` | MCP package snapshot at the app tag (package version `0.68.0`, not yet on npm) |
+| `PowerScroll.html` | 2,674,079 bytes | `be6358dfc21ed810d376a3ffaaf09d90f945f55e387beea3654ed1d2da93b89c` | Primary self-contained notebook application |
+| `PowerNote.html` | 2,674,079 bytes | `be6358dfc21ed810d376a3ffaaf09d90f945f55e387beea3654ed1d2da93b89c` | Byte-identical compatibility alias for legacy updates |
+| `powerscroll-mcp.tgz` | 32,617 bytes | `093446ef84ed03747c9b3dc3d2552e3608d53ff576ff01c86496a8dff52feee1` | MCP package snapshot at the app tag (package version `0.69.0`, not yet on npm) |
+
+## Verified for v0.85.0
+
+- Pre-tag evidence on the release candidate: typecheck clean; lint 0 errors
+  (40 warnings); `build:template` produced the 2,674,079-byte template
+  embedding `0.85.0`; MCP package tests 9/9, `npm audit` 0, `npm pack` = the
+  4 intended files; bridge multi-agent tests all passed; full local
+  Playwright campaign 838/838; the built template opened from disk with the
+  bridge object present, Settings reporting v0.85.0, a board page opening,
+  and zero console errors.
+- Post-tag: `Build & Release`, CI and `Deploy GitHub Pages` all succeeded for
+  `66ed75d`; the live app string reports `0.85.0`.
+- Updater paths: `releases/latest` returns `v0.85.0`; the raw `main`
+  `package.json` fallback returns `0.85.0`; the tag-pinned
+  `dist-template/index.html` answers HTTP 200 with 2,674,079 bytes.
+- New data: board cards may carry `archivedAt`; board events gain
+  `archived`, `restored`, `left`.
 
 ## Verified for v0.84.0
 
