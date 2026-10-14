@@ -1580,7 +1580,7 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] SRS_SHAPES row for live preview above content; T205 spec [agent: codex+claude-opus-5.5 b44cc05]
 - [x] Smoke test: npm run dev launches with zero console errors; affected specs green [agent: codex+claude-opus-5.5 b44cc05]
 
-### v0.80.0 — Freehand ink back to the pre-Excalidraw renderer, precise pen cursor (2026-10-14) (planning) (current) (ACTIVE)
+### v0.80.0 — Freehand ink back to the pre-Excalidraw renderer, precise pen cursor (2026-10-14) (planning)
 **Goal:** Owner request 2026-10-14: the perfect-freehand drawing (v0.69.1, v0.74.0) is "disturbing and disforming the shape ... the movements that I do with the pen don't reflect properly on the canvas. We have to revert that change and get back to a normal drawing style, like it was before." Only change: the drawing cursor must feel "very precise and accurate".
 - [x] Restore the pre-5ccecf7 renderer: Konva Line (tension 0.3, round caps/joins) for mouse and finger, the pressure ribbon only for real pen pressure; stop baking at commit; live ink uses the same renderer so the stroke does not change shape on release [agent: codex+claude-opus-5.5 f023fae draw+shapes 94/94]
 - [x] Data compatibility: strokes saved with baked:true keep loading; their simulated pressures are ignored so they draw as constant-width lines (veto-able: pen strokes drawn during v0.69-v0.78 lose their width variation) [agent: codex+claude-opus-5.5 f023fae draw+shapes 94/94]
@@ -1600,6 +1600,40 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Showcase artifact with real captures, light and dark; smoke test: npm run dev launches with zero console errors; full Playwright campaign green [agent: claude-opus-5.5 812/812, showcase https://claude.ai/artifact/FCNM5qiqaf5JkRGapEZNEu, 06f8246]
 - [x] Owner 2026-10-14: 'continue with all the features until you are able to release ... I will test after the release'. Commit the finished but uncommitted v0.77.0 brand mark and v0.78.0 scroll header work on its own after the full campaign [agent: claude-opus-5.5 812/812, showcase https://claude.ai/artifact/FCNM5qiqaf5JkRGapEZNEu, 06f8246]
 - [x] Release v0.81.0 (app-only, docs/RELEASING.md): version 0.81.0 in src/version.ts + package.json/lock, build:template, typecheck, lint, MCP package tests, bridge tests, template smoke; commit dist-template; push main; tag v0.81.0; verify GitHub release assets, Pages and the in-app update path; update docs/DEPLOYMENTS.md [agent: claude-opus-5.5 tag v0.81.0 @925bf61, release 3 assets, Pages+CI green, ledger e58d167]
+
+### v0.82.0 — Scroll visuals - header card apart from the body, new page separators (2026-10-14) (planning) (current) (ACTIVE)
+**Goal:** Owner request 2026-10-14: the inter-page separators are "very bad" and need a redesign; the scroll title is not readable while scrolling because content shows through it ("if I'm scrolling on a black background or black image, then I don't see the title"). Keep the progress bar. "Split the scroll title from the main scroll itself ... a tiny separated card at the top, a little bit rounded like it is in VS Code, a tiny separation between the scroll title and the scroll body. And when you scroll, only the scroll body actually scrolls and not the scroll title." Maybe centre the title. Visual drafts first.
+- [x] Capture today's scroll header and page separators from the running app (resting, scrolled over dark content, page break) [agent: claude-opus-5.5 https://claude.ai/artifact/WXeWwRwo5tTzikanN6LiKr]
+- [x] Visual drafts: header card detached from the body (rounded, VS Code-like), opaque, pinned while only the body scrolls; title alignment options; separator options - published for the owner to pick [agent: claude-opus-5.5 https://claude.ai/artifact/WXeWwRwo5tTzikanN6LiKr]
+- [ ] Owner picks a direction
+- [ ] Header card as HTML above every canvas layer (text blocks z1, Gantt/diagram/image controls z10, strokes): opaque, rounded, separated from the body by a small gap; an opaque mask hides band content under the card and the gap while pinned, so only the body scrolls visibly; progress bar kept
+- [ ] Title alignment per the owner's pick (left or centred); page counter on the card
+- [ ] Page separators per the owner's pick (A sheet gap, B margin tick, C labelled hairline) replacing the faint #ededed line in scroll mode
+- [ ] SRS_SCROLL rows (supersede REQ-SCROLL-024/033..038 as needed); T208 asserts composited pixels: title readable over a dark block and over a text block
+- [ ] Showcase with real captures; smoke test: npm run dev launches with zero console errors; full campaign green
+
+## v0.83 — Boards - a Kanban page type your agents work on
+> Owner request 2026-10-14: a new page type next to the canvas and scrolls - a Kanban board with To do / In progress / Waiting for feedback / Done, Trello/Planner-style cards that open in an overlay with details and notes, and full MCP control so several named agents (like powerboard names) can claim, move and update cards; the board is the owner's live dashboard of what each agent is doing.
+
+### v0.83.0 — Board design and feature plan (2026-10-14) (planning)
+**Goal:** Owner request 2026-10-14: "come up with a visual design, with a feature plan, and submit it to me" for a Kanban board page type with four columns (To do, In progress, Waiting for feedback, Done), cards that open in an overlay with details and notes, named agents visible on the cards, and live updates as agents move work.
+- [x] Visual design (board page, card overlay) and feature plan (data, 12 agent tools, iterations) published - https://claude.ai/artifact/WXeWwRwo5tTzikanN6LiKr [agent: claude-opus-5.5]
+- [ ] Owner approves the design and the plan, and answers the open decisions
+
+### v0.83.1 — Board page kind, four columns, drag and drop (planning)
+**Goal:** A notebook page can be a board: Page.kind 'board' (absent = canvas, no migration) with To do / In progress / Waiting for feedback / Done; AppShell shows the board view instead of the canvas; cards drag between and within columns with mouse, pen and finger; quick add per column; Board in the sidebar add menu.
+
+### v0.83.2 — Card overlay - details, checklist, notes, history (planning)
+**Goal:** Clicking a card opens it in an overlay (Trello/Planner style): editable title, Markdown description, labels, status and assignee, checklist, a signed notes thread with reply, and the card's history; Esc or the cross closes it.
+
+### v0.83.3 — Agent tools for boards over MCP (planning)
+**Goal:** Agents get full control of boards through the bridge: board_list, board_create, board_read, card_create, card_get, card_update, card_claim/card_release, card_move (Waiting for feedback requires a question), card_note, card_check, agent_status, board_updates; every write takes me (agent name, powerboard convention) and is recorded on the card and in its history.
+
+### v0.83.4 — Live board - agents strip, activity, feedback loop (planning)
+**Goal:** The board is a live dashboard: the agents strip shows each connected agent (from the MCP hub, new server-to-app presence frame) and the card it is on, the activity panel lists every change live, changed cards flash, the Needs me filter lists cards waiting on the owner, and board_updates (long-poll with a cursor) returns the owner's replies and moves to agents.
+
+### v0.84.0 — Release - scrolls redesign and boards, app and powerscroll-mcp together (planning)
+**Goal:** Coordinated release per docs/RELEASING.md: app v0.84.0 and powerscroll-mcp with the board tools (npm then MCP Registry; owner signs in for npm and the Registry).
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.
