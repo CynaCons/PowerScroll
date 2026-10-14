@@ -1606,10 +1606,10 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Capture today's scroll header and page separators from the running app (resting, scrolled over dark content, page break) [agent: claude-opus-5.5 https://claude.ai/artifact/WXeWwRwo5tTzikanN6LiKr]
 - [x] Visual drafts: header card detached from the body (rounded, VS Code-like), opaque, pinned while only the body scrolls; title alignment options; separator options - published for the owner to pick [agent: claude-opus-5.5 https://claude.ai/artifact/WXeWwRwo5tTzikanN6LiKr]
 - [x] Owner picks a direction: S1 (title left, 2026-10-14); separators not specified - A sheet gap, the recommended default [agent: owner]
-- [ ] Header card as HTML above every canvas layer (text blocks z1, Gantt/diagram/image controls z10, strokes): opaque, rounded, separated from the body by a small gap; an opaque mask hides band content under the card and the gap while pinned, so only the body scrolls visibly; progress bar kept
-- [ ] Title alignment per the owner's pick (left or centred); page counter on the card
-- [ ] Page separators per the owner's pick (A sheet gap, B margin tick, C labelled hairline) replacing the faint #ededed line in scroll mode
-- [ ] SRS_SCROLL rows (supersede REQ-SCROLL-024/033..038 as needed); T208 asserts composited pixels: title readable over a dark block and over a text block
+- [x] Header card as HTML above every canvas layer (text blocks z1, Gantt/diagram/image controls z10, strokes): opaque, rounded, separated from the body by a small gap; an opaque mask hides band content under the card and the gap while pinned, so only the body scrolls visibly; progress bar kept [agent: codex+claude-opus-5.5 b04896a scroll/canvas/text/hierarchy 307/307]
+- [x] Title alignment per the owner's pick (left or centred); page counter on the card [agent: codex+claude-opus-5.5 b04896a scroll/canvas/text/hierarchy 307/307]
+- [x] Page separators per the owner's pick (A sheet gap, B margin tick, C labelled hairline) replacing the faint #ededed line in scroll mode [agent: codex+claude-opus-5.5 b04896a scroll/canvas/text/hierarchy 307/307]
+- [x] SRS_SCROLL rows (supersede REQ-SCROLL-024/033..038 as needed); T208 asserts composited pixels: title readable over a dark block and over a text block [agent: codex+claude-opus-5.5 b04896a scroll/canvas/text/hierarchy 307/307]
 - [ ] Showcase with real captures; smoke test: npm run dev launches with zero console errors; full campaign green
 
 ## v0.83 — Boards - a Kanban page type your agents work on
