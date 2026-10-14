@@ -1,4 +1,4 @@
-import type { BoardColumnId } from '../../types/data';
+import type { BoardColumnId, BoardEvent } from '../../types/data';
 
 export const AVATAR_PALETTE = [
   '#2563eb',
@@ -52,4 +52,21 @@ export function colorWithAlpha(hex: string, alpha: number): string {
   const value = Number.parseInt(full, 16);
   if (!Number.isFinite(value)) return `rgba(20, 24, 26, ${alpha})`;
   return `rgba(${(value >> 16) & 255}, ${(value >> 8) & 255}, ${value & 255}, ${alpha})`;
+}
+
+/**
+ * Keeps only the last of each run of adjacent 'updated' events by the same actor
+ * on the same card. Boards edited before v0.86.1 logged one per keystroke.
+ */
+export function collapseEditRuns(events: BoardEvent[]): BoardEvent[] {
+  return events.filter((event, index) => {
+    const next = events[index + 1];
+    return !(
+      next
+      && event.type === 'updated'
+      && next.type === 'updated'
+      && next.actor === event.actor
+      && next.cardId === event.cardId
+    );
+  });
 }

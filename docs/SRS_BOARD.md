@@ -42,6 +42,7 @@ canvas undo history.
 | REQ-BOARD-026 | A live card may be archived (`archivedAt` set, `archived` event); archived cards are excluded from column order/renumbering, counts, the Needs me filter and "Board · N cards". Done's Clear button (`board-clear-done`) shall confirm inline (`board-clear-done-confirm`) then archive every live Done card. Overlay Archive (`card-archive`) archives that card and closes. `Archived (N)` (`board-archived-toggle`) lists archived cards with Restore (`board-restore-<number>`), which returns a card to the end of its previous column (`restored` event). `moveCard`/`updateCard` on an archived card fail with `ARCHIVED`. Archive state shall persist across save and reopen. | Must | T214 |
 | REQ-BOARD-027 | Clicking an agent chip body shall toggle a transient spotlight on that name (`aria-pressed`, `data-spotlight` on the board): cards whose assignee or createdBy is that name stay at full opacity with a 2 px ring in the agent's colour; all other cards dim to about 0.35 opacity. Columns stay in place. Clicking the same chip, another chip, or Escape (when no overlay is open) shall change or clear it. Spotlight shall combine with the All / Needs me filter; dimmed cards stay clickable; active highlighting still shows on top. | Must | T215 |
 | REQ-BOARD-028 | The activity panel shall collapse to a 44 px rail from a button in its header, giving the columns the space; the rail shows the live dot, the count of events that arrived while collapsed, and expands on click (the count then clears). The collapsed state is a device preference (localStorage), not saved in the notebook. Owner request 2026-10-14 | Must | T216 |
+| REQ-BOARD-029 | Text typed in the card overlay (title, description, assignee) shall stay a draft until the overlay closes (X, Escape, backdrop, Archive, leaving the board or the tab going hidden); closing then writes at most one `updated` event for title and description together and one `claimed`/`released` for the assignee, and nothing if the text is unchanged. Typing shall never write an event per keystroke. Enter in the title or assignee ends editing without saving early. Card history and the activity list shall show a run of adjacent `updated` events by the same actor on the same card as one line. Owner report 2026-10-14 | Must | T218 |
 
 ## Traceability
 
@@ -52,3 +53,5 @@ canvas undo history.
 - T213 — `tests/board/213-agents-leave.spec.ts`
 - T214 — `tests/board/214-clear-done.spec.ts`
 - T215 — `tests/board/215-agent-spotlight.spec.ts`
+- T216 — `tests/board/216-activity-collapse.spec.ts`
+- T218 — `tests/board/218-card-drafts.spec.ts`

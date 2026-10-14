@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { BoardData, BoardEvent } from '../../types/data';
 import { BOARD_COLUMNS } from '../../board/boardOps';
-import { avatarColor, avatarInitial, displayName, relativeTime } from './boardUi';
+import { avatarColor, avatarInitial, collapseEditRuns, displayName, relativeTime } from './boardUi';
 
 function eventText(event: BoardEvent, board: BoardData): string {
   const card = board.cards.find((item) => item.id === event.cardId);
@@ -140,7 +140,7 @@ export function ActivityPanel({ board, collapsed, onToggle }: ActivityPanelProps
         </button>
       </header>
       <ol className="board-activity__list">
-        {board.events
+        {collapseEditRuns(board.events)
           .slice(-50)
           .reverse()
           .map((event) => (

@@ -14,9 +14,18 @@ import {
   BOARD_COLUMNS,
 } from '../../board/boardOps';
 import { markdownToHtml } from '../../utils/renderMarkdown';
-import { avatarColor, avatarInitial, displayName, relativeTime, statusClass } from './boardUi';
+import { avatarColor, avatarInitial, collapseEditRuns, displayName, relativeTime, statusClass } from './boardUi';
 
 const ACTOR = 'you';
+
+/** Typed text waits here until the card closes; null means the field is untouched. */
+interface Drafts {
+  title: string | null;
+  description: string | null;
+  assignee: string | null;
+}
+
+const NO_DRAFTS: Drafts = { title: null, description: null, assignee: null };
 
 interface CardOverlayProps {
   card: BoardCard;
@@ -27,7 +36,7 @@ interface CardOverlayProps {
 }
 
 function EventHistory({ card, events }: Pick<CardOverlayProps, 'card' | 'events'>) {
-  const history = events.filter((event) => event.cardId === card.id).slice().reverse();
+  const history = collapseEditRuns(events.filter((event) => event.cardId === card.id)).reverse();
 
   return (
     <ol className="board-history">
@@ -55,6 +64,12 @@ export function CardOverlay({ card, cards, events, edit, onClose }: CardOverlayP
   const [label, setLabel] = useState('');
   const [question, setQuestion] = useState(card.question ?? '');
   const [askingQuestion, setAskingQuestion] = useState(false);
+  const [drafts, setDrafts] = useState<Drafts>(NO_DRAFTS);
+  const draftsRef = useRef<Drafts>(NO_DRAFTS);
+  const setDraft = (field: keyof Drafts, value: string) => {
+    draftsRef.current = { ...draftsRef.current, [field]: value };
+    setDrafts(draftsRef.current);
+  };
   const names = useMemo(
     () => [...new Set(['you', ...cards.map((item) => item.assignee).filter(Boolean) as string[]])],
     [cards],
@@ -65,6 +80,50 @@ export function CardOverlay({ card, cards, events, edit, onClose }: CardOverlayP
     const previousFocus = restoreFocus.current;
 
     return () => previousFocus?.focus();
+  }, []);
+
+  // Saves typed text in one go: one 'updated' entry for title and description,
+  // one claim or release for the assignee. Never one entry per keystroke.
+  const saveDrafts = () => {
+    const pending = draftsRef.current;
+    draftsRef.current = NO_DRAFTS;
+    const title = pending.title?.trim() ? pending.title : null;
+    const changes = {
+      ...(title !== null && title !== card.title ? { title } : {}),
+      ...(pending.description !== null && pending.description !== card.description
+        ? { description: pending.description }
+        : {}),
+    };
+    try {
+      if (Object.keys(changes).length) {
+        edit((board) => updateCard(board, { cardId: card.id, ...changes }, ACTOR, Date.now()));
+      }
+      if (pending.assignee !== null) {
+        const value = pending.assignee.trim();
+        const assignee = value.toLowerCase() === 'you' ? 'you' : value;
+        if (assignee && assignee !== card.assignee) {
+          edit((board) => claimCard(board, { cardId: card.id }, assignee, Date.now()));
+        } else if (!assignee && card.assignee) {
+          edit((board) => releaseCard(board, { cardId: card.id }, ACTOR, Date.now()));
+        }
+      }
+    } catch {
+      // The card was archived or deleted meanwhile: nothing left to save to.
+    }
+  };
+  const saveDraftsRef = useRef(saveDrafts);
+  saveDraftsRef.current = saveDrafts;
+
+  // Every way out (X, Escape, backdrop, switching page) unmounts the overlay.
+  useEffect(() => {
+    const saveBeforeLeaving = () => {
+      if (document.visibilityState === 'hidden') saveDraftsRef.current();
+    };
+    document.addEventListener('visibilitychange', saveBeforeLeaving);
+    return () => {
+      document.removeEventListener('visibilitychange', saveBeforeLeaving);
+      saveDraftsRef.current();
+    };
   }, []);
 
   useEffect(() => {
@@ -166,11 +225,11 @@ export function CardOverlay({ card, cards, events, edit, onClose }: CardOverlayP
             <input
               className="board-overlay__title"
               aria-label="Card title"
-              value={card.title}
-              onChange={(event) => edit((board) => updateCard(board, {
-                cardId: card.id,
-                title: event.target.value,
-              }, ACTOR, Date.now()))}
+              value={drafts.title ?? card.title}
+              onChange={(event) => setDraft('title', event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') event.currentTarget.blur();
+              }}
             />
             <div className="board-overlay__chips">
               <label className={`board-status ${statusClass(card.column)}`}>
@@ -197,15 +256,11 @@ export function CardOverlay({ card, cards, events, edit, onClose }: CardOverlayP
                 <input
                   list="board-assignees"
                   aria-label="Assignee"
-                  value={card.assignee ? displayName(card.assignee) : ''}
+                  value={drafts.assignee ?? (card.assignee ? displayName(card.assignee) : '')}
                   placeholder="Unassigned"
-                  onChange={(event) => {
-                    const value = event.target.value.trim();
-                    const assignee = value.toLowerCase() === 'you' ? 'you' : value;
-
-                    edit((board) => assignee
-                      ? claimCard(board, { cardId: card.id }, assignee, Date.now())
-                      : releaseCard(board, { cardId: card.id }, ACTOR, Date.now()));
+                  onChange={(event) => setDraft('assignee', event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') event.currentTarget.blur();
                   }}
                 />
                 <datalist id="board-assignees">
@@ -243,6 +298,7 @@ export function CardOverlay({ card, cards, events, edit, onClose }: CardOverlayP
               className="board-button"
               data-testid="card-archive"
               onClick={() => {
+                saveDrafts();
                 edit((board) => archiveCard(board, { cardId: card.id }, ACTOR, Date.now()));
                 onClose();
               }}
@@ -276,11 +332,8 @@ export function CardOverlay({ card, cards, events, edit, onClose }: CardOverlayP
                 <textarea
                   autoFocus
                   aria-label="Description"
-                  value={card.description}
-                  onChange={(event) => edit((board) => updateCard(board, {
-                    cardId: card.id,
-                    description: event.target.value,
-                  }, ACTOR, Date.now()))}
+                  value={drafts.description ?? card.description}
+                  onChange={(event) => setDraft('description', event.target.value)}
                   onBlur={() => setDescriptionEditing(false)}
                 />
               ) : (
@@ -289,7 +342,9 @@ export function CardOverlay({ card, cards, events, edit, onClose }: CardOverlayP
                   className="board-description powernote-markdown"
                   onClick={() => setDescriptionEditing(true)}
                   dangerouslySetInnerHTML={{
-                    __html: markdownToHtml(card.description || 'Click to add a description'),
+                    __html: markdownToHtml(
+                      (drafts.description ?? card.description) || 'Click to add a description',
+                    ),
                   }}
                 />
               )}
