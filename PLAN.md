@@ -1651,19 +1651,19 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] SRS_BOARD / SRS_AGENT rows; T213 (leave), T214 (archive and clear done incl. save-reopen), T215 (spotlight); MCP package tests [agent: grok-4.6+claude-opus-5.5 ddb5b44 board+agent 140/140, campaign 838/838, MCP 9/9]
 - [x] Release: app 0.85.0 done (tag v0.85.0 @66ed75d, release 3 assets, CI + Pages green, live 0.85.0, ledger 1715241, showcase https://claude.ai/artifact/SgUM2wqX4DXMioA93KEzC5); MCP publish superseded by powerscroll-mcp 0.70.0 (v0.86.0 task 4) [agent: claude-opus-5.5 66ed75d]
 
-### v0.86.0 — Board - collapsible activity panel, agents must name themselves (2026-10-14)
+### v0.86.0 — Board - collapsible activity panel, agents must name themselves (2026-10-14) (current) (ACTIVE)
 **Goal:** Owner request 2026-10-14: "the activity panel, I need to be able to collapse it"; "we should not generate random agent names. Whenever an agent wants to connect, we should mandate that the agent tells us the name ... right now I see dozens of agents which are connected and I'm suspecting that it's all the same one, just connecting and reconnecting over and over. So in the API we need to request that the agents provide their names."
 - [x] Activity panel collapses to a slim rail (toggle in its header, live dot and unread count on the rail, columns take the space); state remembered on this device [agent: claude-opus-5.5 377a9ef board+agent 143/143, campaign 841/841, MCP 13/13]
 - [x] No more generated agent names: the MCP server drops the agent-<random> fallback; every board write tool (and agent_status, agent_leave) requires me unless POWERNOTE_AGENT_NAME is set, with a clear error telling the agent to pass its name; the app rejects actor names that look auto-generated (agent- + 8 hex) and the presence frame lists unnamed processes as one 'unnamed' entry, never as chips [agent: claude-opus-5.5 377a9ef board+agent 143/143, campaign 841/841, MCP 13/13]
 - [x] SRS rows (supersede the me-default rows); T216 (collapse), T217 (names required); MCP tests [agent: claude-opus-5.5 377a9ef board+agent 143/143, campaign 841/841, MCP 13/13]
 - [ ] Release: app 0.86.0 DONE (tag v0.86.0 @817bbd5, release 3 assets, CI + Pages green, live 0.86.0, showcase https://claude.ai/artifact/9nsGoEVrPEbubPT6rgjS5P); powerscroll-mcp 0.70.0 npm + MCP Registry still open - needs the owner's npm login (npm whoami 401)
 
-### v0.86.1 — Board - card edits saved on close, not per keystroke (current) (ACTIVE)
+### v0.86.1 — Board - card edits saved on close, not per keystroke (2026-10-14) (COMPLETE)
 **Goal:** Owner report 2026-10-14: "while I was typing, I just noticed that on every letter, it created a new entry in the history of that task ... whatever the user types should be saved whenever the user closes the window ... but not on every letter."
-- [x] Owner report 2026-10-14: typing in a card's title/description/assignee wrote one history entry per letter [web]. Card overlay keeps title, description and assignee as drafts; they are saved once when the card closes (X, Escape, backdrop, Archive, leaving the board), as one 'updated' entry; Enter in title/assignee also commits [agent: claude-opus-5.5 T218 fails on old code (37 events) and passes on new; campaign 843/843]
+- [x] Owner report 2026-10-14: typing in a card's title/description/assignee wrote one history entry per letter [web]. Card overlay keeps title, description and assignee as drafts; they are saved once when the card closes (X, Escape, backdrop, Archive, leaving the board, tab hidden), as one 'updated' entry plus at most one claim/release; Enter in title/assignee only leaves the field [agent: claude-opus-5.5 T218 fails on old code (37 events) and passes on new; campaign 843/843]
 - [x] Card history and activity list collapse runs of 'updated' by the same actor on the same card into one line, so boards already flooded by the old behaviour read cleanly [agent: claude-opus-5.5 T218 fails on old code (37 events) and passes on new; campaign 843/843]
 - [x] SRS row (REQ-BOARD-029) + T218 reproducing the symptom: type a title letter by letter, history gains no entry until close, then exactly one [agent: claude-opus-5.5 T218 fails on old code (37 events) and passes on new; campaign 843/843]
-- [ ] Release v0.86.1 (full campaign, smoke, showcase)
+- [x] Release v0.86.1 (full campaign, smoke, showcase) [agent: claude-opus-5.5 tag v0.86.1 @2f54a88; Build&Release, CI, Pages green; live 0.86.1; release 3 assets; showcase https://claude.ai/artifact/Q9GEuhbn2GrV2oxPtgZMbc]
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.

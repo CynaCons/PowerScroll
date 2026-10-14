@@ -10,9 +10,9 @@ the live services before a new release.
 
 | Surface | Deployed state | Verification |
 |---|---|---|
-| Source repository | `CynaCons/PowerScroll`; app release source is tag `v0.86.0` at `817bbd5` | [Repository](https://github.com/CynaCons/PowerScroll) |
-| Application release | `v0.86.0`, published 2026-10-14 12:51 UTC, non-draft, `Latest`; app reports `0.86.0` | [GitHub release](https://github.com/CynaCons/PowerScroll/releases/tag/v0.86.0) |
-| GitHub Pages | Public, HTTPS, workflow-deployed from `main` at `817bbd5` (run succeeded 2026-10-14); live app reports `0.86.0` | [Storefront](https://cynacons.github.io/PowerScroll/) · [Live app](https://cynacons.github.io/PowerScroll/app/) · [deployments](https://github.com/CynaCons/PowerScroll/actions/workflows/pages.yml) |
+| Source repository | `CynaCons/PowerScroll`; app release source is tag `v0.86.1` at `2f54a88` | [Repository](https://github.com/CynaCons/PowerScroll) |
+| Application release | `v0.86.1`, published 2026-10-14 14:49 UTC, non-draft, `Latest`; app reports `0.86.1` | [GitHub release](https://github.com/CynaCons/PowerScroll/releases/tag/v0.86.1) |
+| GitHub Pages | Public, HTTPS, workflow-deployed from `main` at `2f54a88` (run succeeded 2026-10-14); live app reports `0.86.1` | [Storefront](https://cynacons.github.io/PowerScroll/) · [Live app](https://cynacons.github.io/PowerScroll/app/) · [deployments](https://github.com/CynaCons/PowerScroll/actions/workflows/pages.yml) |
 | npm | `powerscroll-mcp@0.67.1`; `latest` = `0.67.1`. **0.70.0 (board tools; every board tool requires the agent's own `me`) is committed at `817bbd5` but NOT published**: npm was not signed in on the release machine (`npm whoami` 401). 0.68.0 and 0.69.0 were never published and are skipped | [npm package](https://www.npmjs.com/package/powerscroll-mcp) |
 | Official MCP Registry | `io.github.CynaCons/powerscroll@0.67.1`, active. 0.70.0 waits for npm (Registry validation queries npm) | [Registry search](https://registry.modelcontextprotocol.io/?q=powerscroll) |
 
@@ -24,14 +24,31 @@ them, and the release carries the 0.70.0 tarball as an asset.
 
 ## GitHub release assets
 
-The `v0.86.0` release contains (digests reported by the GitHub API; the HTML
+The `v0.86.1` release contains (digests reported by the GitHub API; the HTML
 size matches the committed `dist-template/index.html`):
 
 | Asset | Size | SHA-256 | Meaning |
 |---|---:|---|---|
-| `PowerScroll.html` | 2,677,224 bytes | `cf47ede2f639d26cc558b17b223ade64398e20d17ce37b57cdf63ac79dfaf497` | Primary self-contained notebook application |
-| `PowerNote.html` | 2,677,224 bytes | `cf47ede2f639d26cc558b17b223ade64398e20d17ce37b57cdf63ac79dfaf497` | Byte-identical compatibility alias for legacy updates |
+| `PowerScroll.html` | 2,678,237 bytes | `100b9ecfa0a59b3e591a24824fa406b2d4fc39e2e98eee8a28a424e50353dbc9` | Primary self-contained notebook application |
+| `PowerNote.html` | 2,678,237 bytes | `100b9ecfa0a59b3e591a24824fa406b2d4fc39e2e98eee8a28a424e50353dbc9` | Byte-identical compatibility alias for legacy updates |
 | `powerscroll-mcp.tgz` | 33,355 bytes | `27c1030a70bc51fd66cc0a9e9e285002b689ad083ed871d2260b083c8f7e2e5b` | MCP package snapshot at the app tag (package version `0.70.0`, not yet on npm) |
+
+## Verified for v0.86.1
+
+- App-only patch (MCP package unchanged at 0.70.0; the release tarball is
+  byte-identical to v0.86.0's). Pre-tag evidence: typecheck clean; lint 0
+  errors (40 warnings); `build:template` produced the 2,678,237-byte template
+  embedding `0.86.1`; MCP package tests 13/13; bridge multi-agent tests all
+  passed; T218 failed on the previous overlay (37 events) and passed on the
+  fix; full local Playwright campaign 843/843; the built template opened from
+  disk reporting 0.86.1 with zero console errors.
+- Post-tag: `Build & Release`, CI and `Deploy GitHub Pages` all succeeded for
+  `2f54a88`; the live app string reports `0.86.1`.
+- Updater paths: `releases/latest` returns `v0.86.1`; the raw `main`
+  `package.json` fallback returns `0.86.1`; the tag-pinned
+  `dist-template/index.html` answers HTTP 200 with 2,678,237 bytes.
+- Data: no format change. Notebooks edited before this release keep their
+  per-keystroke `updated` events; the UI shows each run as one line.
 
 ## Verified for v0.86.0
 
