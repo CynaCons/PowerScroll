@@ -1640,7 +1640,7 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 
 ### v0.84.0 — Release - scrolls redesign and boards, app and powerscroll-mcp together (planning)
 **Goal:** Coordinated release per docs/RELEASING.md: app v0.84.0 and powerscroll-mcp with the board tools (npm then MCP Registry; owner signs in for npm and the Registry).
-- [ ] App v0.84.0: version synced, dist-template rebuilt (2,666,755 bytes), typecheck, lint 0 errors, full campaign 826/826, template smoke from disk 0 errors, showcase https://claude.ai/artifact/JGnyn7hseubHgowozSZthS; push main, tag v0.84.0, verify release assets, Pages and update paths; ledger
+- [x] App v0.84.0: version synced, dist-template rebuilt (2,666,755 bytes), typecheck, lint 0 errors, full campaign 826/826, template smoke from disk 0 errors, showcase https://claude.ai/artifact/JGnyn7hseubHgowozSZthS; push main, tag v0.84.0, verify release assets, Pages and update paths; ledger [agent: claude-opus-5.5 tag v0.84.0 @f0f52d2, release 3 assets, CI+Pages green, live 0.84.0, ledger c484a8b]
 - [ ] powerscroll-mcp 0.68.0: versions synced, tests 8/8, bridge pass, audit 0, pack = 4 files; npm publish then MCP Registry - needs the owner's npm sign-in (npm whoami: 401 on 2026-10-14)
 
 ## Future (Backlog)
