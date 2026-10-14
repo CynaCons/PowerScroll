@@ -46,3 +46,4 @@ Allow users to create, style, select, move, resize, and delete geometric shapes 
 | REQ-SHAPE-032 | When a committed label needs more height than the inner box, the shape shall grow in height; it shall never shrink automatically. | Must | T198 |
 | REQ-SHAPE-033 | Holding Ctrl (Cmd on macOS) while placing or dragging an arrow or line endpoint shall suppress binding: no hint, no binding, endpoint exactly where released. | Must | T199 |
 | REQ-SHAPE-034 | While an endpoint hovers a bindable target, the app shall show the target's outline and the exact anchor point the endpoint will attach to, updated live. | Must | T199 |
+| REQ-SHAPE-035 | While a shape is being dragged out, the system shall draw a preview of that shape above all page content, in its stroke colour, updated on every pointer move, for mouse, pen and touch. | Must | T205 |

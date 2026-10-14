@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
-import { Stage, Layer, Group as KonvaGroup, Rect as KonvaRect, Ellipse, Line as KonvaLine } from 'react-konva';
+import { Stage, Layer, Group as KonvaGroup } from 'react-konva';
 import type Konva from 'konva';
 import { useCanvasStore, MIN_SCALE, MAX_SCALE } from '../../stores/useCanvasStore';
 import { useToolStore } from '../../stores/useToolStore';
@@ -16,7 +16,7 @@ import { DrawingLayer } from './DrawingLayer';
 import { TrashButton } from './TrashButton';
 import { DiagramSourceDialog } from './DiagramSourceDialog';
 import { ImageLightbox } from './ImageLightbox';
-import { BindingHint } from './BindingHint';
+import { ShapePreview } from './ShapePreview';
 import { useShapeCreation } from '../../hooks/useShapeCreation';
 import { useTextPlacement, consumeAutoEditNodeId } from '../../hooks/useTextPlacement';
 import { useCanvasKeyboard } from '../../hooks/useCanvasKeyboard';
@@ -87,8 +87,6 @@ export function InfiniteCanvas({ backgroundMode = 'pages', bgColor = '#ffffff' }
     eraserPos,
     penCursorPos,
     lassoRect,
-    shapePreview,
-    bindingHint,
     handleDrawPointerDown,
     handleDrawPointerMove,
     handleDrawPointerUp,
@@ -399,34 +397,6 @@ export function InfiniteCanvas({ backgroundMode = 'pages', bgColor = '#ffffff' }
             <PageGuides mode={backgroundMode} nodes={nodes} scrolls={previewScrolls} />
           </Layer>
           <Layer>
-            {/* Shape preview ghost while dragging — uses same coordinate system as ShapeNode */}
-            {shapePreview && (Math.abs(shapePreview.w) > 2 || Math.abs(shapePreview.h) > 2) && (() => {
-              const opts = useToolStore.getState().shapeOptions;
-              const sp = shapePreview;
-              const commonProps = {
-                stroke: opts.stroke,
-                strokeWidth: opts.strokeWidth,
-                dash: opts.strokeDash.length > 0 ? opts.strokeDash : undefined,
-                fill: opts.fill === 'transparent' ? 'rgba(37,99,235,0.05)' : opts.fill,
-                opacity: 0.6,
-                listening: false as const,
-              };
-              // Render at (sp.x, sp.y) with children at (0,0) — same as ShapeNode's Group pattern
-              if (opts.shapeType === 'rect') return <KonvaRect x={sp.x} y={sp.y} width={sp.w} height={sp.h} {...commonProps} />;
-              if (opts.shapeType === 'circle') return <Ellipse x={sp.x + sp.w / 2} y={sp.y + sp.h / 2} radiusX={Math.abs(sp.w) / 2} radiusY={Math.abs(sp.h) / 2} {...commonProps} />;
-              if (opts.shapeType === 'triangle') return <KonvaLine points={[sp.x + sp.w / 2, sp.y, sp.x + sp.w, sp.y + sp.h, sp.x, sp.y + sp.h]} closed {...commonProps} />;
-              if (opts.shapeType === 'diamond') return <KonvaLine points={[sp.x + sp.w / 2, sp.y, sp.x + sp.w, sp.y + sp.h / 2, sp.x + sp.w / 2, sp.y + sp.h, sp.x, sp.y + sp.h / 2]} closed {...commonProps} />;
-              // Arrow/line: start at (sp.x, sp.y), end at (sp.x+sp.w, sp.y+sp.h) — matches ShapeNode's [0,0,w,h] offset by Group position
-              if (opts.shapeType === 'arrow') return <KonvaLine points={[sp.x, sp.y, sp.x + sp.w, sp.y + sp.h]} stroke={opts.stroke} strokeWidth={opts.strokeWidth} opacity={0.6} listening={false} />;
-              if (opts.shapeType === 'line') return <KonvaLine points={[sp.x, sp.y, sp.x + sp.w, sp.y + sp.h]} stroke={opts.stroke} strokeWidth={opts.strokeWidth} lineCap="round" opacity={0.6} listening={false} />;
-              return null;
-            })()}
-            {bindingHint && (() => {
-              const target = nodes.find((node) => node.id === bindingHint.targetId);
-              if (!target) return null;
-              return <BindingHint target={target} point={bindingHint.point} scale={currentScale} offset={{ x: 0, y: 0 }} />;
-            })()}
-
             {/* Paint order. Group-aware: a diagram's members sort inside its
                 band, so the frame's layer moves the whole drawing at once. */}
             {sortNodesForPaint(nodes).map((node) => {
@@ -486,6 +456,7 @@ export function InfiniteCanvas({ backgroundMode = 'pages', bgColor = '#ffffff' }
               selectedStrokeIds={selectedStrokeIds}
               stageRef={stageRef}
             />
+            <ShapePreview />
           </Layer>
         </Stage>
       )}

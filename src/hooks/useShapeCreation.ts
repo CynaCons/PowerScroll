@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type Konva from 'konva';
 import { useCanvasStore } from '../stores/useCanvasStore';
-import { useToolStore } from '../stores/useToolStore';
+import { useToolStore, type ShapePreview } from '../stores/useToolStore';
 import { undoBatchEnd, undoBatchStart, useDrawStore } from '../stores/useDrawStore';
 import { generateId } from '../utils/ids';
 import { clampCanvasY, clampStageY, liveCeiling } from '../utils/scrollCeiling';
@@ -17,13 +17,6 @@ import {
   segmentSegmentDistance,
   type Bounds,
 } from '../utils/eraserGeometry';
-
-export interface ShapePreview {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
 
 /** Stylus eraser end: bit 32 of PointerEvent.buttons (S Pen, Surface pen). */
 const ERASER_BUTTON = 32;
@@ -83,8 +76,14 @@ export function useShapeCreation(
   const lastPenActivity = useRef(0);
 
   // Shape creation state
-  const [shapePreview, setShapePreview] = useState<ShapePreview | null>(null);
-  const [bindingHint, setBindingHint] = useState<{ targetId: string; point: { x: number; y: number } } | null>(null);
+  const shapePreview = useRef<ShapePreview | null>(null);
+  const setShapePreview = useCallback((preview: ShapePreview | null) => {
+    shapePreview.current = preview;
+    useToolStore.getState().setShapePreview(preview);
+  }, []);
+  const setBindingHint = useCallback((hint: { targetId: string; point: { x: number; y: number } } | null) => {
+    useToolStore.getState().setShapeBindingHint(hint);
+  }, []);
   const shapeStart = useRef<{ x: number; y: number } | null>(null);
 
   const getCanvasPoint = useCallback(() => {
@@ -348,11 +347,12 @@ export function useShapeCreation(
     setInProgressPressures(null);
     shapeStart.current = null;
     setShapePreview(null);
+    setBindingHint(null);
     lassoStart.current = null;
     setLassoRect(null);
     setEraserPos(null);
     setPenCursorPos(null);
-  }, [finishErase]);
+  }, [finishErase, setBindingHint, setShapePreview]);
 
   // Escape abandons a pending stroke erase, matching pointercancel rather
   // than committing the preview as a pointerup would.
@@ -575,7 +575,7 @@ export function useShapeCreation(
       lassoStart.current = pt;
       setLassoRect({ x: pt.x, y: pt.y, w: 0, h: 0 });
     }
-  }, [getCanvasPoint, stageRef, cancelInProgress, isPenGestureActive, eraseStrokeAlong, eraseZoneAt]);
+  }, [getCanvasPoint, stageRef, cancelInProgress, isPenGestureActive, eraseStrokeAlong, eraseZoneAt, setShapePreview]);
 
   const handleDrawPointerMove = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
     const evt = e.evt;
@@ -699,7 +699,7 @@ export function useShapeCreation(
         h: Math.abs(pt.y - start.y),
       });
     }
-  }, [getCanvasPoint, clientToCanvas, stageRef, eraseStrokeAlong, eraseZoneAlong, applyPanClient]);
+  }, [getCanvasPoint, clientToCanvas, stageRef, eraseStrokeAlong, eraseZoneAlong, applyPanClient, setBindingHint, setShapePreview]);
 
   const handleDrawPointerUp = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
     const evt = e.evt;
@@ -733,17 +733,18 @@ export function useShapeCreation(
         ...(pressures ? { pressures } : {}),
         ...(drawOpts.opacity < 1 ? { opacity: drawOpts.opacity } : {}),
       }));
-    } else if (tool === 'shape' && shapePreview) {
+    } else if (tool === 'shape' && shapePreview.current) {
       // Commit shape node — different min size for shapes vs arrows/lines
+      const preview = shapePreview.current;
       const shapeOpts = useToolStore.getState().shapeOptions;
       const isLine = shapeOpts.shapeType === 'arrow' || shapeOpts.shapeType === 'line';
-      const dragDist = Math.sqrt(shapePreview.w * shapePreview.w + shapePreview.h * shapePreview.h);
-      const minSize = isLine ? 5 : (Math.abs(shapePreview.w) > 5 && Math.abs(shapePreview.h) > 5);
+      const dragDist = Math.sqrt(preview.w * preview.w + preview.h * preview.h);
+      const minSize = isLine ? 5 : (Math.abs(preview.w) > 5 && Math.abs(preview.h) > 5);
 
       if (isLine ? dragDist > 5 : minSize) {
         const nodes = useCanvasStore.getState().nodes;
-        const startPoint = { x: shapePreview.x, y: shapePreview.y };
-        const endPoint = { x: shapePreview.x + shapePreview.w, y: shapePreview.y + shapePreview.h };
+        const startPoint = { x: preview.x, y: preview.y };
+        const endPoint = { x: preview.x + preview.w, y: preview.y + preview.h };
         const bindingDisabled = e.evt.ctrlKey || e.evt.metaKey;
         const startTarget = isLine && !bindingDisabled ? bindingCandidate(nodes, startPoint, undefined, 12 / useCanvasStore.getState().viewport.scale) : null;
         const endTarget = isLine && !bindingDisabled ? bindingCandidate(nodes, endPoint, undefined, 12 / useCanvasStore.getState().viewport.scale) : null;
@@ -757,10 +758,10 @@ export function useShapeCreation(
         useCanvasStore.getState().addNode({
           id,
           type: 'shape',
-          x: isLine ? snappedStart.x : shapePreview.x,
-          y: isLine ? snappedStart.y : shapePreview.y,
-          width: isLine ? snappedEnd.x - snappedStart.x : shapePreview.w,
-          height: isLine ? snappedEnd.y - snappedStart.y : shapePreview.h,
+          x: isLine ? snappedStart.x : preview.x,
+          y: isLine ? snappedStart.y : preview.y,
+          width: isLine ? snappedEnd.x - snappedStart.x : preview.w,
+          height: isLine ? snappedEnd.y - snappedStart.y : preview.h,
           layer: 3,
           data: {
             shapeType: shapeOpts.shapeType,
@@ -798,7 +799,7 @@ export function useShapeCreation(
     // A lifted finger leaves no hover: without this the pen dot sticks at
     // the lift point until the next mouse move.
     if (evt.pointerType === 'touch') setPenCursorPos(null);
-  }, [lassoRect, shapePreview, finishErase]);
+  }, [lassoRect, finishErase, setBindingHint, setShapePreview]);
 
   /**
    * Discard the owning pointer's in-progress gesture.
@@ -828,8 +829,6 @@ export function useShapeCreation(
     eraserPos,
     penCursorPos,
     lassoRect,
-    shapePreview,
-    bindingHint,
     // Handlers
     handleDrawPointerDown,
     handleDrawPointerMove,

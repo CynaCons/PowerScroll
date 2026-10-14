@@ -53,7 +53,7 @@ const TOOL_CONFIG: Record<ToolType, ToolModeConfig> = {
     allowNodeSelection: false,
     allowNodeDrag: false,
     allowNodeHover: false,
-    cursorClass: '',
+    cursorClass: 'infinite-canvas--crosshair',
     canvasClickAction: 'startShape',
   },
   lasso: {
