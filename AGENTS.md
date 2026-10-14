@@ -11,7 +11,7 @@ often get wrong.
   `docs/SRS_<AREA>.md` with the covering test in the last column.
 - **Verification before you report**: `npm run typecheck`, `npm run lint`,
   then `npx playwright test` (full suite, ~3–5 min, starts its own Vite on
-  port 5193). Never enable retries. Report exact pass/fail counts.
+  port 5193, or $PW_PORT when the coordinator assigns you another one). Never enable retries. Report exact pass/fail counts.
 - **Driving the canvas in tests**: synthetic mouse events do not reach Konva.
   Use pointer events dispatched on the stage container, or set state through
   `window.__POWERNOTE_STORES__` / `window.__POWERNOTE_BRIDGE__`. Look at

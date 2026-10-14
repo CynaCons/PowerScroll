@@ -1605,7 +1605,7 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 **Goal:** Owner request 2026-10-14: the inter-page separators are "very bad" and need a redesign; the scroll title is not readable while scrolling because content shows through it ("if I'm scrolling on a black background or black image, then I don't see the title"). Keep the progress bar. "Split the scroll title from the main scroll itself ... a tiny separated card at the top, a little bit rounded like it is in VS Code, a tiny separation between the scroll title and the scroll body. And when you scroll, only the scroll body actually scrolls and not the scroll title." Maybe centre the title. Visual drafts first.
 - [x] Capture today's scroll header and page separators from the running app (resting, scrolled over dark content, page break) [agent: claude-opus-5.5 https://claude.ai/artifact/WXeWwRwo5tTzikanN6LiKr]
 - [x] Visual drafts: header card detached from the body (rounded, VS Code-like), opaque, pinned while only the body scrolls; title alignment options; separator options - published for the owner to pick [agent: claude-opus-5.5 https://claude.ai/artifact/WXeWwRwo5tTzikanN6LiKr]
-- [ ] Owner picks a direction
+- [x] Owner picks a direction: S1 (title left, 2026-10-14); separators not specified - A sheet gap, the recommended default [agent: owner]
 - [ ] Header card as HTML above every canvas layer (text blocks z1, Gantt/diagram/image controls z10, strokes): opaque, rounded, separated from the body by a small gap; an opaque mask hides band content under the card and the gap while pinned, so only the body scrolls visibly; progress bar kept
 - [ ] Title alignment per the owner's pick (left or centred); page counter on the card
 - [ ] Page separators per the owner's pick (A sheet gap, B margin tick, C labelled hairline) replacing the faint #ededed line in scroll mode
@@ -1615,10 +1615,10 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 ## v0.83 — Boards - a Kanban page type your agents work on
 > Owner request 2026-10-14: a new page type next to the canvas and scrolls - a Kanban board with To do / In progress / Waiting for feedback / Done, Trello/Planner-style cards that open in an overlay with details and notes, and full MCP control so several named agents (like powerboard names) can claim, move and update cards; the board is the owner's live dashboard of what each agent is doing.
 
-### v0.83.0 — Board design and feature plan (2026-10-14) (planning)
+### v0.83.0 — Board design and feature plan (2026-10-14) (planning) (2026-10-14 · design approved) (COMPLETE)
 **Goal:** Owner request 2026-10-14: "come up with a visual design, with a feature plan, and submit it to me" for a Kanban board page type with four columns (To do, In progress, Waiting for feedback, Done), cards that open in an overlay with details and notes, named agents visible on the cards, and live updates as agents move work.
 - [x] Visual design (board page, card overlay) and feature plan (data, 12 agent tools, iterations) published - https://claude.ai/artifact/WXeWwRwo5tTzikanN6LiKr [agent: claude-opus-5.5]
-- [ ] Owner approves the design and the plan, and answers the open decisions - board design approved 2026-10-14 ("very good") with one request: active highlighting when an agent is working on a ticket; scroll pick and decisions 2-7 still open
+- [x] Owner approves the design and the plan - approved 2026-10-14 with active highlighting added; board is its own page type without drawing (owner); defaults taken where unanswered: third column 'Waiting for feedback', a question required to move there, free-text agent names; owner: 'implement both, release when done' [agent: owner]
 
 ### v0.83.1 — Board page kind, four columns, drag and drop (planning)
 **Goal:** A notebook page can be a board: Page.kind 'board' (absent = canvas, no migration) with To do / In progress / Waiting for feedback / Done; AppShell shows the board view instead of the canvas; cards drag between and within columns with mouse, pen and finger; quick add per column; Board in the sidebar add menu.

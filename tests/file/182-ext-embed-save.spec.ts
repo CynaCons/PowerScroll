@@ -14,7 +14,7 @@ import { waitForCanvasReady } from '../helpers';
 const FAKE_JS =
   'window.GraphViewer=function(){};window.GraphViewer.createViewerForElement=function(){};';
 const FAKE_B64 = deflateRawSync(Buffer.from(FAKE_JS, 'utf8')).toString('base64');
-const EXT_BASE = 'http://localhost:5193/fake-ext';
+const EXT_BASE = `http://localhost:${process.env.PW_PORT ?? 5193}/fake-ext`;
 
 test.describe('182 - extension embeds on save (REQ-SETTINGS-019)', () => {
   test.beforeEach(async ({ page }) => {

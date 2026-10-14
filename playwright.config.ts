@@ -1,5 +1,9 @@
 import { defineConfig } from '@playwright/test';
 
+// PW_PORT lets two agents run suites side by side without sharing (and then
+// killing) one Vite server. Default stays 5193.
+const port = Number(process.env.PW_PORT ?? 5193);
+
 export default defineConfig({
   testDir: './tests',
   testMatch: '**/*.spec.ts',
@@ -22,14 +26,14 @@ export default defineConfig({
   expect: { timeout: 10000 },
   use: {
     // Dedicated test port — avoids colliding with other Vite apps on 5173
-    baseURL: 'http://localhost:5193',
+    baseURL: `http://localhost:${port}`,
     headless: true,
     viewport: { width: 1280, height: 720 },
     actionTimeout: 10000,
   },
   webServer: {
-    command: 'npx vite --port 5193 --strictPort',
-    port: 5193,
+    command: `npx vite --port ${port} --strictPort`,
+    port,
     reuseExistingServer: !process.env.CI,
   },
   reporter: [['list'], ['html', { open: 'never' }]],
