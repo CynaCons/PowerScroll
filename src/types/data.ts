@@ -151,13 +151,11 @@ export interface Stroke {
   /** Flat group membership (v0.27+), shared with shape nodes. */
   groupId?: string | null;
   /**
-   * Per-point pen pressure 0..1, parallel to `points` (pressures.length ===
-   * points.length / 2). Baked strokes carry recorded stylus pressure or the
-   * simulated pressure used for mouse/finger ink. Absent legacy strokes are
-   * simulated at render time.
+   * Per-point real pen pressure 0..1, parallel to `points` (pressures.length
+   * === points.length / 2). Mouse and touch strokes intentionally omit it.
    */
   pressures?: number[];
-  /** Geometry is final; render with streamline 0 and recorded pressures. */
+  /** Legacy perfect-freehand geometry marker; renders as a constant-width Line. */
   baked?: true;
   /** 0–1, default 1. Absent keeps pre-v0.73 files opaque. */
   opacity?: number;

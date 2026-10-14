@@ -1,136 +1,70 @@
-import { getStroke, getStrokePoints, type StrokePoint } from 'perfect-freehand';
-import type { Stroke } from '../types/data';
-
 /**
- * Shared perfect-freehand tuning for every freehand stroke. There is no
- * length-relative taper: round caps keep the start of a long stroke as wide
- * as its middle. `sizeMultiplier` keeps the stored stroke width calibrated:
- * with thinning .5, pressure .5 produces an outline exactly `strokeWidth`
- * wide.
+ * Variable-width ink rendering for real stylus pressure.
+ *
+ * A pressure stroke cannot be a Konva Line — Line has one strokeWidth. A pen
+ * stroke is therefore drawn as a closed filled ribbon whose rim follows the
+ * recorded centreline. Mouse, touch, and legacy baked strokes use a regular
+ * constant-width Line instead.
  */
-export const INK_OPTIONS = {
-  sizeMultiplier: 1,
-  thinning: 0.5,
-  smoothing: 0.5,
-  streamline: 0.5,
-  start: { cap: true, taper: 0 },
-  end: { cap: true, taper: 0 },
-} as const;
 
-function hasRecordedPressure(points: number[], pressures: number[] | null | undefined): pressures is number[] {
-  return Boolean(pressures?.length) && pressures!.length * 2 === points.length;
+function clamp(value: number, low: number, high: number): number {
+  return value < low ? low : value > high ? high : value;
 }
 
-function strokeInput(points: number[], pressures: number[] | null | undefined) {
-  const recorded = hasRecordedPressure(points, pressures);
-  return Array.from({ length: points.length / 2 }, (_, index) => {
-    const x = points[index * 2];
-    const y = points[index * 2 + 1];
-    return recorded ? [x, y, pressures[index]] : [x, y];
-  });
-}
-
-const roundPressure = (pressure: number) => Math.round(pressure * 1_000) / 1_000;
-
-/**
- * Match perfect-freehand's pressure simulation for the already streamlined
- * points. This is intentionally kept here rather than relying on render-time
- * state, so cutting a baked stroke cannot restart its pressure calculation.
- */
-function simulatedPressures(points: StrokePoint[], size: number): number[] {
-  const simulate = (previous: number, distance: number) => {
-    const sp = Math.min(1, distance / size);
-    const rp = Math.min(1, 1 - sp);
-    return Math.min(1, previous + (rp - previous) * (sp * 0.275));
-  };
-  let previous = points.slice(0, 10).reduce(
-    (average, point) => (average + simulate(average, point.distance)) / 2,
-    points[0].pressure,
-  );
-  const totalLength = points[points.length - 1]?.runningLength ?? 0;
-
-  return points.map((point, index) => {
-    // getStrokeOutlinePoints omits near-tail non-final points. Their pressure
-    // cannot affect the outline, but retaining the prior value keeps the
-    // stored pressure list complete and parallel to points.
-    if (index !== points.length - 1 && totalLength - point.runningLength < 3) {
-      return roundPressure(previous);
-    }
-    previous = simulate(previous, point.distance);
-    return roundPressure(previous);
-  });
+/** Half-width in canvas px for one point: 0.3×..1.7× the base width. */
+function halfWidth(pressure: number, baseWidth: number): number {
+  const factor = 0.3 + 1.4 * clamp(pressure, 0, 1);
+  return Math.max(0.35, (baseWidth * factor) / 2);
 }
 
 /**
- * Freeze a raw stroke's streamlining and pressure state at commit time.
- * `last` is false for the live-to-committed handoff; legacy zone erasure uses
- * true to preserve its existing committed rendering exactly.
+ * Build the closed outline polygon for a pressure stroke. The three-point
+ * pressure average is the pre-perfect-freehand behaviour and keeps digitizer
+ * jitter out of the rim without changing the recorded input samples.
  */
-export function bakeStroke(stroke: Stroke, last = false): Stroke {
-  if (stroke.baked || stroke.points.length < 4 || stroke.points.length % 2 !== 0 || stroke.strokeWidth <= 0) {
-    return stroke;
-  }
-  const size = stroke.strokeWidth * INK_OPTIONS.sizeMultiplier;
-  const recorded = hasRecordedPressure(stroke.points, stroke.pressures);
-  const bakedPoints = getStrokePoints(strokeInput(stroke.points, stroke.pressures), {
-    ...INK_OPTIONS,
-    size,
-    last,
-  });
-  if (bakedPoints.length < 2) return stroke;
-
-  return {
-    ...stroke,
-    points: bakedPoints.flatMap(({ point }) => point),
-    pressures: recorded
-      ? bakedPoints.map(({ pressure }) => roundPressure(pressure))
-      : simulatedPressures(bakedPoints, size),
-    baked: true,
-  };
-}
-
-function buildOutline(
-  points: number[],
-  pressures: number[] | null | undefined,
-  strokeWidth: number,
-  last: boolean,
-  baked = false,
-): number[] | null {
-  if (points.length < 4 || points.length % 2 !== 0 || strokeWidth <= 0) return null;
-
-  const recorded = hasRecordedPressure(points, pressures);
-  const input = strokeInput(points, pressures);
-  const outline = getStroke(input, {
-    ...INK_OPTIONS,
-    size: strokeWidth * INK_OPTIONS.sizeMultiplier,
-    streamline: baked ? 0 : INK_OPTIONS.streamline,
-    simulatePressure: baked ? false : !recorded,
-    last,
-  });
-
-  if (outline.length < 3) return null;
-  const flat = outline.flat();
-  // Keep the function's closed flat-polygon contract explicit for non-Konva
-  // consumers as well as the closed Shape renderer.
-  flat.push(outline[0][0], outline[0][1]);
-  return flat;
-}
-
-/** Build a closed, committed freehand outline. */
 export function buildInkOutline(
   points: number[],
-  pressures: number[] | null | undefined,
-  strokeWidth: number,
-  baked = false,
+  pressures: number[],
+  baseWidth: number,
 ): number[] | null {
-  return buildOutline(points, pressures, strokeWidth, true, baked);
-}
+  const count = points.length / 2;
+  if (count < 2 || pressures.length !== count) return null;
 
-/** Build a live outline without fixing the tail to the latest pointer sample. */
-export function buildInProgressInkOutline(
-  points: number[],
-  pressures: number[] | null | undefined,
-  strokeWidth: number,
-): number[] | null {
-  return buildOutline(points, pressures, strokeWidth, false);
+  const smooth = new Array<number>(count);
+  for (let index = 0; index < count; index++) {
+    const before = pressures[Math.max(0, index - 1)];
+    const current = pressures[index];
+    const after = pressures[Math.min(count - 1, index + 1)];
+    smooth[index] = (before + current + after) / 3;
+  }
+
+  const left: number[] = [];
+  const right: number[] = [];
+  for (let index = 0; index < count; index++) {
+    const x = points[index * 2];
+    const y = points[index * 2 + 1];
+    const before = Math.max(0, index - 1);
+    const after = Math.min(count - 1, index + 1);
+    let dx = points[after * 2] - points[before * 2];
+    let dy = points[after * 2 + 1] - points[before * 2 + 1];
+    const length = Math.hypot(dx, dy);
+    if (length < 1e-6) {
+      dx = 1;
+      dy = 0;
+    } else {
+      dx /= length;
+      dy /= length;
+    }
+    const normalX = -dy;
+    const normalY = dx;
+    const width = halfWidth(smooth[index], baseWidth);
+    left.push(x + normalX * width, y + normalY * width);
+    right.push(x - normalX * width, y - normalY * width);
+  }
+
+  const outline = left;
+  for (let index = count - 1; index >= 0; index--) {
+    outline.push(right[index * 2], right[index * 2 + 1]);
+  }
+  return outline;
 }

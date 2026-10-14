@@ -7,7 +7,6 @@ import { generateId } from '../utils/ids';
 import { clampCanvasY, clampStageY, liveCeiling } from '../utils/scrollCeiling';
 import type { ShapeNodeData, Stroke } from '../types/data';
 import { bindingCandidate, closestPointOnOutline, fixedPointFor } from '../utils/arrowBinding';
-import { bakeStroke } from '../utils/inkOutline';
 import {
   STROKE_ERASER_SCREEN_RADIUS,
   boundsFromFlatPoints,
@@ -55,7 +54,6 @@ export function useShapeCreation(
   const pointsRef = useRef<number[] | null>(null);
   const pressuresRef = useRef<number[] | null>(null);
   const [eraserPos, setEraserPos] = useState<{ x: number; y: number; radius: number } | null>(null);
-  const [penCursorPos, setPenCursorPos] = useState<{ x: number; y: number } | null>(null);
   const [lassoRect, setLassoRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const isDrawing = useRef(false);
   const lassoStart = useRef<{ x: number; y: number } | null>(null);
@@ -197,9 +195,9 @@ export function useShapeCreation(
     }
 
     for (const originalStroke of strokes) {
-      // Legacy strokes were saved as raw samples. Bake the whole parent before
-      // splitting it, so a fragment retains the geometry it had in place.
-      const stroke = originalStroke.baked ? originalStroke : bakeStroke(originalStroke, true);
+      // Cut the stored raw points directly. Legacy baked strokes keep their
+      // marker for compatibility, while fresh pen pressure stays parallel.
+      const stroke = originalStroke;
       const pts = stroke.points;
       if (pts.length < 4) continue;
       const prs =
@@ -293,7 +291,7 @@ export function useShapeCreation(
           strokeWidth: stroke.strokeWidth,
           ...(stroke.groupId !== undefined ? { groupId: stroke.groupId } : {}),
           ...(run.prs ? { pressures: run.prs } : {}),
-          baked: true,
+          ...(stroke.baked ? { baked: true } : {}),
           ...(stroke.opacity !== undefined ? { opacity: stroke.opacity } : {}),
         });
       }
@@ -351,7 +349,6 @@ export function useShapeCreation(
     lassoStart.current = null;
     setLassoRect(null);
     setEraserPos(null);
-    setPenCursorPos(null);
   }, [finishErase, setBindingHint, setShapePreview]);
 
   // Escape abandons a pending stroke erase, matching pointercancel rather
@@ -606,7 +603,6 @@ export function useShapeCreation(
       const drawOpts = useToolStore.getState().drawOptions;
       if (erasing) {
         // Eraser cursor
-        setPenCursorPos(null);
         const radius = drawOpts.eraserMode === 'zone'
           ? drawOpts.eraserSize / 2
           : STROKE_ERASER_SCREEN_RADIUS / useCanvasStore.getState().viewport.scale;
@@ -625,8 +621,6 @@ export function useShapeCreation(
           erasePreviousPoint.current = pt;
         }
       } else {
-        // Pen cursor
-        setPenCursorPos({ x: pt.x, y: pt.y });
         setEraserPos(null);
 
         if (isDrawing.current && activePointer.current?.mode === 'draw' && pointsRef.current) {
@@ -654,7 +648,6 @@ export function useShapeCreation(
         }
       }
     } else {
-      setPenCursorPos(null);
       setEraserPos(null);
     }
 
@@ -725,14 +718,14 @@ export function useShapeCreation(
         pressuresRef.current && pressuresRef.current.length * 2 === points.length
           ? pressuresRef.current
           : null;
-      useDrawStore.getState().addStroke(bakeStroke({
+      useDrawStore.getState().addStroke({
         id: generateId(),
         points,
         color: drawOpts.color,
         strokeWidth: drawOpts.strokeWidth,
         ...(pressures ? { pressures } : {}),
         ...(drawOpts.opacity < 1 ? { opacity: drawOpts.opacity } : {}),
-      }));
+      });
     } else if (tool === 'shape' && shapePreview.current) {
       // Commit shape node — different min size for shapes vs arrows/lines
       const preview = shapePreview.current;
@@ -796,9 +789,6 @@ export function useShapeCreation(
     setLassoRect(null);
     const opts = useToolStore.getState().drawOptions;
     if (!(tool === 'draw' && opts.isErasing)) setEraserPos(null);
-    // A lifted finger leaves no hover: without this the pen dot sticks at
-    // the lift point until the next mouse move.
-    if (evt.pointerType === 'touch') setPenCursorPos(null);
   }, [lassoRect, finishErase, setBindingHint, setShapePreview]);
 
   /**
@@ -827,7 +817,6 @@ export function useShapeCreation(
     inProgressPoints,
     inProgressPressures,
     eraserPos,
-    penCursorPos,
     lassoRect,
     // Handlers
     handleDrawPointerDown,

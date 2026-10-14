@@ -1,9 +1,10 @@
-import { useRef, useState, useCallback, useEffect } from 'react';
+import { useRef, useState, useCallback, useEffect, useMemo } from 'react';
 import { Stage, Layer, Group as KonvaGroup } from 'react-konva';
 import type Konva from 'konva';
 import { useCanvasStore, MIN_SCALE, MAX_SCALE } from '../../stores/useCanvasStore';
 import { useToolStore } from '../../stores/useToolStore';
 import { getToolConfig } from '../../utils/toolConfig';
+import { createPenCursor } from '../../utils/penCursor';
 import { sortNodesForPaint } from '../../utils/zOrder';
 import { useDrawStore } from '../../stores/useDrawStore';
 import { CanvasNode } from './CanvasNode';
@@ -59,9 +60,11 @@ export function InfiniteCanvas({ backgroundMode = 'pages', bgColor = '#ffffff' }
   const clearSelection = useCanvasStore((s) => s.clearSelection);
   const addNode = useCanvasStore((s) => s.addNode);
   const setViewport = useCanvasStore((s) => s.setViewport);
+  const viewportScale = useCanvasStore((s) => s.viewport.scale);
 
   const activeTool = useToolStore((s) => s.activeTool);
   const spaceHeld = useToolStore((s) => s.spaceHeld);
+  const drawOptions = useToolStore((s) => s.drawOptions);
 
   // Scroll records live on the workspace page, not the canvas store — subscribe
   // so a rename or a new scroll repaints without waiting for a node change.
@@ -85,7 +88,6 @@ export function InfiniteCanvas({ backgroundMode = 'pages', bgColor = '#ffffff' }
     inProgressPoints,
     inProgressPressures,
     eraserPos,
-    penCursorPos,
     lassoRect,
     handleDrawPointerDown,
     handleDrawPointerMove,
@@ -340,7 +342,16 @@ export function InfiniteCanvas({ backgroundMode = 'pages', bgColor = '#ffffff' }
   const toolConfig = getToolConfig(activeTool);
   const cursorClass = spaceHeld || activeTool === 'hand'
     ? 'infinite-canvas--grab'
-    : toolConfig.cursorClass;
+    : activeTool === 'draw' && drawOptions.isErasing
+      ? 'infinite-canvas--none'
+      : toolConfig.cursorClass;
+  const penCursor = useMemo(
+    () => createPenCursor(drawOptions.color, drawOptions.strokeWidth, viewportScale),
+    [drawOptions.color, drawOptions.strokeWidth, viewportScale],
+  );
+  const cursor = activeTool === 'draw' && !drawOptions.isErasing && !spaceHeld
+    ? penCursor
+    : undefined;
 
   // Get current stage scale for text editor positioning
   const currentScale = stageRef.current?.scaleX() ?? 1;
@@ -349,7 +360,7 @@ export function InfiniteCanvas({ backgroundMode = 'pages', bgColor = '#ffffff' }
     <div
       ref={containerRef}
       className={`infinite-canvas ${cursorClass} ${bgColor === 'paper' ? 'infinite-canvas--paper' : ''}`}
-      style={{ backgroundColor: bgColor === 'paper' ? '#f5f0e8' : bgColor }}
+      style={{ backgroundColor: bgColor === 'paper' ? '#f5f0e8' : bgColor, cursor }}
       data-testid="canvas-container"
       // Capture-phase native cancel: Konva's Stage onPointerCancel never
       // sees the event (it remaps cancel → pointerup on a hit, swallows a
@@ -439,12 +450,9 @@ export function InfiniteCanvas({ backgroundMode = 'pages', bgColor = '#ffffff' }
               pendingEraseIds={pendingEraseIds}
               inProgressPoints={inProgressPoints}
               inProgressPressures={inProgressPressures}
-              inProgressColor={useToolStore.getState().drawOptions?.color ?? '#1a1a1a'}
-              inProgressWidth={useToolStore.getState().drawOptions?.strokeWidth ?? 3}
+              inProgressColor={drawOptions.color}
+              inProgressWidth={drawOptions.strokeWidth}
               eraserPos={eraserPos}
-              penCursorPos={penCursorPos}
-              penColor={useToolStore.getState().drawOptions?.color ?? '#1a1a1a'}
-              penWidth={useToolStore.getState().drawOptions?.strokeWidth ?? 3}
               lassoRect={lassoRect}
             />
           </Layer>

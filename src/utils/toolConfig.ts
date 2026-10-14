@@ -46,7 +46,7 @@ const TOOL_CONFIG: Record<ToolType, ToolModeConfig> = {
     allowNodeSelection: false,
     allowNodeDrag: false,
     allowNodeHover: false,
-    cursorClass: 'infinite-canvas--none',
+    cursorClass: '',
     canvasClickAction: 'startDraw',
   },
   shape: {
