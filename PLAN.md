@@ -1638,10 +1638,10 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] SRS row for the active state (60 s window, fade, reduced motion) and its T212 assertions [agent: grok-4.6+claude-opus-5.5 37fd929 T212 2/2]
 - [x] agents presence frame from the hub, useAgentPresenceStore, agents strip, live activity dot, change flash for others' edits, Needs me badge; T212 [agent: grok-4.6+claude-opus-5.5 37fd929 board+agent 126/126]
 
-### v0.84.0 — Release - scrolls redesign and boards, app and powerscroll-mcp together (planning)
+### v0.84.0 — Release - scrolls redesign and boards, app and powerscroll-mcp together (planning) (2026-10-14 · released v0.84.0 @f0f52d2) (COMPLETE)
 **Goal:** Coordinated release per docs/RELEASING.md: app v0.84.0 and powerscroll-mcp with the board tools (npm then MCP Registry; owner signs in for npm and the Registry).
 - [x] App v0.84.0: version synced, dist-template rebuilt (2,666,755 bytes), typecheck, lint 0 errors, full campaign 826/826, template smoke from disk 0 errors, showcase https://claude.ai/artifact/JGnyn7hseubHgowozSZthS; push main, tag v0.84.0, verify release assets, Pages and update paths; ledger [agent: claude-opus-5.5 tag v0.84.0 @f0f52d2, release 3 assets, CI+Pages green, live 0.84.0, ledger c484a8b]
-- [ ] powerscroll-mcp 0.68.0: versions synced, tests 8/8, bridge pass, audit 0, pack = 4 files; npm publish then MCP Registry - needs the owner's npm sign-in (npm whoami: 401 on 2026-10-14)
+- [x] powerscroll-mcp npm + MCP Registry publish - superseded: 0.68.0 never published; the board tools now ship as 0.69.0 (tracked in v0.85.0 task 5) [agent: claude-opus-5.5 superseded by 0.69.0]
 
 ### v0.85.0 — Board follow-ups - agents leave, clear Done, spotlight an agent's cards (2026-10-14) (current) (ACTIVE)
 **Goal:** Owner request 2026-10-14: "when agents are connected to the notebook, they never go out and they don't have themselves the ability to go out from the list of active agents"; "in my done column ... I want to clean it up, remove the tasks because it's done"; "if I click on that agent, it highlights all the tasks on which this agent is working or all the tasks that this agent has created". Then push and release.
@@ -1649,7 +1649,7 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Clear Done: 'Clear done' on the Done column archives every done card (inline confirm, count); 'Archive' in the card overlay; an Archived view in the board header restores cards; archived cards leave the columns, counts and board_read (unless asked); events archived/restored; MCP card_archive / card_restore [agent: grok-4.6+claude-opus-5.5 ddb5b44 board+agent 140/140, campaign 838/838, MCP 9/9]
 - [x] Agent spotlight: clicking an agent chip highlights the cards assigned to or created by that agent and dims the rest; click again, Esc or another chip changes it [agent: grok-4.6+claude-opus-5.5 ddb5b44 board+agent 140/140, campaign 838/838, MCP 9/9]
 - [x] SRS_BOARD / SRS_AGENT rows; T213 (leave), T214 (archive and clear done incl. save-reopen), T215 (spotlight); MCP package tests [agent: grok-4.6+claude-opus-5.5 ddb5b44 board+agent 140/140, campaign 838/838, MCP 9/9]
-- [ ] Release: app 0.85.0 (full campaign, template smoke, showcase, push, tag, verify, ledger); powerscroll-mcp 0.69.0 (0.68.0 was never published but its snapshot shipped in the v0.84.0 release assets, so its number is not reused) - npm/Registry still need the owner's npm login
+- [ ] Release: app 0.85.0 DONE (tag v0.85.0 @66ed75d, release 3 assets, CI + Pages green, live 0.85.0, ledger 1715241, showcase https://claude.ai/artifact/SgUM2wqX4DXMioA93KEzC5); powerscroll-mcp 0.69.0 npm + MCP Registry still open - needs the owner's npm login (npm whoami 401)
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.
