@@ -16,7 +16,7 @@ import {
   useAgentPresenceStore,
 } from '../../stores/useAgentPresenceStore';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
-import { ActivityPanel } from './ActivityPanel';
+import { ActivityPanel, readActivityCollapsed, writeActivityCollapsed } from './ActivityPanel';
 import { agentChips, AgentsStrip } from './AgentsStrip';
 import { BoardColumn } from './BoardColumn';
 import { CardOverlay } from './CardOverlay';
@@ -57,6 +57,7 @@ export function BoardView() {
   const now = useAgentPresenceStore((state) => state.now);
   const [needsMe, setNeedsMe] = useState(false);
   const [spotlight, setSpotlight] = useState<string | null>(null);
+  const [activityCollapsed, setActivityCollapsed] = useState(readActivityCollapsed);
   const [showArchived, setShowArchived] = useState(false);
   const [opened, setOpened] = useState<BoardCard | null>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
@@ -384,7 +385,11 @@ export function BoardView() {
           ))}
         </div>
       )}
-      <div className="board-view__content">
+      <div
+        className={`board-view__content${
+          activityCollapsed ? ' board-view__content--activity-collapsed' : ''
+        }`}
+      >
         <div className="board-view__columns">
           {BOARD_COLUMNS.map((column) => {
             const cards = cardsIn(visibleCards, column.id);
@@ -428,7 +433,15 @@ export function BoardView() {
             );
           })}
         </div>
-        <ActivityPanel board={board} />
+        <ActivityPanel
+          board={board}
+          collapsed={activityCollapsed}
+          onToggle={() => {
+            const next = !activityCollapsed;
+            setActivityCollapsed(next);
+            writeActivityCollapsed(next);
+          }}
+        />
       </div>
       {questionDrop && (
         <QuestionPrompt

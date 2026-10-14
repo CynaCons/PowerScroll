@@ -50,7 +50,11 @@ export function agentChips(
     // Names come from `me` on each call and need not equal the process label,
     // so only an empty agent list counts as everyone having left.
     const disconnected = presenceSeen && connected.length === 0;
-    const active = Boolean(actedRecently && card && !disconnected && !left[name]);
+    // "Working on" means the agent holds the card, not that it last touched it
+    // (creating a card for someone else is not working on it).
+    const active = Boolean(
+      actedRecently && card && card.assignee === name && !disconnected && !left[name],
+    );
     const quietMin = actor
       ? Math.max(0, Math.floor((now - actor.lastActionAt) / 60_000))
       : 0;

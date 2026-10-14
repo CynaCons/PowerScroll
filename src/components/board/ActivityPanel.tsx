@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { BoardData, BoardEvent } from '../../types/data';
 import { BOARD_COLUMNS } from '../../board/boardOps';
 import { avatarColor, avatarInitial, displayName, relativeTime } from './boardUi';
@@ -34,9 +35,43 @@ function eventText(event: BoardEvent, board: BoardData): string {
   }
 }
 
-export function ActivityPanel({ board }: { board: BoardData }) {
+const COLLAPSED_KEY = 'powerscroll-board-activity-collapsed';
+
+/** Device preference, like touch drawing: not saved in the notebook. */
+export function readActivityCollapsed(): boolean {
+  try {
+    return localStorage.getItem(COLLAPSED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function writeActivityCollapsed(collapsed: boolean): void {
+  try {
+    localStorage.setItem(COLLAPSED_KEY, collapsed ? '1' : '0');
+  } catch {
+    // Private mode or blocked storage: the panel still toggles for this session.
+  }
+}
+
+interface ActivityPanelProps {
+  board: BoardData;
+  collapsed: boolean;
+  onToggle: () => void;
+}
+
+export function ActivityPanel({ board, collapsed, onToggle }: ActivityPanelProps) {
   const baseline = useRef<number | null>(null);
   const [fresh, setFresh] = useState<Set<number>>(() => new Set());
+  const latestSeq = board.events[board.events.length - 1]?.seq ?? 0;
+  // Events that arrive while the panel is collapsed are counted on the rail.
+  const [seenSeq, setSeenSeq] = useState(latestSeq);
+  useEffect(() => {
+    if (!collapsed) setSeenSeq(latestSeq);
+  }, [collapsed, latestSeq]);
+  const unread = collapsed
+    ? board.events.filter((event) => event.seq > seenSeq).length
+    : 0;
 
   useEffect(() => {
     const latest = board.events[board.events.length - 1]?.seq ?? 0;
@@ -52,11 +87,57 @@ export function ActivityPanel({ board }: { board: BoardData }) {
     setFresh((current) => new Set([...current, ...arrived]));
   }, [board.events]);
 
+  if (collapsed) {
+    return (
+      <aside
+        className="board-activity board-activity--collapsed"
+        aria-label="Activity"
+        data-testid="board-activity"
+        data-collapsed="true"
+      >
+        <button
+          type="button"
+          className="board-activity__rail"
+          onClick={onToggle}
+          aria-expanded="false"
+          aria-label={unread > 0 ? `Show activity, ${unread} new` : 'Show activity'}
+          title="Show activity"
+          data-testid="board-activity-toggle"
+        >
+          <ChevronLeft size={16} aria-hidden="true" />
+          <span className="board-live-dot" data-testid="board-activity-live" />
+          {unread > 0 && (
+            <span className="board-activity__unread" data-testid="board-activity-unread">
+              {unread}
+            </span>
+          )}
+          <span className="board-activity__rail-label">Activity</span>
+        </button>
+      </aside>
+    );
+  }
+
   return (
-    <aside className="board-activity" aria-label="Activity">
+    <aside
+      className="board-activity"
+      aria-label="Activity"
+      data-testid="board-activity"
+      data-collapsed="false"
+    >
       <header className="board-activity__header">
         <h2>Activity</h2>
         <span className="board-live-dot" data-testid="board-activity-live" title="Live" />
+        <button
+          type="button"
+          className="board-activity__collapse"
+          onClick={onToggle}
+          aria-expanded="true"
+          aria-label="Collapse activity"
+          title="Collapse activity"
+          data-testid="board-activity-toggle"
+        >
+          <ChevronRight size={16} aria-hidden="true" />
+        </button>
       </header>
       <ol className="board-activity__list">
         {board.events

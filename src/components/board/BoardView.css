@@ -212,6 +212,11 @@
   align-items: start;
 }
 
+/* The collapsed activity panel keeps a slim rail; the columns take the rest. */
+.board-view__content--activity-collapsed {
+  grid-template-columns: minmax(0, 1fr) 44px;
+}
+
 .board-view__columns {
   min-width: 0;
   display: grid;
@@ -583,6 +588,77 @@
   border-radius: 50%;
   background: #16a34a;
   box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.18);
+}
+
+.board-activity__collapse {
+  width: 32px;
+  height: 32px;
+  margin-left: 8px;
+  margin-right: -8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #5c6467;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.board-activity__collapse:hover {
+  background: #eef1f0;
+  color: #14181a;
+}
+
+.board-activity--collapsed {
+  min-height: 360px;
+}
+
+.board-activity__rail {
+  width: 100%;
+  min-height: 360px;
+  padding: 12px 0;
+  border: none;
+  background: transparent;
+  color: #5c6467;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.board-activity__rail:hover {
+  background: #f6f8f7;
+  color: #14181a;
+}
+
+.board-activity__rail .board-live-dot {
+  margin-left: 0;
+}
+
+.board-activity__unread {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: #14181a;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.board-activity__rail-label {
+  writing-mode: vertical-rl;
+  font-size: 13px;
+  font-weight: 600;
+  color: #14181a;
+  letter-spacing: 0.02em;
 }
 
 .board-activity__item--new {
@@ -1067,8 +1143,23 @@
 }
 
 @media (max-width: 1150px) {
-  .board-view__content {
+  .board-view__content,
+  .board-view__content--activity-collapsed {
     grid-template-columns: 1fr;
+  }
+
+  .board-activity--collapsed,
+  .board-activity__rail {
+    min-height: auto;
+  }
+
+  .board-activity__rail {
+    flex-direction: row;
+    justify-content: center;
+  }
+
+  .board-activity__rail-label {
+    writing-mode: horizontal-tb;
   }
 
   .board-activity {

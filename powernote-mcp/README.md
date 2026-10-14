@@ -95,7 +95,7 @@ socket on their machine.
 | `agent_leave` | Sign off: drop this name from the board's active agents. |
 | `board_updates` | Events after `since` (omit for cursor only). `mine` + `wait_seconds` long-polls the owner's replies. |
 
-Board writes take `me` (defaults to `POWERNOTE_AGENT_NAME` / the process label). Use the same short name on every call (`^[a-z0-9][a-z0-9._-]{0,39}$`). Workflow: `board_read` → `card_claim` → `card_move` to doing → work with `card_check` / `card_note` and `agent_status` → `card_move` to waiting with a `question` → `board_updates {mine:true, wait_seconds}` → `card_move` to done.
+Every board tool requires `me`: your agent name (`^[a-z0-9][a-z0-9._-]{0,39}$`, e.g. `feature-1`). PowerScroll never invents one; a call without it fails with `NAME_REQUIRED`, unless `POWERNOTE_AGENT_NAME` is set for the server. Use the same name every session so the board shows you once. Workflow: `board_read` → `card_claim` → `card_move` to doing → work with `card_check` / `card_note` and `agent_status` → `card_move` to waiting with a `question` → `board_updates {mine:true, wait_seconds}` → `card_move` to done.
 
 ### Diagrams
 
@@ -318,7 +318,7 @@ not a guarantee.
 | `POWERNOTE_BRIDGE_PORT` | `41777` | WebSocket port (loopback only). |
 | `POWERNOTE_BRIDGE_TIMEOUT_MS` | `10000` | How long to wait for the app to answer. |
 | `POWERNOTE_BRIDGE_SLOW_TIMEOUT_MS` | `120000` | Budget for the network-bound tools (`check_update`, `run_update`, `save_notebook`). |
-| `POWERNOTE_AGENT_NAME` | `agent-<id>` | Label other agents see in `LOCKED` errors and `bridge_status`. |
+| `POWERNOTE_AGENT_NAME` | none (process listed as `unnamed-<id>`) | Your agent name: other agents see it in `LOCKED` errors and `bridge_status`, and it stands in for `me` on board tools. Never generated. |
 | `POWERNOTE_LOCK_IDLE_MS` | `10000` | Idle grace before another agent may take the notebook. |
 | `POWERNOTE_LOCK_MAX_HOLD_MS` | `120000` | After this a holder yields, if anyone is waiting. |
 

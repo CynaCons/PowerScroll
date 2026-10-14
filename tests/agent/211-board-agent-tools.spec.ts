@@ -49,7 +49,7 @@ test.describe('211 - Board agent tools', () => {
       boardId: created.boardId,
       title: 'No actor',
     });
-    expect(missingActor.code).toBe('INVALID');
+    expect(missingActor.code).toBe('NAME_REQUIRED');
 
     const card = await runBridge<{ id: string; number: number; title: string; column: string }>(
       page,

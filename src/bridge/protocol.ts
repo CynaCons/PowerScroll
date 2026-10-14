@@ -161,6 +161,7 @@ export interface BridgeRequest {
 export type BridgeErrorCode =
   | 'BAD_PARAMS'
   | 'INVALID'
+  | 'NAME_REQUIRED'
   | 'NOT_FOUND'
   | 'UNSUPPORTED'
   /** Command is valid but the app cannot run it in its current state. */

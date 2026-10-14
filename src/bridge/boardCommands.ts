@@ -50,8 +50,23 @@ function locatePage(pageId: string): { section: Section; page: Page } | null {
   return null;
 }
 
+/**
+ * Names an MCP server used to generate (agent-<8 hex>) or gives to unnamed
+ * processes. They change on every restart, so one agent reconnecting would
+ * fill the board with strangers — agents must say who they are.
+ */
+const GENERATED_NAME_RE = /^(agent|unnamed)-[0-9a-f]{8}$/;
+
 function requireActor(params: Record<string, unknown>): string {
   const raw = params.actor ?? params.me;
+  const missing = raw === undefined || raw === null || raw === '';
+  if (missing || (typeof raw === 'string' && GENERATED_NAME_RE.test(raw))) {
+    throw new BridgeCommandError(
+      'NAME_REQUIRED',
+      'Tell PowerScroll who you are: pass "me" with your agent name (e.g. "feature-1"), ' +
+        'the same name every session.',
+    );
+  }
   if (typeof raw !== 'string' || !ACTOR_RE.test(raw)) {
     throw new BridgeCommandError(
       'INVALID',

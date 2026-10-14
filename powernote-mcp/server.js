@@ -43,9 +43,30 @@ const REQUEST_TIMEOUT_MS = Number(process.env.POWERNOTE_BRIDGE_TIMEOUT_MS || 10_
 
 const log = (...args) => console.error('[powerscroll-mcp]', ...args);
 
-/** This process's agent identity. Stable for its lifetime. */
+/** This process's id, used only to arbitrate the lease between processes. */
 const AGENT_ID = randomUUID().slice(0, 8);
-const AGENT_LABEL = process.env.POWERNOTE_AGENT_NAME || `agent-${AGENT_ID}`;
+
+/**
+ * The agent's own name, if its environment gives one. PowerScroll never makes
+ * a name up: a generated name changes on every restart, so one agent that
+ * reconnects would show up on the board as dozens of agents. Without
+ * POWERNOTE_AGENT_NAME every board tool must be told `me`.
+ */
+const ENV_AGENT_NAME = (() => {
+  const raw = (process.env.POWERNOTE_AGENT_NAME || '').trim();
+  if (!raw) return null;
+  if (!/^[a-z0-9][a-z0-9._-]{0,39}$/.test(raw)) {
+    console.error(
+      '[powerscroll-mcp] POWERNOTE_AGENT_NAME "' + raw +
+      '" is not a valid agent name (^[a-z0-9][a-z0-9._-]{0,39}$); ignoring it.',
+    );
+    return null;
+  }
+  return raw;
+})();
+
+/** How this process is listed to other processes and in bridge_status. Never a board actor. */
+const AGENT_LABEL = ENV_AGENT_NAME || `unnamed-${AGENT_ID}`;
 
 /**
  * Tools that only look. They bypass the lease: a blocked agent must still be
@@ -69,6 +90,13 @@ const READ_ONLY = new Set([
 ]);
 
 const AGENT_NAME_RE = /^[a-z0-9][a-z0-9._-]{0,39}$/;
+/** Names a server used to generate (agent-<8 hex>) or labels it gives unnamed processes. */
+const GENERATED_NAME_RE = /^(agent|unnamed)-[0-9a-f]{8}$/;
+const NAME_REQUIRED_MESSAGE =
+  'NAME_REQUIRED: tell PowerScroll who you are. Pass "me" with your agent name ' +
+  '(e.g. "feature-1", ^[a-z0-9][a-z0-9._-]{0,39}$) on every board call, and reuse the ' +
+  'same name every session so the board shows you once. Or set POWERNOTE_AGENT_NAME in ' +
+  'this MCP server environment.';
 const BOARD_ME_TOOLS = new Set([
   'board_create',
   'card_create',
@@ -94,8 +122,9 @@ const HUB_CONNECTED_AT = Date.now();
 const ME_PROP = {
   type: 'string',
   description:
-    'Your short agent name (^[a-z0-9][a-z0-9._-]{0,39}$). Defaults to POWERNOTE_AGENT_NAME ' +
-    'or this process label. Passed to the app as actor and recorded on cards, notes and events.',
+    'Required: your agent name (^[a-z0-9][a-z0-9._-]{0,39}$, e.g. "feature-1"). Use the same ' +
+    'name every session; PowerScroll never invents one. Only POWERNOTE_AGENT_NAME in the ' +
+    'server environment can stand in for it. Recorded on cards, notes and events.',
 };
 
 /** Idle grace between one agent's commands before another may take over. */
@@ -333,7 +362,9 @@ function adoptApp(socket, msg) {
 }
 
 function agentsFrame() {
-  const agents = [{ label: AGENT_LABEL, role: 'hub', connectedAt: HUB_CONNECTED_AT }];
+  const agents = [
+    { label: AGENT_LABEL, role: 'hub', connectedAt: HUB_CONNECTED_AT, named: !!ENV_AGENT_NAME },
+  ];
   for (const info of peers.values()) {
     agents.push({
       label: info.label,
@@ -1933,6 +1964,13 @@ const TOOLS = [
   },
 ];
 
+// Board tools require `me`: the schema says so, so clients prompt for it.
+for (const tool of TOOLS) {
+  if (!BOARD_ME_TOOLS.has(tool.name)) continue;
+  const required = tool.inputSchema.required || [];
+  if (!required.includes('me')) tool.inputSchema.required = [...required, 'me'];
+}
+
 /**
  * Tools that are one app command carrying a fixed argument.
  *
@@ -2090,13 +2128,15 @@ function withAgentMe(name, params, label) {
   if (!BOARD_ME_TOOLS.has(name)) return { ...params };
   const next = { ...params };
   if (next.me === undefined || next.me === null || next.me === '') {
-    next.me = label;
+    if (!ENV_AGENT_NAME) throw new Error(NAME_REQUIRED_MESSAGE);
+    next.me = ENV_AGENT_NAME;
   }
   if (typeof next.me !== 'string' || !AGENT_NAME_RE.test(next.me)) {
     throw new Error(
       'INVALID: "me" must match ^[a-z0-9][a-z0-9._-]{0,39}$ (powerboard convention)',
     );
   }
+  if (GENERATED_NAME_RE.test(next.me)) throw new Error(NAME_REQUIRED_MESSAGE);
   next.actor = next.me;
   return next;
 }
