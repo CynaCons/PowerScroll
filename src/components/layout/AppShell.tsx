@@ -8,6 +8,7 @@ import { SearchPanel } from '../search/SearchPanel';
 import { SettingsPanel } from '../settings/SettingsPanel';
 import { NotebookLibraryPanel } from './NotebookLibraryPanel';
 import { ZoomBar } from '../canvas/ZoomBar';
+import { BoardView } from '../board/BoardView';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { useCanvasStore } from '../../stores/useCanvasStore';
 import { useDrawStore } from '../../stores/useDrawStore';
@@ -122,7 +123,7 @@ export function AppShell() {
           />
         )}
         <div className="canvas-area__content">
-          <InfiniteCanvas backgroundMode={backgroundMode} bgColor={bgColor} />
+          {activePage?.kind === 'board' ? <BoardView /> : <><InfiniteCanvas backgroundMode={backgroundMode} bgColor={bgColor} />
           <BottomToolbar />
           <SearchPanel
             isOpen={searchOpen}
@@ -130,7 +131,7 @@ export function AppShell() {
             onClose={() => setSearchOpen(false)}
             onNavigateToResult={handleNavigateToResult}
           />
-          <ZoomBar />
+          <ZoomBar /></>}
         </div>
       </div>
       {isSettingsOpen && (

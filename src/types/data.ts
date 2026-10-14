@@ -230,6 +230,70 @@ export interface Page {
    * notebook's colour. Always read it through `resolvePageSettings`.
    */
   settings?: Partial<WorkspaceSettings>;
+  /** Absent means canvas, preserving the shape of notebooks written before boards. */
+  kind?: 'canvas' | 'board';
+  /** Board-only data. Canvas pages never need to carry an empty board object. */
+  board?: BoardData;
+}
+
+export type BoardColumnId = 'todo' | 'doing' | 'waiting' | 'done';
+
+export interface BoardNote {
+  id: string;
+  author: string;
+  at: number;
+  text: string;
+}
+
+export interface BoardCheckItem {
+  id: string;
+  text: string;
+  done: boolean;
+}
+
+export interface BoardCard {
+  id: string;
+  number: number;
+  title: string;
+  description: string;
+  column: BoardColumnId;
+  order: number;
+  assignee?: string;
+  labels: string[];
+  checklist: BoardCheckItem[];
+  notes: BoardNote[];
+  question?: string;
+  createdBy: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type BoardEventType =
+  | 'created'
+  | 'moved'
+  | 'updated'
+  | 'claimed'
+  | 'released'
+  | 'noted'
+  | 'checked'
+  | 'deleted';
+
+export interface BoardEvent {
+  seq: number;
+  at: number;
+  actor: string;
+  type: BoardEventType;
+  cardId?: string;
+  from?: BoardColumnId;
+  to?: BoardColumnId;
+  text?: string;
+}
+
+export interface BoardData {
+  cards: BoardCard[];
+  events: BoardEvent[];
+  nextNumber: number;
+  nextSeq: number;
 }
 
 export interface Section {

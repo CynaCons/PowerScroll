@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { ScrollText, FileText, Pencil, X, Plus } from 'lucide-react';
+import { ScrollText, FileText, Pencil, X, Plus, SquareKanban } from 'lucide-react';
 import { deleteScroll, liveScrollDeleteInfo } from '../../utils/scrollOps';
 import { ScrollDeleteChoices } from '../canvas/ScrollDeleteChoices';
 import '../canvas/ContextMenu.css';
@@ -62,7 +62,7 @@ export function PageItem({
   if (isRenaming) {
     return (
       <div className="hierarchy-page hierarchy-page--renaming" data-testid={`page-${page.id}`}>
-        <FileText size={14} />
+        {page.kind === 'board' ? <SquareKanban size={14} /> : <FileText size={14} />}
         <input
           ref={inputRef}
           className="hierarchy-page__rename-input"
@@ -111,7 +111,7 @@ export function PageItem({
         onClick={() => onNavigate(sectionId, page.id)}
         title={page.title}
       >
-        <FileText size={14} />
+        {page.kind === 'board' ? <SquareKanban size={14} /> : <FileText size={14} />}
         <span className="hierarchy-page__title" data-testid="page-title">{page.title}</span>
       </button>
       <div className="hierarchy-page__actions">
@@ -138,12 +138,7 @@ export function PageItem({
           <X size={12} />
         </button>
       </div>
-      <ScrollList
-        page={page}
-        isActive={isActive}
-        sectionId={sectionId}
-        onOpenScroll={onOpenScroll}
-      />
+      {page.kind !== 'board' && <ScrollList page={page} isActive={isActive} sectionId={sectionId} onOpenScroll={onOpenScroll} />}
     </div>
   );
 }

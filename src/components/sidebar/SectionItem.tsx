@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { ChevronDown, ChevronRight, Plus, Pencil, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Plus, Pencil, Trash2, SquareKanban } from 'lucide-react';
 import type { Section } from '../../types/data';
 import { PageItem } from './PageItem';
 import './HierarchyPanel.css';
@@ -10,6 +10,7 @@ interface SectionItemProps {
   activePageId: string;
   onNavigate: (sectionId: string, pageId: string) => void;
   onAddPage: (sectionId: string) => void;
+  onAddBoard: (sectionId: string) => void;
   onRenameSection: (sectionId: string, title: string) => void;
   onDeleteSection: (sectionId: string) => void;
   onRenamePage: (sectionId: string, pageId: string, title: string) => void;
@@ -25,6 +26,7 @@ export function SectionItem({
   activePageId,
   onNavigate,
   onAddPage,
+  onAddBoard,
   onRenameSection,
   onDeleteSection,
   onRenamePage,
@@ -128,13 +130,11 @@ export function SectionItem({
           >
             <Pencil size={14} />
           </button>
-          <button
-            className="hierarchy-section__action-btn"
-            onClick={() => onAddPage(section.id)}
-            title="Add page"
-            data-testid="add-page-btn"
-          >
+          <button className="hierarchy-section__action-btn" onClick={() => onAddPage(section.id)} title="Add page" data-testid="add-page-btn">
             <Plus size={14} />
+          </button>
+          <button className="hierarchy-section__action-btn" onClick={() => onAddBoard(section.id)} title="Add board" data-testid="add-board-btn">
+            <SquareKanban size={14} />
           </button>
           <button
             className="hierarchy-section__action-btn hierarchy-section__action-btn--danger"

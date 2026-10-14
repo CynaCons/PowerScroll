@@ -8,6 +8,7 @@ import type {
 } from '../types/data';
 import { generateId } from './ids';
 import { APP_VERSION } from '../version';
+import { createBoard } from '../board/boardOps';
 
 export const DEFAULT_WORKSPACE_SETTINGS: WorkspaceSettings = {
   backgroundMode: 'pages',
@@ -22,6 +23,17 @@ export function createPage(title = 'Untitled Page'): Page {
     // Untitled so no header is drawn until someone names it, but present from
     // birth so an agent always has a scroll id to append to.
     scrolls: [{ id: generateId(), title: '', column: 0 }],
+  };
+}
+
+export function createBoardPage(title = 'Untitled Board'): Page {
+  return {
+    id: generateId(),
+    title,
+    kind: 'board',
+    board: createBoard(),
+    nodes: [],
+    scrolls: [],
   };
 }
 
