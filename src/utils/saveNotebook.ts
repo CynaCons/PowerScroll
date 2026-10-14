@@ -10,6 +10,7 @@ import {
 import { getCurrentHandle, setCurrentHandle, addRecentHandle, setHandleForNotebook } from './fileHandleStore';
 import { APP_VERSION } from '../version';
 import { showToast } from '../components/layout/Toast';
+import { useSaveStatusStore } from '../stores/useSaveStatusStore';
 
 export type SaveOutcome =
   | { ok: true; savedTo: string; revision: number }
@@ -72,6 +73,7 @@ export async function saveNotebook(
         if (ok) {
           useWorkspaceStore.getState().markClean();
           if (ws.id) await setHandleForNotebook(ws.id, handle);
+          useSaveStatusStore.getState().setStatus('saved-file', undefined, handle.name);
           showToast(`Saved to ${handle.name}`, 'success');
           return { ok: true, savedTo: handle.name, revision };
         }
@@ -93,6 +95,7 @@ export async function saveNotebook(
         await addRecentHandle(ws.filename, newHandle);
         if (ws.id) await setHandleForNotebook(ws.id, newHandle);
         useWorkspaceStore.getState().markClean();
+        useSaveStatusStore.getState().setStatus('saved-file', undefined, newHandle.name);
         showToast(`Saved to ${newHandle.name}`, 'success');
         return { ok: true, savedTo: newHandle.name, revision };
       }

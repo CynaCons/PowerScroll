@@ -102,6 +102,7 @@ test.describe('204 - Autosave to the linked file and failure reporting', () => {
     await page.getByTestId('reconnect-file-btn').click();
     await expect.poll(() => readOpfsFile(page, 'reconnect-204.html'), { timeout: 8000 }).toContain('after reconnecting');
     await expect(page.getByTestId('reconnect-file-btn')).toBeHidden();
+    await expect(page.getByTestId('save-status')).toHaveAttribute('data-state', 'saved-file');
   });
 
   test('a browser that refuses the recovery copy says so, once, and shows the error state', async ({ page }) => {

@@ -218,7 +218,9 @@ export function TopBar() {
     if (permission === 'granted') {
       await setCurrentHandle(handle);
       useSaveStatusStore.getState().setStatus('saving', undefined, handle.name);
-      await saveNotebook(false);
+      const outcome = await saveNotebook(false);
+      // saveNotebook reports success itself; anything else must not leave "Saving…" up.
+      if (!outcome.ok) useSaveStatusStore.getState().setStatus('error', 'The linked file could not be written', handle.name);
     } else useSaveStatusStore.getState().setStatus('needs-permission', 'Permission is required to write the linked file', handle.name);
   };
   const statusText = saveStatus === 'saved-file' ? `Saved to ${statusFileName ?? filePathLabel ?? 'file'}` : saveStatus === 'saved-browser' ? 'Saved in this browser' : saveStatus === 'saving' ? 'Saving…' : saveStatus === 'needs-permission' ? 'File permission needed' : 'Save failed';
