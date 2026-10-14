@@ -83,17 +83,24 @@ past it.
 | REQ-SCROLL-021 | Committing a non-empty name shall create a scroll in the next free column and make it active | Must | T122 |
 | REQ-SCROLL-022 | An empty name, or Escape, shall cancel without creating — an unnamed scroll draws no header and would be invisible | Must | T122 |
 | REQ-SCROLL-023 | A scroll title shall hold at the top of the viewport once the viewport scrolls past its resting position, for every named scroll at once | Must | T123 |
-| REQ-SCROLL-024 | A held title shall be visually distinguished from a resting one, and shall draw above page content rather than beneath it | Must | T123, T202 |
+| REQ-SCROLL-024 | A held title shall be visually distinguished from a resting one, and shall draw above page content rather than beneath it **(superseded by REQ-SCROLL-039..044)** | Must | T123, T202 |
 | REQ-SCROLL-025 | Dragging a node shall snap its left edge to a scroll band's left, or its right edge to the band's right, within a threshold | Must | T124 |
 | REQ-SCROLL-026 | The snap shall release when dragged beyond the threshold, so a deliberate off-band placement holds | Must | T124 |
 | REQ-SCROLL-027 | The scroll snap shall not require a modifier key, unlike node-to-node snapping | Must | T124 |
 | REQ-SCROLL-028 | Sidebar scroll entries shall use a scroll glyph rather than a column-split glyph | Should | T122 |
-| REQ-SCROLL-033 | A resting named scroll shall draw its title at 24 canvas units, weight 700, on a hairline rule at the foot of a 34-unit resting header (rest row 12, rule at 46), so it never overlaps the first block, which sits at 48 in every existing notebook. | Must | T202 |
-| REQ-SCROLL-034 | A held scroll header shall be a 32 screen-pixel paper band with a 22 screen-pixel paper-to-transparent fade below it at every viewport scale. | Must | T202 |
-| REQ-SCROLL-035 | A held scroll header shall show a two screen-pixel progress rule derived from the visible position in that scroll's own content. | Must | T202 |
-| REQ-SCROLL-036 | Only the active scroll shall show its two canvas-unit ink spine from the resting row through its content. | Must | T202 |
-| REQ-SCROLL-037 | During manual scroll resize, the screen-constant pixel readout shall be rendered inside the header band before the grip. | Must | T202 |
-| REQ-SCROLL-038 | Scroll rename shall edit in the title's exact current-state box without changing its type scale. | Must | T202 |
+| REQ-SCROLL-033 | A resting named scroll shall draw its title at 24 canvas units, weight 700, on a hairline rule at the foot of a 34-unit resting header (rest row 12, rule at 46), so it never overlaps the first block, which sits at 48 in every existing notebook. **(superseded by REQ-SCROLL-039)** | Must | T202 |
+| REQ-SCROLL-034 | A held scroll header shall be a 32 screen-pixel paper band with a 22 screen-pixel paper-to-transparent fade below it at every viewport scale. **(superseded by REQ-SCROLL-039..042)** | Must | T202 |
+| REQ-SCROLL-035 | A held scroll header shall show a two screen-pixel progress rule derived from the visible position in that scroll's own content. **(superseded by REQ-SCROLL-043)** | Must | T202 |
+| REQ-SCROLL-036 | Only the active scroll shall show its two canvas-unit ink spine from the resting row through its content. **(superseded by REQ-SCROLL-039)** | Must | T202 |
+| REQ-SCROLL-037 | During manual scroll resize, the screen-constant pixel readout shall be rendered inside the header band before the grip. **(superseded by REQ-SCROLL-039)** | Must | T202 |
+| REQ-SCROLL-038 | Scroll rename shall edit in the title's exact current-state box without changing its type scale. **(superseded by REQ-SCROLL-039)** | Must | T202 |
+| REQ-SCROLL-039 | Every named scroll shall render an opaque, screen-space 44 px by 8 px-radius header card above all page content, controls and ink; it shall contain the left-aligned ScrollText icon/title, active/inactive ring, in-place rename and resize affordance. | Must | T152, T202, T208 |
+| REQ-SCROLL-040 | A resting card shall leave a 6 px visual gap before the scroll body, and shall remain screen-constant at every zoom. | Must | T152, T208 |
+| REQ-SCROLL-041 | Once pinned, a card shall sit 8 px below the canvas top and an opaque canvas-background mask shall conceal all band content through the card and its body gap, with a crisp rounded body edge. | Must | T152, T208 |
+| REQ-SCROLL-042 | A header card shall show the current viewport page and the total rendered scroll pages as a mono “page N of M” counter. | Must | T202 |
+| REQ-SCROLL-043 | A card shall retain a clipped 3 px ink progress rule whose width follows reading position in that scroll. | Must | T208 |
+| REQ-SCROLL-044 | Scroll-mode page boundaries shall use 16 canvas-unit background-colour sheet gaps with rounded sheet corners and no legacy separator caps or rules. | Must | T101, T208 |
+| REQ-SCROLL-045 | Scroll-mode sheet gaps shall show centred mono page numbers from page 2 onward when zoom is at least 30%. | Must | T101, T208 |
 
 Vertical position is never snapped: blocks stack freely down a band, and
 snapping y would fight that.

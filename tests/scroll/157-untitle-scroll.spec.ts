@@ -34,20 +34,11 @@ async function defaultScroll(page: import('@playwright/test').Page) {
 }
 
 async function waitForTitle(page: import('@playwright/test').Page, title: string) {
-  await page.waitForFunction((name) => {
-    const stage = (window as any).Konva?.stages?.[0];
-    if (!stage) return false;
-    return stage.find('Text').some((t: any) => t.text() === name);
-  }, title);
+  await expect(page.getByTestId('scroll-header-card').filter({ hasText: title })).toBeVisible();
 }
 
 async function openRename(page: import('@playwright/test').Page, title: string) {
-  await page.evaluate((name) => {
-    const stage = (window as any).Konva.stages[0];
-    const text = stage.find('Text').find((t: any) => t.text() === name);
-    if (!text) throw new Error(`no title "${name}"`);
-    text.getParent().fire('dblclick');
-  }, title);
+  await page.getByTestId('scroll-header-card').filter({ hasText: title }).dblclick();
 }
 
 async function ceilingOf(page: import('@playwright/test').Page) {
@@ -63,10 +54,7 @@ async function ceilingOf(page: import('@playwright/test').Page) {
 }
 
 async function headerTitles(page: import('@playwright/test').Page) {
-  return page.evaluate(() => {
-    const stage = (window as any).Konva.stages[0];
-    return stage.find('.scroll-title-text').map((t: any) => t.text());
-  });
+  return page.getByTestId('scroll-title-strip').allTextContents();
 }
 
 test.describe('157 - Untitle a scroll (REQ-HIER-020, REQ-AGENT-053)', () => {

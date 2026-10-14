@@ -70,7 +70,7 @@ test.describe('101 - Scroll guide style (REQ-SETTINGS-005)', () => {
     await waitForCanvasReady(page);
   });
 
-  test('selecting Scroll stores the mode and renders one continuous sheet', async ({ page }) => {
+  test('selecting Scroll stores the mode and renders scroll sheets', async ({ page }) => {
     await openSettings(page);
     await page.locator('[data-testid="settings-bg-scroll"]').click();
 
@@ -78,21 +78,18 @@ test.describe('101 - Scroll guide style (REQ-SETTINGS-005)', () => {
     expect(ws.workspace.settings?.backgroundMode).toBe('scroll');
     await expect(page.locator('[data-testid="settings-bg-scroll"]')).toBeChecked();
 
-    // One sheet for the single occupied column — not one rect per page.
-    await expect.poll(() => countShapes(page, 'scroll-sheet')).toBe(1);
+    await expect.poll(() => countShapes(page, 'scroll-sheet')).toBeGreaterThan(0);
   });
 
-  test('the sheet grows with content and separators mark each page boundary', async ({ page }) => {
+  test('the sheet grows with content and gaps mark each page boundary', async ({ page }) => {
     await openSettings(page);
     await page.locator('[data-testid="settings-bg-scroll"]').click();
 
-    const before = await countShapes(page, 'scroll-separator');
+    const before = await countShapes(page, 'scroll-sheet-gap');
     await seedTallBlock(page);
 
-    // A block three pages down must extend the same sheet, adding boundaries
-    // rather than spawning detached cards.
-    await expect.poll(() => countShapes(page, 'scroll-separator')).toBeGreaterThan(before);
-    expect(await countShapes(page, 'scroll-sheet')).toBe(1);
+    await expect.poll(() => countShapes(page, 'scroll-sheet-gap')).toBeGreaterThan(before);
+    expect(await countShapes(page, 'scroll-page-number')).toBeGreaterThan(0);
   });
 
   test('pages mode draws no scroll sheet, and switching back restores it', async ({ page }) => {
@@ -102,7 +99,7 @@ test.describe('101 - Scroll guide style (REQ-SETTINGS-005)', () => {
     await expect.poll(() => countShapes(page, 'scroll-sheet')).toBe(0);
 
     await page.locator('[data-testid="settings-bg-scroll"]').click();
-    await expect.poll(() => countShapes(page, 'scroll-sheet')).toBe(1);
+    await expect.poll(() => countShapes(page, 'scroll-sheet')).toBeGreaterThan(0);
   });
 
   test('scroll survives page navigation within the session', async ({ page }) => {
@@ -118,7 +115,7 @@ test.describe('101 - Scroll guide style (REQ-SETTINGS-005)', () => {
 
     const ws = await getWorkspaceStore(page);
     expect(ws.workspace.settings?.backgroundMode).toBe('scroll');
-    await expect.poll(() => countShapes(page, 'scroll-sheet')).toBe(1);
+    await expect.poll(() => countShapes(page, 'scroll-sheet')).toBeGreaterThan(0);
   });
 
   test('scroll round-trips through save → open', async ({ page }) => {
@@ -150,6 +147,6 @@ test.describe('101 - Scroll guide style (REQ-SETTINGS-005)', () => {
         { timeout: 5000 },
       )
       .toBe('scroll');
-    await expect.poll(() => countShapes(page, 'scroll-sheet')).toBe(1);
+    await expect.poll(() => countShapes(page, 'scroll-sheet')).toBeGreaterThan(0);
   });
 });

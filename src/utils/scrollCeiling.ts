@@ -18,12 +18,11 @@ import { useWorkspaceStore } from '../stores/useWorkspaceStore';
 export const CEILING_PAD = 48;
 
 /**
- * Breathing room (canvas px) the camera may show above the ceiling. The
- * aligned title row rests AT the ceiling; without headroom it would sit flush
- * against the viewport edge, and the outline's scroll navigation — which
- * documents a 24px inset above the scroll top — could never reach its target.
+ * Screen pixels reserved above a titled scroll's ceiling. This is the header
+ * card strip: 8px pin inset + 44px card + 6px body gap + 6px clearance.
+ * Keeping it in screen space makes the first body line visible at every zoom.
  */
-export const CEILING_HEADROOM = 24;
+export const CEILING_HEADROOM = 64;
 
 export function pageCeiling(
   nodes: ReadonlyArray<{ y: number }>,
@@ -52,7 +51,8 @@ export function pageCeiling(
 }
 
 /**
- * Max legal stage.y for a canvas-space ceiling: `stage.y <= -ceiling * scale`.
+ * Max legal stage.y for a canvas-space ceiling with screen-space headroom:
+ * `stage.y <= CEILING_HEADROOM - ceiling * scale`.
  *
  * The ceiling is canvas-space; the stage lives in screen space. One function
  * owns this conversion so the five camera paths cannot drift apart.
@@ -62,7 +62,10 @@ export function clampStageY(
   ceiling: number | null,
 ): number {
   if (ceiling === null) return stage.y();
-  return Math.min(stage.y(), (CEILING_HEADROOM - ceiling) * stage.scaleX());
+  return Math.min(
+    stage.y(),
+    CEILING_HEADROOM - ceiling * stage.scaleX(),
+  );
 }
 
 /** Canvas-space y: content aimed above the ceiling lands ON it. */

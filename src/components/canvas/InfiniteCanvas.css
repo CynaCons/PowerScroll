@@ -27,6 +27,126 @@
   outline: none;
 }
 
+.scroll-header-cards {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.scroll-header-card-wrap {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  pointer-events: none;
+}
+
+.scroll-header-mask {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 1;
+  border-bottom: 1px solid #c3cbc9;
+  border-radius: 0 0 8px 8px;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.scroll-header-cards--paper .scroll-header-mask {
+  background-image:
+    repeating-linear-gradient(0deg, transparent, transparent 28px, rgba(0, 0, 0, 0.03) 28px, rgba(0, 0, 0, 0.03) 29px),
+    repeating-linear-gradient(90deg, transparent, transparent 28px, rgba(0, 0, 0, 0.02) 28px, rgba(0, 0, 0, 0.02) 29px);
+}
+
+.scroll-header-card {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 44px;
+  box-sizing: border-box;
+  border: 1px solid #c3cbc9;
+  border-radius: 8px;
+  background: #fff;
+  color: #5c6467;
+  cursor: pointer;
+  overflow: hidden;
+  padding-right: 16px;
+  pointer-events: auto;
+}
+
+.scroll-header-card--active {
+  border: 1.6px solid #14181a;
+  color: #14181a;
+}
+
+.scroll-header-card--pinned {
+  box-shadow: 0 2px 6px rgba(20, 24, 26, 0.10);
+}
+
+.scroll-header-card__icon {
+  flex: 0 0 auto;
+  margin: 0 9px 0 12px;
+}
+
+.scroll-header-card__title,
+.scroll-header-card__input {
+  min-width: 0;
+  flex: 1 1 auto;
+  color: #14181a;
+  font: 600 15px/1.1 Inter, system-ui, sans-serif;
+}
+
+.scroll-header-card__input {
+  border: 0;
+  outline: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.scroll-header-card__counter,
+.scroll-resize-width-text {
+  flex: 0 0 auto;
+  margin: 0 11px 0 8px;
+  color: #5c6467;
+  font: 11px/1 ui-monospace, Consolas, monospace;
+  white-space: nowrap;
+}
+
+.scroll-resize-width-text {
+  color: #14181a;
+}
+
+.scroll-resize-handle {
+  position: absolute;
+  top: 9px;
+  right: 3px;
+  width: 8px;
+  height: 25px;
+  border: 0;
+  border-left: 3px solid #c3cbc9;
+  border-radius: 2px;
+  background: transparent;
+  cursor: col-resize;
+}
+
+.scroll-header-card__progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  border-radius: 0 0 0 7px;
+  background: #14181a;
+  pointer-events: none;
+}
+
+.scroll-header-menu {
+  position: fixed;
+  z-index: 100;
+  pointer-events: auto;
+}
+
 .infinite-canvas {
   width: 100%;
   height: 100%;

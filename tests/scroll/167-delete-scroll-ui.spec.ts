@@ -14,19 +14,7 @@ import {
 } from '../helpers';
 
 async function openHeaderMenu(page: import('@playwright/test').Page, title: string) {
-  await page.waitForFunction((name) => {
-    const stage = (window as any).Konva?.stages?.[0];
-    if (!stage) return false;
-    return stage.find('Text').some((t: any) => t.text() === name);
-  }, title);
-  await page.evaluate((name) => {
-    const stage = (window as any).Konva.stages[0];
-    const text = stage.find('Text').find((t: any) => t.text() === name);
-    if (!text) throw new Error(`no title "${name}"`);
-    text.getParent().fire('contextmenu', {
-      evt: { preventDefault() {}, stopPropagation() {}, clientX: 120, clientY: 40 },
-    });
-  }, title);
+  await page.getByTestId('scroll-header-card').filter({ hasText: title }).click({ button: 'right' });
 }
 
 async function namedTitles(page: import('@playwright/test').Page): Promise<string[]> {

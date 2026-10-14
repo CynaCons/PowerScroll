@@ -1,4 +1,4 @@
-import { Rect, Line, Group } from 'react-konva';
+import { Rect, Line, Group, Text } from 'react-konva';
 import type { BackgroundMode, CanvasNode, ScrollRecord } from '../../types/data';
 import {
   A4_WIDTH,
@@ -6,7 +6,6 @@ import {
   PAGE_GAP,
   PAGE_MARGIN as MARGIN,
   SCROLL_HEADROOM_PAGES,
-  SCROLL_SEPARATOR_TICK,
   columnAt,
   columnLeft,
   columnWidth,
@@ -26,6 +25,7 @@ interface PageGuidesProps {
   mode: BackgroundMode;
   nodes: CanvasNode[];
   scrolls?: ScrollRecord[];
+  viewportScale?: number;
 }
 
 /**
@@ -123,7 +123,7 @@ function renderPages(nodes: CanvasNode[], scrolls?: ScrollRecord[]) {
  * BETWEEN stacked pages, so a multi-column page keeps its existing layout and
  * each column becomes its own scroll.
  */
-function scrollExtent(nodes: CanvasNode[], scrolls?: ScrollRecord[]) {
+export function scrollPageRange(nodes: CanvasNode[], scrolls?: ScrollRecord[]) {
   const columns = new Set<number>([0]);
   let minY = 0;
   let maxY = 0;
@@ -143,74 +143,54 @@ function scrollExtent(nodes: CanvasNode[], scrolls?: ScrollRecord[]) {
   };
 }
 
-function renderScroll(nodes: CanvasNode[], scrolls?: ScrollRecord[]) {
-  const { columns, firstRow, lastRow } = scrollExtent(nodes, scrolls);
+function renderScroll(nodes: CanvasNode[], scrolls?: ScrollRecord[], viewportScale = 1) {
+  const { columns, firstRow, lastRow } = scrollPageRange(nodes, scrolls);
   const elements: JSX.Element[] = [];
-
-  const top = firstRow * A4_HEIGHT;
-  const height = (lastRow - firstRow + 1) * A4_HEIGHT;
 
   for (const col of columns) {
     const x = columnLeft(col, scrolls);
     const w = columnWidth(col, scrolls);
-
-    elements.push(
-      <Rect
-        key={`scroll-bg-${col}`}
-        name="scroll-sheet"
-        x={x}
-        y={top}
-        width={w}
-        height={height}
-        fill="#ffffff"
-        shadowColor="rgba(0,0,0,0.08)"
-        shadowBlur={8}
-        shadowOffsetY={2}
-        cornerRadius={2}
-        listening={false}
-      />,
-      // One dashed outline around the whole strip, not per page — the point of
-      // scroll mode is that the pages inside it do not look detached.
-      <Rect
-        key={`scroll-border-${col}`}
-        x={x}
-        y={top}
-        width={w}
-        height={height}
-        stroke="#d4d4d4"
-        strokeWidth={0.5}
-        dash={[6, 4]}
-        cornerRadius={2}
-        listening={false}
-      />,
-    );
-
-    for (let row = firstRow + 1; row <= lastRow; row++) {
-      const y = row * A4_HEIGHT;
+    for (let row = firstRow; row <= lastRow; row++) {
+      const topInset = row === firstRow ? 0 : 8;
+      const bottomInset = row === lastRow ? 0 : 8;
+      const y = row * A4_HEIGHT + topInset;
+      const h = A4_HEIGHT - topInset - bottomInset;
       elements.push(
-        <Line
-          key={`scroll-sep-${col}-${row}`}
-          name="scroll-separator"
-          points={[x, y, x + w, y]}
-          stroke="#ededed"
-          strokeWidth={1}
+        <Rect
+          key={`scroll-sheet-${col}-${row}`}
+          name="scroll-sheet"
+          x={x}
+          y={y}
+          width={w}
+          height={h}
+          fill="#ffffff"
+          shadowColor="rgba(0,0,0,0.08)"
+          shadowBlur={8}
+          shadowOffsetY={2}
+          cornerRadius={[topInset ? 6 : 2, topInset ? 6 : 2, bottomInset ? 6 : 2, bottomInset ? 6 : 2]}
           listening={false}
         />,
-        <Line
-          key={`scroll-tick-l-${col}-${row}`}
-          points={[x, y, x + SCROLL_SEPARATOR_TICK, y]}
-          stroke="#cfcfcf"
-          strokeWidth={1}
-          listening={false}
-        />,
-        <Line
-          key={`scroll-tick-r-${col}-${row}`}
-          points={[x + w - SCROLL_SEPARATOR_TICK, y, x + w, y]}
-          stroke="#cfcfcf"
-          strokeWidth={1}
+        <Rect
+          key={`scroll-border-${col}-${row}`}
+          x={x}
+          y={y}
+          width={w}
+          height={h}
+          stroke="#d4d4d4"
+          strokeWidth={0.5}
+          dash={[6, 4]}
+          cornerRadius={[topInset ? 6 : 2, topInset ? 6 : 2, bottomInset ? 6 : 2, bottomInset ? 6 : 2]}
           listening={false}
         />,
       );
+      if (row > firstRow) {
+        const gapY = row * A4_HEIGHT - 8;
+        const pageNumberSize = Math.min(36, 11 / Math.max(viewportScale, 0.1));
+        elements.push(
+          <Rect key={`scroll-gap-${col}-${row}`} name="scroll-sheet-gap" x={x} y={gapY} width={w} height={16} fill="rgba(0,0,0,0)" listening={false} />,
+          ...(viewportScale >= 0.3 ? [<Text key={`scroll-page-${col}-${row}`} name="scroll-page-number" x={x} y={gapY + (16 - pageNumberSize) / 2} width={w} text={String(row - firstRow + 1)} align="center" fontSize={pageNumberSize} fontFamily="ui-monospace, Consolas, monospace" fill="#5C6467" listening={false} />] : []),
+        );
+      }
     }
   }
 
@@ -255,9 +235,9 @@ function renderGrid() {
   return elements;
 }
 
-export function PageGuides({ mode, nodes, scrolls }: PageGuidesProps) {
+export function PageGuides({ mode, nodes, scrolls, viewportScale }: PageGuidesProps) {
   if (mode === 'none') return null;
   if (mode === 'grid') return <Group listening={false}>{renderGrid()}</Group>;
-  if (mode === 'scroll') return <Group listening={false}>{renderScroll(nodes, scrolls)}</Group>;
+  if (mode === 'scroll') return <Group listening={false}>{renderScroll(nodes, scrolls, viewportScale)}</Group>;
   return <Group listening={false}>{renderPages(nodes, scrolls)}</Group>;
 }

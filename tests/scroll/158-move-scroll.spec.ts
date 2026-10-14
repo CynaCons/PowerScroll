@@ -361,20 +361,7 @@ test.describe('158 - move_scroll is group-aware (REQ-AGENT-054, REQ-HIER-022)', 
   }) => {
     const ids = await seedThreeScrolls(page);
 
-    await page.waitForFunction((name) => {
-      const stage = (window as any).Konva?.stages?.[0];
-      if (!stage) return false;
-      return stage.find('Text').some((t: any) => t.text() === name);
-    }, 'Left');
-
-    await page.evaluate((name) => {
-      const stage = (window as any).Konva.stages[0];
-      const text = stage.find('Text').find((t: any) => t.text() === name);
-      if (!text) throw new Error(`no title "${name}"`);
-      text.getParent().fire('contextmenu', {
-        evt: { preventDefault() {}, stopPropagation() {}, clientX: 80, clientY: 40 },
-      });
-    }, 'Left');
+    await page.getByTestId('scroll-header-card').filter({ hasText: 'Left' }).click({ button: 'right' });
 
     const menu = page.locator('[data-testid="scroll-header-menu"]');
     await expect(menu).toBeVisible();
@@ -384,14 +371,7 @@ test.describe('158 - move_scroll is group-aware (REQ-AGENT-054, REQ-HIER-022)', 
     await page.keyboard.press('Escape');
     await expect(menu).toHaveCount(0);
 
-    await page.evaluate((name) => {
-      const stage = (window as any).Konva.stages[0];
-      const text = stage.find('Text').find((t: any) => t.text() === name);
-      if (!text) throw new Error(`no title "${name}"`);
-      text.getParent().fire('contextmenu', {
-        evt: { preventDefault() {}, stopPropagation() {}, clientX: 400, clientY: 40 },
-      });
-    }, 'Right');
+    await page.getByTestId('scroll-header-card').filter({ hasText: 'Right' }).click({ button: 'right' });
 
     await expect(page.locator('[data-testid="scroll-header-menu"]')).toBeVisible();
     await expect(page.locator('[data-testid="move-scroll-left"]')).toBeEnabled();

@@ -8,7 +8,7 @@
  * records stay fully infinite.
  */
 import { test, expect } from '@playwright/test';
-import { waitForCanvasReady, clickCanvas } from '../helpers';
+import { waitForCanvasReady, clickCanvas, preloadModule } from '../helpers';
 
 /** Dispatch a pointer stroke on the Konva canvas (same path as T135). */
 async function pointerStroke(
@@ -157,13 +157,16 @@ test.describe('150 - Scroll ceiling (REQ-HIER-017, REQ-CANVAS-030)', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await waitForCanvasReady(page);
+    await preloadModule(page, '/src/utils/scrollCeiling.ts');
   });
 
   test('pageCeiling: null without scrolls, 0 by default, adapts to legacy negative y', async ({
     page,
   }) => {
-    const r = await page.evaluate(async () => {
-      const { pageCeiling, CEILING_PAD } = await import('/src/utils/scrollCeiling.ts');
+    const r = await page.evaluate(() => {
+      const { pageCeiling, CEILING_PAD } = (window as any).__mods[
+        '/src/utils/scrollCeiling.ts'
+      ];
       const titled = { id: 's', title: 'S' };
       return {
         none: pageCeiling([], [], []),
@@ -189,12 +192,12 @@ test.describe('150 - Scroll ceiling (REQ-HIER-017, REQ-CANVAS-030)', () => {
     page,
   }) => {
     // The birth scroll is untitled and must not clamp — title it to arm the
-    // ceiling. The camera may still show CEILING_HEADROOM (24px) above it.
+    // ceiling. The camera leaves the 64px screen-space card strip above it.
     await page.evaluate(() => {
       const ws = (window as any).__POWERNOTE_STORES__.workspace.getState();
       ws.renameScroll(ws.activePageId, ws.getActivePage().scrolls[0].id, 'Main');
     });
-    const HEADROOM = 24;
+    const HEADROOM = 64;
     const before = await stagePos(page);
     expect(before.stageY).toBeCloseTo(0, 5);
 
@@ -236,7 +239,7 @@ test.describe('150 - Scroll ceiling (REQ-HIER-017, REQ-CANVAS-030)', () => {
       { x: 500, y: 380 },
     ]);
     const afterPinch = await stagePos(page);
-    expect(afterPinch.stageY).toBeLessThanOrEqual(24 + 0.5);
+    expect(afterPinch.stageY).toBeLessThanOrEqual(64 + 0.5);
   });
 
   test('page without scrolls pans freely upward (regression)', async ({ page }) => {
@@ -263,7 +266,7 @@ test.describe('150 - Scroll ceiling (REQ-HIER-017, REQ-CANVAS-030)', () => {
   });
 
   test('legacy node at y=-400 stays reachable; ceiling adapts', async ({ page }) => {
-    const derived = await page.evaluate(async () => {
+    const derived = await page.evaluate(() => {
       const S = (window as any).__POWERNOTE_STORES__;
       const ws0 = S.workspace.getState();
       ws0.renameScroll(ws0.activePageId, ws0.getActivePage().scrolls[0].id, 'Main');
@@ -277,7 +280,9 @@ test.describe('150 - Scroll ceiling (REQ-HIER-017, REQ-CANVAS-030)', () => {
         layer: 4,
         data: { text: 'legacy', fontSize: 16, fontFamily: 'Inter', fontStyle: 'normal', fill: '#1a1a1a' },
       });
-      const { pageCeiling, CEILING_PAD } = await import('/src/utils/scrollCeiling.ts');
+      const { pageCeiling, CEILING_PAD } = (window as any).__mods[
+        '/src/utils/scrollCeiling.ts'
+      ];
       const ws = S.workspace.getState();
       const ceiling = pageCeiling(
         S.canvas.getState().nodes,
@@ -299,8 +304,10 @@ test.describe('150 - Scroll ceiling (REQ-HIER-017, REQ-CANVAS-030)', () => {
     page,
   }) => {
     await parkCameraAboveThenRestoreScroll(page);
-    const ceiling = await page.evaluate(async () => {
-      const { pageCeiling } = await import('/src/utils/scrollCeiling.ts');
+    const ceiling = await page.evaluate(() => {
+      const { pageCeiling } = (window as any).__mods[
+        '/src/utils/scrollCeiling.ts'
+      ];
       const S = (window as any).__POWERNOTE_STORES__;
       return pageCeiling(
         S.canvas.getState().nodes,
@@ -333,8 +340,10 @@ test.describe('150 - Scroll ceiling (REQ-HIER-017, REQ-CANVAS-030)', () => {
 
     // A committed stroke at the ceiling adapts the derived top (0 − PAD).
     // Capture the live ceiling immediately before each later placement.
-    const ceilingBeforeText = await page.evaluate(async () => {
-      const { pageCeiling } = await import('/src/utils/scrollCeiling.ts');
+    const ceilingBeforeText = await page.evaluate(() => {
+      const { pageCeiling } = (window as any).__mods[
+        '/src/utils/scrollCeiling.ts'
+      ];
       const S = (window as any).__POWERNOTE_STORES__;
       return pageCeiling(
         S.canvas.getState().nodes,
@@ -358,8 +367,10 @@ test.describe('150 - Scroll ceiling (REQ-HIER-017, REQ-CANVAS-030)', () => {
     // Unclamped screen y=90 with stage.y=250 is canvas y=-160. Must not stay there.
     expect(textY!).toBeGreaterThan(-100);
 
-    const ceilingBeforeDrop = await page.evaluate(async () => {
-      const { pageCeiling } = await import('/src/utils/scrollCeiling.ts');
+    const ceilingBeforeDrop = await page.evaluate(() => {
+      const { pageCeiling } = (window as any).__mods[
+        '/src/utils/scrollCeiling.ts'
+      ];
       const S = (window as any).__POWERNOTE_STORES__;
       return pageCeiling(
         S.canvas.getState().nodes,
@@ -407,7 +418,7 @@ test.describe('150 - Scroll ceiling (REQ-HIER-017, REQ-CANVAS-030)', () => {
     expect(dropY!).toBeGreaterThan(-100);
   });
 
-  test('two scroll titles rest on the same ceiling row', async ({ page }) => {
+  test('two scroll title cards rest on the same ceiling row', async ({ page }) => {
     await page.evaluate(() => {
       const ws = (window as any).__POWERNOTE_STORES__.workspace.getState();
       const pageRec = ws.getActivePage();
@@ -417,51 +428,18 @@ test.describe('150 - Scroll ceiling (REQ-HIER-017, REQ-CANVAS-030)', () => {
       (window as any).__POWERNOTE_STORES__.canvas.getState().setViewport({ x: 0, y: 0, scale: 1 });
     });
 
-    await page.waitForFunction(() => {
-      const Konva = (window as any).Konva;
-      const stage = Konva?.stages?.[0];
-      if (!stage) return false;
-      const texts = stage.find('Text').map((t: any) => t.text());
-      return texts.includes('Alpha') && texts.includes('Beta');
-    });
-
-    const row = await page.evaluate(async () => {
-      const { pageCeiling } = await import('/src/utils/scrollCeiling.ts');
-      const layout = await import('/src/utils/pageLayout.ts');
-      const S = (window as any).__POWERNOTE_STORES__;
-      const ceiling = pageCeiling(
-        S.canvas.getState().nodes,
-        S.draw.getState().strokes,
-        S.workspace.getState().getActivePage()?.scrolls,
-      );
-      const stage = (window as any).Konva.stages[0];
-      const ys = stage
-        .find('Text')
-        .filter((t: any) => t.text() === 'Alpha' || t.text() === 'Beta')
-        .map((t: any) => t.y());
-      const barYs = stage.find('.scroll-title-backing').map((r: any) => r.y());
-      return {
-        ceiling,
-        ys,
-        barYs,
-        stripH: layout.SCROLL_TITLE_RESTING_HEIGHT,
-        fontSize: layout.SCROLL_TITLE_RESTING_FONT_SIZE,
-      };
-    });
-
-    // v0.78 header: the resting header TOP rests on the ceiling row; the title
-    // is vertically centred inside the 34-unit resting header (REQ-HIER-019,
-    // REQ-SCROLL-033), so the text sits (stripH - fontSize)/2 below the ceiling.
-    expect(row.barYs.length).toBe(2);
-    expect(row.barYs[0]).toBeCloseTo(row.barYs[1], 5);
-    expect(row.barYs[0]).toBeCloseTo(row.ceiling!, 5);
-    expect(row.ys.length).toBe(2);
-    expect(row.ys[0]).toBeCloseTo(row.ys[1], 5);
-    expect(row.ys[0]).toBeCloseTo(row.ceiling! + (row.stripH - row.fontSize) / 2, 5);
+    const cards = page.getByTestId('scroll-header-card');
+    await expect(cards).toHaveCount(2);
+    const first = await cards.nth(0).boundingBox();
+    const second = await cards.nth(1).boundingBox();
+    expect(first).not.toBeNull();
+    expect(second).not.toBeNull();
+    expect(first!.y).toBeCloseTo(second!.y, 1);
+    expect(first!.height).toBe(44);
   });
 
   test('clamp is zoom-aware at scale 0.5 and 2.0', async ({ page }) => {
-    const result = await page.evaluate(async () => {
+    const result = await page.evaluate(() => {
       const S = (window as any).__POWERNOTE_STORES__;
       const ws0 = S.workspace.getState();
       ws0.renameScroll(ws0.activePageId, ws0.getActivePage().scrolls[0].id, 'Main');
@@ -475,7 +453,9 @@ test.describe('150 - Scroll ceiling (REQ-HIER-017, REQ-CANVAS-030)', () => {
         layer: 4,
         data: { text: 'legacy', fontSize: 16, fontFamily: 'Inter', fontStyle: 'normal', fill: '#1a1a1a' },
       });
-      const { pageCeiling, clampStageY } = await import('/src/utils/scrollCeiling.ts');
+      const { pageCeiling, clampStageY } = (window as any).__mods[
+        '/src/utils/scrollCeiling.ts'
+      ];
       const ceiling = pageCeiling(
         S.canvas.getState().nodes,
         S.draw.getState().strokes,
@@ -502,15 +482,21 @@ test.describe('150 - Scroll ceiling (REQ-HIER-017, REQ-CANVAS-030)', () => {
       };
     });
 
-    const HEADROOM = 24;
+    const HEADROOM = 64;
     expect(result.ceiling).not.toBeNull();
     expect(result.atHalf.y).toBeCloseTo(result.atHalf.expected, 5);
-    expect(result.atHalf.y).toBeCloseTo((HEADROOM - (result.ceiling as number)) * 0.5, 5);
+    expect(result.atHalf.y).toBeCloseTo(
+      HEADROOM - (result.ceiling as number) * 0.5,
+      5,
+    );
     expect(result.atHalf.stageY).toBeCloseTo(result.atHalf.expected, 5);
     expect(result.atDouble.y).toBeCloseTo(result.atDouble.expected, 5);
     expect(result.atDouble.stageY).toBeCloseTo(result.atDouble.expected, 5);
-    expect(result.atDouble.y).toBeCloseTo((HEADROOM - (result.ceiling as number)) * 2, 5);
-    // The two scales must produce different stage-y caps — the zoom term is live.
-    expect(result.atDouble.y).toBeCloseTo(result.atHalf.y * 4, 5);
+    expect(result.atDouble.y).toBeCloseTo(
+      HEADROOM - (result.ceiling as number) * 2,
+      5,
+    );
+    // The ceiling's canvas distance still scales, while the card strip does not.
+    expect(result.atDouble.y).toBeGreaterThan(result.atHalf.y);
   });
 });

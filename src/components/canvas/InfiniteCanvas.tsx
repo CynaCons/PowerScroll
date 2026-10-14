@@ -12,7 +12,7 @@ import { SelectionTransformer } from './SelectionTransformer';
 import { ContextMenu } from './ContextMenu';
 import { SnapGuides, type SnapGuide } from './SnapGuides';
 import { PageGuides } from './PageGuides';
-import { ScrollHeaders } from './ScrollHeaders';
+import { ScrollHeaderCards } from './ScrollHeaderCards';
 import { DrawingLayer } from './DrawingLayer';
 import { TrashButton } from './TrashButton';
 import { DiagramSourceDialog } from './DiagramSourceDialog';
@@ -405,7 +405,7 @@ export function InfiniteCanvas({ backgroundMode = 'pages', bgColor = '#ffffff' }
           onTouchEnd={handleTouchEnd}
         >
           <Layer>
-            <PageGuides mode={backgroundMode} nodes={nodes} scrolls={previewScrolls} />
+            <PageGuides mode={backgroundMode} nodes={nodes} scrolls={previewScrolls} viewportScale={viewportScale} />
           </Layer>
           <Layer>
             {/* Paint order. Group-aware: a diagram's members sort inside its
@@ -428,17 +428,6 @@ export function InfiniteCanvas({ backgroundMode = 'pages', bgColor = '#ffffff' }
               );
             })}
             <SnapGuides lines={snapLines} />
-          </Layer>
-          {/* Scroll titles sit ABOVE the nodes (v0.35): once a title pins to the
-              top of the viewport, content scrolls underneath it, so drawing it
-              in the guide layer would let blocks pass over the header. */}
-          <Layer>
-            <ScrollHeaders
-              mode={backgroundMode}
-              scrolls={activeScrolls}
-              pageId={activePageId}
-              onResizePreviewChange={setScrollResizePreview}
-            />
           </Layer>
           {/* Drawings render above nodes (REQ-DRAW-009) so pen strokes
               annotate over images/text/shapes. listening={false} keeps
@@ -468,6 +457,13 @@ export function InfiniteCanvas({ backgroundMode = 'pages', bgColor = '#ffffff' }
           </Layer>
         </Stage>
       )}
+      <ScrollHeaderCards
+        mode={backgroundMode}
+        scrolls={activeScrolls}
+        pageId={activePageId}
+        bgColor={bgColor}
+        onResizePreviewChange={setScrollResizePreview}
+      />
       {/* Floating trash button for selected nodes */}
       {selectedNodeIds.length > 0 && (
         <TrashButton />
