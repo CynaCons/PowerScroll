@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Html } from 'react-konva-utils';
 import type { CanvasNode, TextNodeData } from '../../types/data';
 import { useEditorStore } from '../../stores/useEditorStore';
-import { FORMAT_MARKERS, toggleMarker, type FormatKind } from '../../utils/markdownToggle';
+import { FORMAT_MARKERS, toggleFormat, type FormatKind } from '../../utils/markdownToggle';
 import { applyListIndent } from '../../utils/listIndent';
 import { MIN_TEXT_WIDTH, MAX_TEXT_WIDTH } from '../../utils/pageLayout';
 
@@ -33,73 +33,29 @@ function replaceSelection(
 }
 
 /**
- * Apply an inline markdown formatting marker (`**` bold, `*` italic) to the
- * textarea's current selection. Wraps the selection if unformatted, unwraps it
- * if the markers are already present (idempotent toggle).
+ * Toggle an inline format (bold, italic, ...) on the textarea's selection.
  *
- * The key behavior: this affects ONLY the selected range, never the whole block.
- * Bold/italic are encoded as markdown in the text content itself (`**word**`),
- * so partial formatting is preserved per-selection rather than as a block-level
- * fontStyle. With no selection, an empty marker pair is inserted and the cursor
- * is parked between them so the user can type formatted text directly.
+ * Formatting is markdown in the text itself (`**word**`) and touches only the
+ * selection, line by line inside each line's list/heading/quote prefix, so a
+ * whole list row selected gives '- **row**' and the list survives
+ * (toggleFormat). With no selection, an empty marker pair is inserted and the
+ * caret parked between them so the user can type formatted text directly.
  */
-export function applyInlineFormat(ta: HTMLTextAreaElement, marker: string): void {
-  const value = ta.value;
-  const s = ta.selectionStart;
-  const e = ta.selectionEnd;
-  const m = marker;
-  const mLen = m.length;
-
-  // No selection → insert an empty pair, park cursor in the middle
-  if (s === e) {
-    replaceSelection(ta, s, e, m + m);
-    ta.selectionStart = s + mLen;
-    ta.selectionEnd = s + mLen;
-    return;
-  }
-
-  const selected = value.substring(s, e);
-
-  // Already wrapped, markers inside the selection — e.g. selection is "**word**"
-  if (selected.length >= 2 * mLen && selected.startsWith(m) && selected.endsWith(m)) {
-    const inner = selected.substring(mLen, selected.length - mLen);
-    replaceSelection(ta, s, e, inner);
-    ta.selectionStart = s;
-    ta.selectionEnd = s + inner.length;
-    return;
-  }
-
-  // Already wrapped, markers just outside the selection — e.g. selecting "word"
-  // inside "**word**". Strip the surrounding markers. The guard prevents a single
-  // '*' (italic) from matching one half of a '**' (bold) run.
-  const before = value.substring(s - mLen, s);
-  const after = value.substring(e, e + mLen);
-  const isExactMarker =
-    before === m &&
-    after === m &&
-    value.charAt(s - mLen - 1) !== m.charAt(0) &&
-    value.charAt(e + mLen) !== m.charAt(0);
-  if (isExactMarker) {
-    replaceSelection(ta, s - mLen, e + mLen, selected);
-    ta.selectionStart = s - mLen;
-    ta.selectionEnd = s - mLen + selected.length;
-    return;
-  }
-
-  // Default: wrap the selection, keep the original text selected (markers excluded)
-  replaceSelection(ta, s, e, m + selected + m);
-  ta.selectionStart = s + mLen;
-  ta.selectionEnd = s + mLen + selected.length;
-}
-
 function applyFormatKind(ta: HTMLTextAreaElement, kind: FormatKind): void {
-  // Bold/italic keep the dedicated helper so '*' never eats half of '**'.
-  if (kind === 'bold' || kind === 'italic') {
-    applyInlineFormat(ta, FORMAT_MARKERS[kind].open);
-    return;
+  const value = ta.value;
+  const next = toggleFormat(value, ta.selectionStart, ta.selectionEnd, kind);
+  if (next.value !== value) {
+    // Replace only the changed middle so the browser undo step stays small.
+    let head = 0;
+    while (head < value.length && head < next.value.length && value[head] === next.value[head]) head++;
+    let tail = 0;
+    while (
+      tail < value.length - head &&
+      tail < next.value.length - head &&
+      value[value.length - 1 - tail] === next.value[next.value.length - 1 - tail]
+    ) tail++;
+    replaceSelection(ta, head, value.length - tail, next.value.slice(head, next.value.length - tail));
   }
-  const next = toggleMarker(ta.value, ta.selectionStart, ta.selectionEnd, FORMAT_MARKERS[kind]);
-  replaceSelection(ta, 0, ta.value.length, next.value);
   ta.selectionStart = next.selStart;
   ta.selectionEnd = next.selEnd;
 }
@@ -158,19 +114,12 @@ export function TextEditor({ node, stageScale: _stageScale, onFinish, onCancel }
     const apply = (markerOrKind: string | FormatKind) => {
       const ta = textareaRef.current;
       if (!ta) return;
-      if (markerOrKind === '**' || markerOrKind === 'bold') {
-        applyFormatKind(ta, 'bold');
-      } else if (markerOrKind === '*' || markerOrKind === 'italic') {
-        applyFormatKind(ta, 'italic');
-      } else if (
-        markerOrKind === 'strike' ||
-        markerOrKind === 'code' ||
-        markerOrKind === 'underline'
-      ) {
-        applyFormatKind(ta, markerOrKind);
-      } else {
-        applyInlineFormat(ta, markerOrKind);
-      }
+      const kind: FormatKind | undefined =
+        markerOrKind === '**' ? 'bold'
+        : markerOrKind === '*' ? 'italic'
+        : Object.prototype.hasOwnProperty.call(FORMAT_MARKERS, markerOrKind) ? (markerOrKind as FormatKind)
+        : undefined;
+      if (kind) applyFormatKind(ta, kind);
       autoHeight(ta);
     };
 
