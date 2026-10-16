@@ -8,7 +8,7 @@
  * selected text node's data in the canvas store.
  */
 import { test, expect } from '@playwright/test';
-import { getCanvasStore, waitForCanvasReady, clickCanvas, activateTool } from '../helpers';
+import { commitEditor, fillEditor, getCanvasStore, waitForCanvasReady, clickCanvas, activateTool } from '../helpers';
 
 test.describe('11 - Toolbar Format (REQ-TOOL-002..005)', () => {
   test.beforeEach(async ({ page }) => {
@@ -19,11 +19,8 @@ test.describe('11 - Toolbar Format (REQ-TOOL-002..005)', () => {
     await activateTool(page, 'text');
     await clickCanvas(page, 400, 300);
 
-    const textarea = page.locator('textarea');
-    await expect(textarea).toBeVisible();
-
-    await textarea.fill('Hello');
-    await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+    await fillEditor(page, 'Hello');
+    await commitEditor(page);
     await page.waitForTimeout(300);
 
     // After commit, node is still selected and text tool is active,

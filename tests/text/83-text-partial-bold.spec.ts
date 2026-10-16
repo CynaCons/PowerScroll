@@ -8,7 +8,7 @@
  * (`**...**`) while editing, leaving the rest of the block untouched.
  */
 import { test, expect } from '@playwright/test';
-import { getCanvasStore, waitForCanvasReady, clickCanvas, activateTool } from '../helpers';
+import { commitEditor, expectEditorValue, fillEditor, getCanvasStore, selectInEditor, textEditor, waitForCanvasReady, clickCanvas, activateTool } from '../helpers';
 
 test.describe('83 - Partial bold/italic (REQ-TEXT-022/023, REQ-TOOL-007)', () => {
   test('toolbar bold formats only the selected text, not the whole block', async ({ page }) => {
@@ -19,26 +19,20 @@ test.describe('83 - Partial bold/italic (REQ-TEXT-022/023, REQ-TOOL-007)', () =>
     await activateTool(page, 'text');
     await clickCanvas(page, 400, 300);
 
-    const textarea = page.locator('textarea');
-    await expect(textarea).toBeVisible();
-    await textarea.fill('hello world');
+    await fillEditor(page, 'hello world');
 
-    // Select just the word "world" (chars 6..11) inside the textarea
-    await page.evaluate(() => {
-      const ta = document.querySelector('textarea') as HTMLTextAreaElement;
-      ta.focus();
-      ta.setSelectionRange(6, 11);
-    });
+    // Select just the word "world" (chars 6..11) inside the editor.
+    await selectInEditor(page, 6, 11);
 
     // Click Bold while still editing — must NOT blur/close the editor
     await page.locator('.text-toolbar__btn').first().click();
     await page.waitForTimeout(100);
 
     // Only the selection is wrapped in markdown bold markers
-    await expect(textarea).toHaveValue('hello **world**');
+    await expectEditorValue(page, 'hello **world**');
 
     // Commit the edit
-    await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+    await commitEditor(page);
     await page.waitForTimeout(200);
 
     const store = await getCanvasStore(page);
@@ -56,23 +50,17 @@ test.describe('83 - Partial bold/italic (REQ-TEXT-022/023, REQ-TOOL-007)', () =>
     await activateTool(page, 'text');
     await clickCanvas(page, 400, 300);
 
-    const textarea = page.locator('textarea');
-    await expect(textarea).toBeVisible();
-    await textarea.fill('keep stress calm');
+    await fillEditor(page, 'keep stress calm');
 
     // Select "stress" (chars 5..11)
-    await page.evaluate(() => {
-      const ta = document.querySelector('textarea') as HTMLTextAreaElement;
-      ta.focus();
-      ta.setSelectionRange(5, 11);
-    });
+    await selectInEditor(page, 5, 11);
 
-    await textarea.press('Control+i');
+    await textEditor(page).press('Control+i');
     await page.waitForTimeout(100);
 
-    await expect(textarea).toHaveValue('keep *stress* calm');
+    await expectEditorValue(page, 'keep *stress* calm');
 
-    await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+    await commitEditor(page);
     await page.waitForTimeout(200);
 
     const store = await getCanvasStore(page);
@@ -87,15 +75,8 @@ test.describe('83 - Partial bold/italic (REQ-TEXT-022/023, REQ-TOOL-007)', () =>
     await activateTool(page, 'text');
     await clickCanvas(page, 400, 300);
 
-    const textarea = page.locator('textarea');
-    await expect(textarea).toBeVisible();
-
     // Fresh block: place the cursor with nothing highlighted
-    await page.evaluate(() => {
-      const ta = document.querySelector('textarea') as HTMLTextAreaElement;
-      ta.focus();
-      ta.setSelectionRange(0, 0);
-    });
+    await selectInEditor(page, 0);
 
     // Turn bold ON with no selection — must keep editor focused (no blur)
     await page.locator('.text-toolbar__btn').first().click();
@@ -105,9 +86,9 @@ test.describe('83 - Partial bold/italic (REQ-TEXT-022/023, REQ-TOOL-007)', () =>
     await page.keyboard.type('hello');
     await page.waitForTimeout(50);
 
-    await expect(textarea).toHaveValue('**hello**');
+    await expectEditorValue(page, '**hello**');
 
-    await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+    await commitEditor(page);
     await page.waitForTimeout(200);
 
     const store = await getCanvasStore(page);
@@ -122,10 +103,8 @@ test.describe('83 - Partial bold/italic (REQ-TEXT-022/023, REQ-TOOL-007)', () =>
     await activateTool(page, 'text');
     await clickCanvas(page, 400, 300);
 
-    const textarea = page.locator('textarea');
-    await expect(textarea).toBeVisible();
-    await textarea.fill('hello');
-    await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+    await fillEditor(page, 'hello');
+    await commitEditor(page);
     await page.waitForTimeout(200);
 
     // Node stays selected, not editing — re-show the toolbar

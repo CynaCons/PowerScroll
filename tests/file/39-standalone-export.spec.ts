@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
-import { waitForCanvasReady, clickCanvas, activateTool, disableFSA } from '../helpers';
+import { commitEditor, fillEditor, waitForCanvasReady, clickCanvas, activateTool, disableFSA } from '../helpers';
 
 /**
  * 39 - Standalone HTML Export
@@ -29,10 +29,8 @@ test.describe('39 - Standalone Export (REQ-FILE-007, REQ-FILE-008)', () => {
     // Place a text node with distinctive content
     await activateTool(page, 'text');
     await clickCanvas(page, 400, 300);
-    const textarea = page.locator('textarea');
-    await expect(textarea).toBeVisible({ timeout: 5000 });
-    await textarea.fill('Standalone Export Test Content');
-    await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+    await fillEditor(page, 'Standalone Export Test Content');
+    await commitEditor(page);
     await page.waitForTimeout(300);
 
     // Step 2: Trigger export and capture the downloaded file

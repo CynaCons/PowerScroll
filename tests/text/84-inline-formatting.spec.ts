@@ -6,7 +6,7 @@
  * buttons and shortcuts. Toolbar clicks must not commit the edit.
  */
 import { test, expect } from '@playwright/test';
-import { getCanvasStore, waitForCanvasReady, clickCanvas, activateTool } from '../helpers';
+import { commitEditor, editorValue, fillEditor, getCanvasStore, selectInEditor, textEditor, waitForCanvasReady, clickCanvas, activateTool } from '../helpers';
 
 test.describe('84 - Extended inline formatting (REQ-TEXT-025..027, REQ-TOOL-007)', () => {
   test.beforeEach(async ({ page }) => {
@@ -16,65 +16,55 @@ test.describe('84 - Extended inline formatting (REQ-TEXT-025..027, REQ-TOOL-007)
     await activateTool(page, 'text');
     await clickCanvas(page, 400, 300);
 
-    const textarea = page.locator('textarea');
-    await expect(textarea).toBeVisible();
-    await textarea.fill('Hello brave world');
+    await fillEditor(page, 'Hello brave world');
   });
 
   test('toolbar Bold click on a partial selection does not commit the edit', async ({ page }) => {
-    const textarea = page.locator('textarea');
-    await textarea.evaluate((el) => {
-      const ta = el as HTMLTextAreaElement;
-      ta.setSelectionRange(6, 11);
-    });
+    await selectInEditor(page, 6, 11);
 
     await page.locator('[data-testid="format-bold"]').click();
 
     // Editor must still be open (no commit-on-click)
-    await expect(textarea).toBeVisible();
-    expect(await textarea.inputValue()).toBe('Hello **brave** world');
+    await expect(textEditor(page)).toBeVisible();
+    expect(await editorValue(page)).toBe('Hello **brave** world');
   });
 
   test('strike, code, underline buttons each wrap the selection appropriately', async ({ page }) => {
-    const textarea = page.locator('textarea');
-
-    await textarea.evaluate((el) => (el as HTMLTextAreaElement).setSelectionRange(6, 11));
+    await selectInEditor(page, 6, 11);
     await page.locator('[data-testid="format-strike"]').click();
-    expect(await textarea.inputValue()).toBe('Hello ~~brave~~ world');
+    expect(await editorValue(page)).toBe('Hello ~~brave~~ world');
 
     // Reset by selecting the wrapped region and unwrapping
-    await textarea.fill('Hello brave world');
-    await textarea.evaluate((el) => (el as HTMLTextAreaElement).setSelectionRange(6, 11));
+    await fillEditor(page, 'Hello brave world');
+    await selectInEditor(page, 6, 11);
     await page.locator('[data-testid="format-code"]').click();
-    expect(await textarea.inputValue()).toBe('Hello `brave` world');
+    expect(await editorValue(page)).toBe('Hello `brave` world');
 
-    await textarea.fill('Hello brave world');
-    await textarea.evaluate((el) => (el as HTMLTextAreaElement).setSelectionRange(6, 11));
+    await fillEditor(page, 'Hello brave world');
+    await selectInEditor(page, 6, 11);
     await page.locator('[data-testid="format-underline"]').click();
-    expect(await textarea.inputValue()).toBe('Hello <u>brave</u> world');
+    expect(await editorValue(page)).toBe('Hello <u>brave</u> world');
   });
 
   test('Ctrl+U / Ctrl+E / Ctrl+Shift+X wrap the selection', async ({ page }) => {
-    const textarea = page.locator('textarea');
-
-    await textarea.evaluate((el) => (el as HTMLTextAreaElement).setSelectionRange(6, 11));
+    await selectInEditor(page, 6, 11);
     await page.keyboard.press('Control+u');
-    expect(await textarea.inputValue()).toBe('Hello <u>brave</u> world');
+    expect(await editorValue(page)).toBe('Hello <u>brave</u> world');
 
-    await textarea.fill('Hello brave world');
-    await textarea.evaluate((el) => (el as HTMLTextAreaElement).setSelectionRange(6, 11));
+    await fillEditor(page, 'Hello brave world');
+    await selectInEditor(page, 6, 11);
     await page.keyboard.press('Control+e');
-    expect(await textarea.inputValue()).toBe('Hello `brave` world');
+    expect(await editorValue(page)).toBe('Hello `brave` world');
 
-    await textarea.fill('Hello brave world');
-    await textarea.evaluate((el) => (el as HTMLTextAreaElement).setSelectionRange(6, 11));
+    await fillEditor(page, 'Hello brave world');
+    await selectInEditor(page, 6, 11);
     await page.keyboard.press('Control+Shift+x');
-    expect(await textarea.inputValue()).toBe('Hello ~~brave~~ world');
+    expect(await editorValue(page)).toBe('Hello ~~brave~~ world');
   });
 
   test('clicking Bold with editor closed still toggles the whole-node fontStyle', async ({ page }) => {
     // Commit the edit so the editor closes but the node stays selected
-    await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+    await commitEditor(page);
     await page.waitForTimeout(200);
 
     let store = await getCanvasStore(page);

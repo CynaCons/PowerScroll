@@ -5,7 +5,7 @@
  * after commit.
  */
 import { test, expect } from '@playwright/test';
-import { getCanvasStore, waitForCanvasReady, activateTool, clickCanvas } from '../helpers';
+import { commitEditor, fillEditor, getCanvasStore, waitForCanvasReady, activateTool, clickCanvas } from '../helpers';
 
 /** Matches src/utils/pageLayout.ts DEFAULT_TEXT_WIDTH / A4_WIDTH */
 const DEFAULT_TEXT_WIDTH = 794;
@@ -20,10 +20,8 @@ test.describe('21 - Text Intentional Width (REQ-TEXT-007, REQ-TEXT-020)', () => 
     await activateTool(page, 'text');
     await clickCanvas(page, 400, 300);
 
-    const textarea = page.locator('textarea');
-    await expect(textarea).toBeVisible();
-    await textarea.fill('Hi');
-    await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+    await fillEditor(page, 'Hi');
+    await commitEditor(page);
     await page.waitForTimeout(200);
 
     const store = await getCanvasStore(page);
@@ -36,12 +34,10 @@ test.describe('21 - Text Intentional Width (REQ-TEXT-007, REQ-TEXT-020)', () => 
     await activateTool(page, 'text');
     await clickCanvas(page, 400, 300);
 
-    const textarea = page.locator('textarea');
-    await expect(textarea).toBeVisible();
-    await textarea.fill(
+    await fillEditor(page,
       'This is a longer piece of text that should wrap within the page-wide block rather than growing the box to content',
     );
-    await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+    await commitEditor(page);
     await page.waitForTimeout(200);
 
     const store = await getCanvasStore(page);

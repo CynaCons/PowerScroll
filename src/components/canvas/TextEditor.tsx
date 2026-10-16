@@ -1,344 +1,298 @@
 import { useEffect, useRef } from 'react';
 import { Html } from 'react-konva-utils';
+import { EditorSelection, EditorState, type Extension } from '@codemirror/state';
+import { EditorView, keymap, placeholder } from '@codemirror/view';
+import { defaultKeymap, history, historyKeymap, insertNewline, moveLineDown, moveLineUp } from '@codemirror/commands';
+import { HighlightStyle, Language, defineLanguageFacet, syntaxHighlighting } from '@codemirror/language';
+import { parser as markdownParser, GFM } from '@lezer/markdown';
+import { tags } from '@lezer/highlight';
 import type { CanvasNode, TextNodeData } from '../../types/data';
-import { useEditorStore } from '../../stores/useEditorStore';
-import { FORMAT_MARKERS, toggleFormat, type FormatKind } from '../../utils/markdownToggle';
+import { useEditorStore, type EditorCommand } from '../../stores/useEditorStore';
+import { toggleFormat, type FormatKind, type ToggleResult } from '../../utils/markdownToggle';
+import {
+  backspaceMarker,
+  continueListOnEnter,
+  insertLink,
+  pasteUrlOverSelection,
+  setHeading,
+  toggleList,
+  toggleTaskChecked,
+} from '../../utils/markdownCommands';
 import { applyListIndent } from '../../utils/listIndent';
-import { MIN_TEXT_WIDTH, MAX_TEXT_WIDTH } from '../../utils/pageLayout';
+import { htmlToMarkdown } from '../../utils/htmlToMarkdown';
+import { MIN_TEXT_WIDTH } from '../../utils/pageLayout';
 
 /**
- * Replace the textarea's selected range with new text using a native-compatible
- * approach that integrates with the browser's undo stack.
+ * The text-block editor: CodeMirror over the block's markdown.
  *
- * Falls back to direct value assignment if execCommand is not supported.
+ * The text stays markdown (what is saved, rendered and read by agents), but it
+ * is drawn styled while you type: bold is bold, headings are large, code is
+ * monospace, and the markers themselves are dimmed. CodeMirror brings a real
+ * undo history, IME and mobile input; the markdown commands (formatting,
+ * headings, lists, links, list continuation) are the shared pure functions in
+ * utils/, applied as minimal edits so each is one undo step.
  */
-function replaceSelection(
-  ta: HTMLTextAreaElement,
-  selStart: number,
-  selEnd: number,
-  newText: string,
-): void {
-  ta.focus();
-  ta.setSelectionRange(selStart, selEnd);
-  try {
-    const ok = document.execCommand('insertText', false, newText);
-    if (ok) return;
-  } catch {
-    // Ignore — fall through to fallback
-  }
-  // Fallback: direct mutation (no undo history)
-  const before = ta.value.substring(0, selStart);
-  const after = ta.value.substring(selEnd);
-  ta.value = before + newText + after;
+
+const markdownLanguage = new Language(
+  defineLanguageFacet({ commentTokens: { block: { open: '<!--', close: '-->' } } }),
+  markdownParser.configure([GFM]),
+  [],
+  'markdown',
+);
+
+const MARK = 'rgba(100, 116, 139, 0.75)';
+
+/** Sizes match the rendered view (REQ-TEXT-030) so a heading does not jump on commit. */
+const markdownStyle = HighlightStyle.define([
+  { tag: tags.heading1, fontSize: '1.6em', fontWeight: '700' },
+  { tag: tags.heading2, fontSize: '1.3em', fontWeight: '600' },
+  { tag: [tags.heading3, tags.heading4, tags.heading5, tags.heading6], fontSize: '1.1em', fontWeight: '600' },
+  { tag: tags.strong, fontWeight: '700' },
+  { tag: tags.emphasis, fontStyle: 'italic' },
+  { tag: tags.strikethrough, textDecoration: 'line-through' },
+  { tag: tags.monospace, fontFamily: 'ui-monospace, "Cascadia Mono", Consolas, monospace', fontSize: '0.92em' },
+  { tag: tags.link, color: '#2563eb' },
+  { tag: tags.url, color: MARK },
+  { tag: tags.quote, color: '#475569', fontStyle: 'italic' },
+  { tag: [tags.processingInstruction, tags.contentSeparator], color: MARK },
+  { tag: tags.angleBracket, color: MARK },
+  // Task boxes ([ ] / [x]).
+  { tag: tags.atom, color: MARK },
+]);
+
+/** Box and type that mirror the rendered block, so text stays put when editing starts. */
+const editorTheme = EditorView.theme({
+  '&': {
+    border: '2px solid #2563eb',
+    borderRadius: '3px',
+    background: '#ffffff',
+  },
+  '&.cm-focused': { outline: 'none' },
+  '.cm-scroller': { fontFamily: 'inherit', lineHeight: '1.4', overflow: 'visible' },
+  '.cm-content': { padding: '4px', caretColor: '#14181A', minHeight: '1.4em' },
+  '.cm-line': { padding: '0' },
+  '.cm-placeholder': { color: '#94a3b8' },
+});
+
+/** The test and capture hook: read and drive the live editor without a textarea. */
+export interface TextEditorHandle {
+  getValue: () => string;
+  setValue: (text: string) => void;
+  getSelection: () => [number, number];
+  setSelection: (from: number, to?: number) => void;
 }
 
-/**
- * Toggle an inline format (bold, italic, ...) on the textarea's selection.
- *
- * Formatting is markdown in the text itself (`**word**`) and touches only the
- * selection, line by line inside each line's list/heading/quote prefix, so a
- * whole list row selected gives '- **row**' and the list survives
- * (toggleFormat). With no selection, an empty marker pair is inserted and the
- * caret parked between them so the user can type formatted text directly.
- */
-function applyFormatKind(ta: HTMLTextAreaElement, kind: FormatKind): void {
-  const value = ta.value;
-  const next = toggleFormat(value, ta.selectionStart, ta.selectionEnd, kind);
-  if (next.value !== value) {
-    // Replace only the changed middle so the browser undo step stays small.
-    let head = 0;
-    while (head < value.length && head < next.value.length && value[head] === next.value[head]) head++;
-    let tail = 0;
-    while (
-      tail < value.length - head &&
-      tail < next.value.length - head &&
-      value[value.length - 1 - tail] === next.value[next.value.length - 1 - tail]
-    ) tail++;
-    replaceSelection(ta, head, value.length - tail, next.value.slice(head, next.value.length - tail));
-  }
-  ta.selectionStart = next.selStart;
-  ta.selectionEnd = next.selEnd;
+function apply(view: EditorView, next: ToggleResult | null): boolean {
+  if (!next) return false;
+  const value = view.state.doc.toString();
+  let head = 0;
+  while (head < value.length && head < next.value.length && value[head] === next.value[head]) head++;
+  let tail = 0;
+  while (
+    tail < value.length - head &&
+    tail < next.value.length - head &&
+    value[value.length - 1 - tail] === next.value[next.value.length - 1 - tail]
+  ) tail++;
+  view.dispatch({
+    changes: next.value === value ? [] : { from: head, to: value.length - tail, insert: next.value.slice(head, next.value.length - tail) },
+    selection: EditorSelection.single(next.selStart, next.selEnd),
+    scrollIntoView: true,
+    userEvent: 'input.format',
+  });
+  return true;
 }
 
-// ── Active editor registry ────────────────────────────────────────────────
-// Lets external UI (the bottom toolbar) apply inline formatting to the text
-// block currently being edited, targeting only the live textarea selection.
-export interface ActiveTextEditor {
-  applyFormat: (markerOrKind: string | FormatKind) => void;
-  hasSelection: () => boolean;
+type Command = (value: string, from: number, to: number) => ToggleResult | null;
+
+function run(view: EditorView, command: Command): boolean {
+  const { from, to } = view.state.selection.main;
+  return apply(view, command(view.state.doc.toString(), from, to));
 }
-let activeTextEditor: ActiveTextEditor | null = null;
-export function getActiveTextEditor(): ActiveTextEditor | null {
-  return activeTextEditor;
+
+function commandFor(command: EditorCommand): Command {
+  if (command === 'link') return insertLink;
+  if (typeof command === 'string') return (v, s, e) => toggleFormat(v, s, e, command as FormatKind);
+  if ('heading' in command) return (v, s, e) => setHeading(v, s, e, command.heading);
+  return (v, s, e) => toggleList(v, s, e, command.list);
 }
 
 interface TextEditorProps {
   node: CanvasNode;
   stageScale: number;
+  /** Where the user double-clicked (client px), to put the caret there. */
+  caretAt?: { x: number; y: number } | null;
   onFinish: (newText: string) => void;
   onCancel: () => void;
 }
 
-export function TextEditor({ node, stageScale: _stageScale, onFinish, onCancel }: TextEditorProps) {
+export function TextEditor({ node, caretAt, onFinish, onCancel }: TextEditorProps) {
+  // Offset by -2 so the 2px border keeps the text where the rendered block shows it.
+  return (
+    <Html groupProps={{ x: node.x - 2, y: node.y - 2 }} divProps={{ style: {} }}>
+      <MarkdownEditor node={node} caretAt={caretAt} onFinish={onFinish} onCancel={onCancel} />
+    </Html>
+  );
+}
+
+function MarkdownEditor({ node, caretAt, onFinish, onCancel }: Omit<TextEditorProps, 'stageScale'>) {
   const data = node.data as TextNodeData;
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const hostRef = useRef<HTMLDivElement>(null);
+  const done = useRef(false);
+  const callbacks = useRef({ onFinish, onCancel });
+  callbacks.current = { onFinish, onCancel };
 
-  const autoHeight = (textarea: HTMLTextAreaElement) => {
-    textarea.style.height = 'auto';
-    textarea.style.height = textarea.scrollHeight + 'px';
-  };
-
-  // Focus the textarea reliably — the Html portal renders async,
-  // so we retry until it's in the DOM and focusable
   useEffect(() => {
-    const focusTextarea = () => {
-      const textarea = textareaRef.current;
-      if (!textarea) return false;
-      textarea.focus();
-      textarea.select();
-      autoHeight(textarea);
-      return document.activeElement === textarea;
+    const host = hostRef.current;
+    if (!host) return;
+    const finish = (view: EditorView) => {
+      if (done.current) return;
+      done.current = true;
+      callbacks.current.onFinish(view.state.doc.toString());
     };
 
-    if (focusTextarea()) return;
+    const shortcuts = keymap.of([
+      { key: 'Mod-b', run: (v) => run(v, commandFor('bold')) },
+      { key: 'Mod-i', run: (v) => run(v, commandFor('italic')) },
+      { key: 'Mod-u', run: (v) => run(v, commandFor('underline')) },
+      { key: 'Mod-e', run: (v) => run(v, commandFor('code')) },
+      { key: 'Mod-Shift-x', run: (v) => run(v, commandFor('strike')) },
+      { key: 'Mod-k', run: (v) => run(v, insertLink) },
+      // Headings: Ctrl+Shift+digit works on every layout (like the list keys below);
+      // Ctrl+Alt+digit is the Google Docs habit, but on AZERTY/QWERTZ it is AltGr and types characters.
+      ...[0, 1, 2, 3].flatMap((level) => [
+        { key: `Mod-Shift-${level}`, run: (v: EditorView) => run(v, commandFor({ heading: level })) },
+        { key: `Mod-Alt-${level}`, run: (v: EditorView) => run(v, commandFor({ heading: level })) },
+      ]),
+      { key: 'Mod-Shift-8', run: (v) => run(v, commandFor({ list: 'bullet' })) },
+      { key: 'Mod-Shift-7', run: (v) => run(v, commandFor({ list: 'number' })) },
+      { key: 'Mod-Shift-9', run: (v) => run(v, commandFor({ list: 'task' })) },
+      { key: 'Mod-Enter', run: (v) => run(v, toggleTaskChecked) },
+      { key: 'Alt-ArrowUp', run: moveLineUp },
+      { key: 'Alt-ArrowDown', run: moveLineDown },
+      // Outside a list, Enter is a plain line break (no auto-indent).
+      { key: 'Enter', run: (v) => run(v, continueListOnEnter) || insertNewline(v) },
+      { key: 'Backspace', run: (v) => run(v, backspaceMarker) },
+      {
+        key: 'Tab',
+        run: (v) => run(v, (value, s, e) => {
+          const next = applyListIndent(value, s, e, 'in');
+          return { value: next.text, selStart: next.selStart, selEnd: next.selEnd };
+        }),
+        shift: (v) => run(v, (value, s, e) => {
+          const next = applyListIndent(value, s, e, 'out');
+          return { value: next.text, selStart: next.selStart, selEnd: next.selEnd };
+        }),
+      },
+      // Escape leaves editing and keeps the text (as the app always did); Ctrl+Z reverts.
+      { key: 'Escape', run: (v) => (finish(v), true) },
+    ]);
 
-    // Retry with increasing delays for async portal rendering
-    const t1 = setTimeout(focusTextarea, 10);
-    const t2 = setTimeout(focusTextarea, 50);
-    const t3 = setTimeout(focusTextarea, 150);
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
-  }, []);
+    const extensions: Extension[] = [
+      history(),
+      shortcuts,
+      keymap.of([...historyKeymap, ...defaultKeymap]),
+      markdownLanguage,
+      syntaxHighlighting(markdownStyle),
+      editorTheme,
+      EditorView.lineWrapping,
+      placeholder('Type here: # heading, - list, **bold**'),
+      EditorView.contentAttributes.of({ spellcheck: 'true', 'aria-label': 'Text block', 'data-testid': 'text-editor' }),
+      EditorView.domEventHandlers({
+        paste: (event, view) => {
+          const { from, to } = view.state.selection.main;
+          const value = view.state.doc.toString();
+          const plain = event.clipboardData?.getData('text/plain') ?? '';
+          const linked = pasteUrlOverSelection(value, from, to, plain);
+          if (linked) {
+            event.preventDefault();
+            return apply(view, linked);
+          }
+          const md = htmlToMarkdown(event.clipboardData?.getData('text/html') ?? '');
+          if (md === null || md === plain.trim()) return false;
+          event.preventDefault();
+          view.dispatch(view.state.replaceSelection(md), { userEvent: 'input.paste', scrollIntoView: true });
+          return true;
+        },
+      }),
+      EditorView.updateListener.of((update) => {
+        if (update.focusChanged && !update.view.hasFocus) {
+          // Defer a tick: a toolbar click refocuses the editor right away.
+          setTimeout(() => {
+            if (!update.view.hasFocus && document.activeElement !== update.view.contentDOM) finish(update.view);
+          }, 0);
+        }
+      }),
+    ];
 
-  // Register this editor so the bottom toolbar can format the live selection
-  useEffect(() => {
-    const apply = (markerOrKind: string | FormatKind) => {
-      const ta = textareaRef.current;
-      if (!ta) return;
-      const kind: FormatKind | undefined =
-        markerOrKind === '**' ? 'bold'
-        : markerOrKind === '*' ? 'italic'
-        : Object.prototype.hasOwnProperty.call(FORMAT_MARKERS, markerOrKind) ? (markerOrKind as FormatKind)
-        : undefined;
-      if (kind) applyFormatKind(ta, kind);
-      autoHeight(ta);
+    const text = data.text ?? '';
+    const view = new EditorView({
+      parent: host,
+      state: EditorState.create({ doc: text, selection: EditorSelection.cursor(text.length), extensions }),
+    });
+
+    // Put the caret where the user double-clicked; a fresh block starts empty.
+    let placed = false;
+    const placeCaret = () => {
+      if (!caretAt || placed) return;
+      placed = true;
+      requestAnimationFrame(() => {
+        const pos = view.posAtCoords(caretAt, false);
+        view.dispatch({ selection: EditorSelection.cursor(pos) });
+      });
     };
+    const focus = () => {
+      view.focus();
+      if (view.hasFocus) placeCaret();
+      return view.hasFocus;
+    };
+    const timers = focus() ? [] : [10, 50, 150].map((ms) => setTimeout(focus, ms));
 
-    const editor: ActiveTextEditor = {
-      applyFormat: apply,
-      hasSelection: () => {
-        const ta = textareaRef.current;
-        return !!ta && ta.selectionStart !== ta.selectionEnd;
+    const runCommand = (command: EditorCommand) => {
+      if (!view.hasFocus) view.focus();
+      run(view, commandFor(command));
+    };
+    useEditorStore.getState().registerEditor(view.dom, runCommand);
+    const handle: TextEditorHandle = {
+      getValue: () => view.state.doc.toString(),
+      setValue: (value) => view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: value }, selection: EditorSelection.cursor(value.length) }),
+      getSelection: () => [view.state.selection.main.from, view.state.selection.main.to],
+      setSelection: (from, to = from) => {
+        view.focus();
+        view.dispatch({ selection: EditorSelection.single(from, to) });
       },
     };
-    activeTextEditor = editor;
-
-    let registeredEl: HTMLTextAreaElement | null = null;
-    const tryRegister = () => {
-      const ta = textareaRef.current;
-      if (!ta || registeredEl === ta) return !!ta;
-      useEditorStore.getState().registerEditor(ta, (kind) => apply(kind));
-      registeredEl = ta;
-      return true;
-    };
-
-    let timers: ReturnType<typeof setTimeout>[] = [];
-    if (!tryRegister()) {
-      timers = [
-        setTimeout(tryRegister, 10),
-        setTimeout(tryRegister, 50),
-        setTimeout(tryRegister, 150),
-      ];
-    }
+    const win = window as unknown as { __POWERNOTE_TEXT_EDITOR__?: TextEditorHandle };
+    win.__POWERNOTE_TEXT_EDITOR__ = handle;
 
     return () => {
       timers.forEach(clearTimeout);
-      if (activeTextEditor === editor) activeTextEditor = null;
-      if (registeredEl) useEditorStore.getState().unregisterEditor(registeredEl);
+      useEditorStore.getState().unregisterEditor(view.dom);
+      if (win.__POWERNOTE_TEXT_EDITOR__ === handle) delete win.__POWERNOTE_TEXT_EDITOR__;
+      view.destroy();
     };
+    // The editor is created once per edit session.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    // Inline formatting shortcuts (must come before the generic stopPropagation)
-    if (e.ctrlKey || e.metaKey) {
-      const k = e.key.toLowerCase();
-      let kind: FormatKind | null = null;
-      if (k === 'b' && !e.shiftKey) kind = 'bold';
-      else if (k === 'i' && !e.shiftKey) kind = 'italic';
-      else if (k === 'u' && !e.shiftKey) kind = 'underline';
-      else if (k === 'e' && !e.shiftKey) kind = 'code';
-      else if (k === 'x' && e.shiftKey) kind = 'strike';
-      if (kind) {
-        e.preventDefault();
-        e.stopPropagation();
-        applyFormatKind(textarea, kind);
-        autoHeight(textarea);
-        return;
-      }
-    }
-
-    // Tab / Shift+Tab: indent / unindent (list-aware; numbered items nest)
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const next = applyListIndent(textarea.value, start, end, e.shiftKey ? 'out' : 'in');
-      if (next.text !== textarea.value) {
-        replaceSelection(textarea, 0, textarea.value.length, next.text);
-        textarea.selectionStart = next.selStart;
-        textarea.selectionEnd = next.selEnd;
-      }
-      autoHeight(textarea);
-      return;
-    }
-
-    // Enter: auto-continue bullet/numbered lists
-    if (e.key === 'Enter' && !e.shiftKey) {
-      const start = textarea.selectionStart;
-      const value = textarea.value;
-      const lineStart = value.lastIndexOf('\n', start - 1) + 1;
-      const currentLine = value.substring(lineStart, start);
-
-      // Check for checkbox pattern: "- [ ] text" or "- [x] text"
-      const checkboxMatch = currentLine.match(/^(\s*)- \[[ x]\]\s/);
-      if (checkboxMatch) {
-        e.preventDefault();
-        const indent = checkboxMatch[0].length > 6 ? checkboxMatch[1] : '';
-        const contentAfter = currentLine.substring(checkboxMatch[0].length).trim();
-        if (contentAfter === '') {
-          textarea.value = value.substring(0, lineStart) + value.substring(start);
-          textarea.selectionStart = lineStart;
-          textarea.selectionEnd = lineStart;
-        } else {
-          const insert = `\n${indent}- [ ] `;
-          textarea.value = value.substring(0, start) + insert + value.substring(start);
-          textarea.selectionStart = start + insert.length;
-          textarea.selectionEnd = start + insert.length;
-        }
-        autoHeight(textarea);
-        return;
-      }
-
-      // Check for bullet point pattern: "  • text" or "  - text" or "  * text"
-      const bulletMatch = currentLine.match(/^(\s*)([-*•])\s/);
-      if (bulletMatch) {
-        e.preventDefault();
-        const indent = bulletMatch[1];
-        const bullet = bulletMatch[2];
-        // If the line is just the bullet with no content, remove it (end the list)
-        const contentAfterBullet = currentLine.substring(bulletMatch[0].length).trim();
-        if (contentAfterBullet === '') {
-          // Remove the empty bullet line
-          textarea.value = value.substring(0, lineStart) + value.substring(start);
-          textarea.selectionStart = lineStart;
-          textarea.selectionEnd = lineStart;
-        } else {
-          const insert = `\n${indent}${bullet} `;
-          textarea.value = value.substring(0, start) + insert + value.substring(start);
-          textarea.selectionStart = start + insert.length;
-          textarea.selectionEnd = start + insert.length;
-        }
-        autoHeight(textarea);
-        return;
-      }
-
-      // Check for numbered list pattern: "  1. text"
-      const numberMatch = currentLine.match(/^(\s*)(\d+)\.\s/);
-      if (numberMatch) {
-        e.preventDefault();
-        const indent = numberMatch[1];
-        const num = parseInt(numberMatch[2], 10);
-        const contentAfterNumber = currentLine.substring(numberMatch[0].length).trim();
-        if (contentAfterNumber === '') {
-          textarea.value = value.substring(0, lineStart) + value.substring(start);
-          textarea.selectionStart = lineStart;
-          textarea.selectionEnd = lineStart;
-        } else {
-          const insert = `\n${indent}${num + 1}. `;
-          textarea.value = value.substring(0, start) + insert + value.substring(start);
-          textarea.selectionStart = start + insert.length;
-          textarea.selectionEnd = start + insert.length;
-        }
-        autoHeight(textarea);
-        return;
-      }
-
-      // Default: Shift+Enter behavior (new line) since we use Enter for plain text too
-      // Actually for a text editor, Enter should just create a new line
-      // Let it pass through naturally
-    }
-
-    // Escape: cancel
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      onCancel();
-    }
-
-    e.stopPropagation();
-  };
-
-  const handleBlur = () => {
-    onFinish(textareaRef.current?.value ?? '');
-  };
-
-  const handleInput = () => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    autoHeight(textarea);
-  };
-
-  // Mirror TextNode's rendered div exactly so the editing experience
-  // visually matches the committed text. <Html> handles the stage-scale
-  // transform automatically — do NOT manually multiply by stageScale.
-  // Offset by -2 to compensate for the 2px border so the text baseline
-  // lines up pixel-perfect with where the rendered div showed it.
   return (
-    <Html
-      groupProps={{
-        x: node.x - 2,
-        y: node.y - 2,
+    <div
+      ref={hostRef}
+      className="powernote-text-editor"
+      // Keys stay in the editor: canvas shortcuts (Delete, arrows, tools) must not fire.
+      onKeyDown={(e) => e.stopPropagation()}
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        // Border (2) + padding (4) each side: the text wraps at the rendered block's width.
+        width: Math.max(node.width, MIN_TEXT_WIDTH) + 4,
+        fontSize: data.fontSize,
+        fontFamily: data.fontFamily,
+        fontStyle: data.fontStyle.includes('italic') ? 'italic' : 'normal',
+        fontWeight: data.fontStyle.includes('bold') ? 'bold' : 'normal',
+        color: data.fill,
+        boxSizing: 'content-box',
       }}
-      divProps={{
-        style: {},
-      }}
-    >
-      <textarea
-        ref={textareaRef}
-        defaultValue={data.text}
-        onKeyDown={handleKeyDown}
-        onBlur={handleBlur}
-        onInput={handleInput}
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          minWidth: MIN_TEXT_WIDTH,
-          maxWidth: MAX_TEXT_WIDTH,
-          width: Math.max(node.width, MIN_TEXT_WIDTH),
-          minHeight: 24,
-          fontSize: data.fontSize,
-          fontFamily: data.fontFamily,
-          fontStyle: data.fontStyle.includes('italic') ? 'italic' : 'normal',
-          fontWeight: data.fontStyle.includes('bold') ? 'bold' : 'normal',
-          color: data.fill,
-          border: '2px solid #2563eb',
-          borderRadius: 3,
-          padding: 4,
-          margin: 0,
-          outline: 'none',
-          resize: 'none',
-          overflow: 'hidden',
-          background: '#ffffff',
-          lineHeight: '1.4',
-          whiteSpace: 'pre-wrap',
-          wordWrap: 'break-word',
-          overflowWrap: 'break-word',
-          tabSize: 2,
-          boxSizing: 'content-box',
-        }}
-      />
-    </Html>
+    />
   );
 }

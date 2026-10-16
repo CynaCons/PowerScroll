@@ -3,7 +3,7 @@
  * Covers: REQ-SHAPE-028, REQ-SHAPE-029
  */
 import { test, expect, type Locator } from '@playwright/test';
-import { getCanvasStore, waitForCanvasReady } from '../helpers';
+import { getCanvasStore, textEditor, waitForCanvasReady } from '../helpers';
 
 const SHAPES = [
   ['rect', 'Rectangle'],
@@ -63,7 +63,7 @@ test.describe('197 - Shape tool flow (REQ-SHAPE-028, REQ-SHAPE-029)', () => {
     await page.keyboard.press('t');
     const canvas = page.locator('[data-testid="canvas-container"] canvas').last();
     await canvas.click({ position: { x: 550, y: 450 } });
-    const editor = page.locator('textarea');
+    const editor = textEditor(page);
     await expect(editor).toBeVisible();
     await editor.focus();
     await page.keyboard.press('4');

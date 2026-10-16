@@ -4,10 +4,10 @@
  * and auto-enter edit mode
  *
  * Verifies that activating the text tool and clicking the canvas creates a text
- * node in the store and opens a textarea for editing (auto-edit mode).
+ * node in the store and opens the inline editor (auto-edit mode).
  */
 import { test, expect } from '@playwright/test';
-import { getCanvasStore, waitForCanvasReady, clickCanvas, activateTool } from '../helpers';
+import { getCanvasStore, textEditor, waitForCanvasReady, clickCanvas, activateTool } from '../helpers';
 
 test.describe('03 - Text Place (REQ-TEXT-001, REQ-TEXT-002)', () => {
   test.beforeEach(async ({ page }) => {
@@ -49,13 +49,12 @@ test.describe('03 - Text Place (REQ-TEXT-001, REQ-TEXT-002)', () => {
     expect(node.width).toBe(794);
   });
 
-  test('textarea appears after placing text (auto-edit mode)', async ({ page }) => {
+  test('editor appears after placing text (auto-edit mode)', async ({ page }) => {
     await activateTool(page, 'text');
     await clickCanvas(page, 400, 300);
 
-    // A textarea should appear for inline editing
-    const textarea = page.locator('textarea');
-    await expect(textarea).toBeVisible();
+    // The inline editor should appear for editing.
+    await expect(textEditor(page)).toBeVisible();
   });
 
   test('placed text node is selected in the store', async ({ page }) => {

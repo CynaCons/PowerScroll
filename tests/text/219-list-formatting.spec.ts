@@ -9,7 +9,7 @@
  * previous row becomes bold and big??"
  */
 import { expect, test, type Page } from '@playwright/test';
-import { activateTool, clickCanvas, waitForCanvasReady } from '../helpers';
+import { activateTool, clickCanvas, commitEditor, expectEditorValue, fillEditor, selectInEditor, textEditor, waitForCanvasReady } from '../helpers';
 
 type Step = string | { press: string };
 
@@ -18,17 +18,15 @@ async function editBlock(page: Page, steps: Step[]) {
   await waitForCanvasReady(page);
   await activateTool(page, 'text');
   await clickCanvas(page, 400, 300);
-  const textarea = page.locator('textarea');
-  await expect(textarea).toBeVisible();
+  await expect(textEditor(page)).toBeFocused();
   for (const step of steps) {
     if (typeof step === 'string') await page.keyboard.type(step);
     else await page.keyboard.press(step.press);
   }
-  return textarea;
 }
 
 async function commit(page: Page) {
-  await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+  await commitEditor(page);
   const rendered = page.locator('.powernote-markdown').first();
   await expect(rendered).toBeVisible();
   return rendered;
@@ -37,9 +35,9 @@ async function commit(page: Page) {
 const LIST: Step[] = ['- one', { press: 'Enter' }, 'two', { press: 'Enter' }, 'three'];
 
 test('Ctrl+B on a selected list row bolds the row and keeps the list', async ({ page }) => {
-  const textarea = await editBlock(page, [...LIST, { press: 'ArrowUp' }, { press: 'Home' }, { press: 'Shift+End' }]);
+  await editBlock(page, [...LIST, { press: 'ArrowUp' }, { press: 'Home' }, { press: 'Shift+End' }]);
   await page.keyboard.press('Control+b');
-  await expect(textarea).toHaveValue('- one\n- **two**\n- three');
+  await expectEditorValue(page, '- one\n- **two**\n- three');
 
   const rendered = await commit(page);
   await expect(rendered.locator('ul > li')).toHaveCount(3);
@@ -50,20 +48,20 @@ test('Ctrl+B on a selected list row bolds the row and keeps the list', async ({ 
 
 test('a row selected with its line break, then the whole list, stays a list', async ({ page }) => {
   // Shift+Down from the row start also takes the newline: the old code broke every later row.
-  const textarea = await editBlock(page, [...LIST, { press: 'ArrowUp' }, { press: 'Home' }, { press: 'Shift+ArrowDown' }]);
+  await editBlock(page, [...LIST, { press: 'ArrowUp' }, { press: 'Home' }, { press: 'Shift+ArrowDown' }]);
   await page.keyboard.press('Control+b');
-  await expect(textarea).toHaveValue('- one\n- **two**\n- three');
+  await expectEditorValue(page, '- one\n- **two**\n- three');
 
   // Pressing again with the row still selected removes the bold.
   await page.keyboard.press('Control+b');
-  await expect(textarea).toHaveValue('- one\n- two\n- three');
+  await expectEditorValue(page, '- one\n- two\n- three');
 
   // Every row at once: each is bolded inside its own bullet.
   await page.keyboard.press('Control+a');
   await page.keyboard.press('Control+b');
-  await expect(textarea).toHaveValue('- **one**\n- **two**\n- **three**');
+  await expectEditorValue(page, '- **one**\n- **two**\n- **three**');
   await page.keyboard.press('Control+i');
-  await expect(textarea).toHaveValue('- ***one***\n- ***two***\n- ***three***');
+  await expectEditorValue(page, '- ***one***\n- ***two***\n- ***three***');
 
   const rendered = await commit(page);
   await expect(rendered.locator('ul > li')).toHaveCount(3);
@@ -73,18 +71,18 @@ test('a row selected with its line break, then the whole list, stays a list', as
 });
 
 test('a word selected with its trailing space is bolded without the space', async ({ page }) => {
-  const textarea = await editBlock(page, ['hello world']);
-  await textarea.evaluate((el) => (el as HTMLTextAreaElement).setSelectionRange(0, 6));
+  await editBlock(page, ['hello world']);
+  await selectInEditor(page, 0, 6);
   await page.keyboard.press('Control+b');
-  await expect(textarea).toHaveValue('**hello** world');
+  await expectEditorValue(page, '**hello** world');
   const rendered = await commit(page);
   await expect(rendered.locator('strong')).toHaveText('hello');
 });
 
 test('Tab on a new empty bullet does not turn the row above into a heading', async ({ page }) => {
   // The owner's second symptom: '- two\n  - ' rendered "two" big and bold.
-  const textarea = await editBlock(page, [...LIST.slice(0, 3), { press: 'Enter' }, { press: 'Tab' }]);
-  await expect(textarea).toHaveValue('- one\n- two\n  - ');
+  await editBlock(page, [...LIST.slice(0, 3), { press: 'Enter' }, { press: 'Tab' }]);
+  await expectEditorValue(page, '- one\n- two\n  - ');
   const rendered = await commit(page);
   await expect(rendered.locator('h1, h2, h3, h4, h5, h6')).toHaveCount(0);
   await expect(rendered.locator('ul > li').nth(1)).toContainText('two');
@@ -98,8 +96,8 @@ test('dash and equals lines under text stay text, a rule, or an empty row', asyn
     ['Notes\n===', 'text'],
     ['Notes\n---', 'rule'],
   ] as const) {
-    const textarea = await editBlock(page, []);
-    await textarea.fill(typed);
+    await editBlock(page, []);
+    await fillEditor(page, typed);
     const rendered = await commit(page);
     await expect(rendered.locator('h1, h2, h3, h4, h5, h6')).toHaveCount(0);
     if (check === 'rule') await expect(rendered.locator('hr')).toHaveCount(1);

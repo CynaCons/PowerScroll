@@ -3,7 +3,7 @@
  * Covers: selecting multiple lines and indenting/unindenting all at once
  */
 import { test, expect } from '@playwright/test';
-import { waitForCanvasReady, activateTool, clickCanvas } from '../helpers';
+import { expectEditorValue, fillEditor, selectInEditor, textEditor, waitForCanvasReady, activateTool, clickCanvas } from '../helpers';
 
 test.describe('75 - Tab Multi-line Selection', () => {
   test.beforeEach(async ({ page }) => {
@@ -15,87 +15,66 @@ test.describe('75 - Tab Multi-line Selection', () => {
     await activateTool(page, 'text');
     await clickCanvas(page, 300, 200);
 
-    const textarea = page.locator('textarea');
-    await textarea.waitFor({ state: 'visible' });
-    await textarea.fill('- item1\n- item2\n- item3');
+    const text = '- item1\n- item2\n- item3';
+    await fillEditor(page, text);
     await page.waitForTimeout(100);
 
     // Select all three lines
-    await page.evaluate(() => {
-      const ta = document.querySelector('textarea') as HTMLTextAreaElement;
-      ta.setSelectionRange(0, ta.value.length);
-    });
+    await selectInEditor(page, 0, text.length);
 
-    await textarea.press('Tab');
+    await textEditor(page).press('Tab');
     await page.waitForTimeout(100);
 
-    const value = await textarea.inputValue();
-    expect(value).toBe('  - item1\n  - item2\n  - item3');
+    await expectEditorValue(page, '  - item1\n  - item2\n  - item3');
   });
 
   test('Shift+Tab un-indents all selected lines', async ({ page }) => {
     await activateTool(page, 'text');
     await clickCanvas(page, 300, 200);
 
-    const textarea = page.locator('textarea');
-    await textarea.waitFor({ state: 'visible' });
-    await textarea.fill('  - item1\n  - item2\n  - item3');
+    const text = '  - item1\n  - item2\n  - item3';
+    await fillEditor(page, text);
     await page.waitForTimeout(100);
 
-    await page.evaluate(() => {
-      const ta = document.querySelector('textarea') as HTMLTextAreaElement;
-      ta.setSelectionRange(0, ta.value.length);
-    });
+    await selectInEditor(page, 0, text.length);
 
-    await textarea.press('Shift+Tab');
+    await textEditor(page).press('Shift+Tab');
     await page.waitForTimeout(100);
 
-    const value = await textarea.inputValue();
-    expect(value).toBe('- item1\n- item2\n- item3');
+    await expectEditorValue(page, '- item1\n- item2\n- item3');
   });
 
   test('Tab indents checkbox lines in multi-line selection', async ({ page }) => {
     await activateTool(page, 'text');
     await clickCanvas(page, 300, 200);
 
-    const textarea = page.locator('textarea');
-    await textarea.waitFor({ state: 'visible' });
-    await textarea.fill('- [ ] todo1\n- [x] done\n- [ ] todo2');
+    const text = '- [ ] todo1\n- [x] done\n- [ ] todo2';
+    await fillEditor(page, text);
     await page.waitForTimeout(100);
 
     // Select the middle 2 lines (from start of line 2 to end of line 3)
-    await page.evaluate(() => {
-      const ta = document.querySelector('textarea') as HTMLTextAreaElement;
-      const firstNl = ta.value.indexOf('\n');
-      ta.setSelectionRange(firstNl + 1, ta.value.length);
-    });
+    await selectInEditor(page, text.indexOf('\n') + 1, text.length);
 
-    await textarea.press('Tab');
+    await textEditor(page).press('Tab');
     await page.waitForTimeout(100);
 
-    const value = await textarea.inputValue();
-    expect(value).toBe('- [ ] todo1\n  - [x] done\n  - [ ] todo2');
+    await expectEditorValue(page, '- [ ] todo1\n  - [x] done\n  - [ ] todo2');
   });
 
   test('Shift+Tab on line with no indent is a no-op', async ({ page }) => {
     await activateTool(page, 'text');
     await clickCanvas(page, 300, 200);
 
-    const textarea = page.locator('textarea');
-    await textarea.waitFor({ state: 'visible' });
-    await textarea.fill('- unindented');
+    const text = '- unindented';
+    await fillEditor(page, text);
     await page.waitForTimeout(100);
 
-    await page.evaluate(() => {
-      const ta = document.querySelector('textarea') as HTMLTextAreaElement;
-      ta.setSelectionRange(ta.value.length, ta.value.length);
-    });
+    await selectInEditor(page, text.length);
 
-    await textarea.press('Shift+Tab');
+    await textEditor(page).press('Shift+Tab');
     await page.waitForTimeout(100);
 
-    const value = await textarea.inputValue();
-    expect(value).toBe('- unindented');
+    await expectEditorValue(page, '- unindented');
   });
 
   test('Tab removes any selected text and replaces with indent (standard behavior)', async ({ page }) => {
@@ -103,22 +82,16 @@ test.describe('75 - Tab Multi-line Selection', () => {
     await activateTool(page, 'text');
     await clickCanvas(page, 300, 200);
 
-    const textarea = page.locator('textarea');
-    await textarea.waitFor({ state: 'visible' });
-    await textarea.fill('- item');
+    await fillEditor(page, '- item');
     await page.waitForTimeout(100);
 
     // Select "item" (partial single line)
-    await page.evaluate(() => {
-      const ta = document.querySelector('textarea') as HTMLTextAreaElement;
-      ta.setSelectionRange(2, 6); // "item"
-    });
+    await selectInEditor(page, 2, 6); // "item"
 
-    await textarea.press('Tab');
+    await textEditor(page).press('Tab');
     await page.waitForTimeout(100);
 
-    const value = await textarea.inputValue();
     // Single-line partial selection: indent whole line
-    expect(value).toBe('  - item');
+    await expectEditorValue(page, '  - item');
   });
 });

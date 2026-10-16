@@ -72,6 +72,8 @@ export function TextNode({ node, isSelected, onSelect, stageScale, autoEdit, onS
   const updateNode = useCanvasStore((s) => s.updateNode);
   const updateNodeSilent = useCanvasStore((s) => s.updateNodeSilent);
   const [isEditing, setIsEditing] = useState(!!autoEdit);
+  // Where the edit was opened from, so the caret lands under the pointer.
+  const [caretAt, setCaretAt] = useState<{ x: number; y: number } | null>(null);
   const [hovered, setHovered] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 
@@ -197,6 +199,9 @@ export function TextNode({ node, isSelected, onSelect, stageScale, autoEdit, onS
     const tool = useToolStore.getState().activeTool;
     if (tool === 'select' || tool === 'text' || tool === 'image') {
       onSelect(node.id, false);
+      const evt = e.evt as MouseEvent & TouchEvent;
+      const point = evt.changedTouches?.[0] ?? evt;
+      setCaretAt(typeof point.clientX === 'number' ? { x: point.clientX, y: point.clientY } : null);
       setIsEditing(true);
     }
   };
@@ -219,6 +224,7 @@ export function TextNode({ node, isSelected, onSelect, stageScale, autoEdit, onS
       <TextEditor
         node={node}
         stageScale={stageScale}
+        caretAt={caretAt}
         onFinish={handleFinishEdit}
         onCancel={handleCancelEdit}
       />

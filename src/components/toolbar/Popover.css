@@ -254,3 +254,18 @@
   color: var(--color-primary);
   opacity: 0.7;
 }
+
+/* Heading menu: H1 H2 H3 Text in one row */
+.toolbar-popover--headings {
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+}
+
+.text-toolbar__btn--label {
+  width: auto;
+  min-width: 36px;
+  padding: 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+}

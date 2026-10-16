@@ -1,2 +1,2 @@
 /** Single source of truth for the PowerScroll app version. */
-export const APP_VERSION = '0.86.1';
+export const APP_VERSION = '0.87.0';

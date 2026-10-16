@@ -14,7 +14,7 @@
  * React re-renders between them.
  */
 import { test, expect } from '@playwright/test';
-import { waitForCanvasReady, disableFSA } from '../helpers';
+import { textEditor, waitForCanvasReady, disableFSA } from '../helpers';
 
 type Pt = { x: number; y: number };
 
@@ -85,15 +85,15 @@ test.describe('139 - Double-tap text edit (REQ-TEXT-032)', () => {
     await page.waitForTimeout(100);
   });
 
-  test('double-tap on a text node opens the textarea editor overlay', async ({ page }) => {
-    await expect(page.locator('textarea')).not.toBeVisible();
+  test('double-tap on a text node opens the editor overlay', async ({ page }) => {
+    await expect(textEditor(page)).toHaveCount(0);
 
     // Center of the node's hit area: Group at (200,200), invisible Rect
     // padded -4..width+4/-4..height+4 (see TextNode.tsx).
     await tap(page, { x: 260, y: 215 });
     await tap(page, { x: 260, y: 215 });
 
-    await expect(page.locator('textarea')).toBeVisible();
+    await expect(textEditor(page)).toBeVisible();
 
     const selected = await page.evaluate(
       () => (window as any).__POWERNOTE_STORES__.canvas.getState().selectedNodeIds,
@@ -107,14 +107,14 @@ test.describe('139 - Double-tap text edit (REQ-TEXT-032)', () => {
     await page.waitForTimeout(600);
     await tap(page, { x: 260, y: 215 });
 
-    await expect(page.locator('textarea')).not.toBeVisible();
+    await expect(textEditor(page)).toHaveCount(0);
   });
 
   test('a single tap selects but does not open the editor', async ({ page }) => {
     await tap(page, { x: 260, y: 215 });
     await page.waitForTimeout(100);
 
-    await expect(page.locator('textarea')).not.toBeVisible();
+    await expect(textEditor(page)).toHaveCount(0);
     const selected = await page.evaluate(
       () => (window as any).__POWERNOTE_STORES__.canvas.getState().selectedNodeIds,
     );

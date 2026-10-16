@@ -1,7 +1,7 @@
 {
   "name": "powerscroll",
   "private": true,
-  "version": "0.86.1",
+  "version": "0.87.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -16,6 +16,12 @@
     "test:bridge": "node powernote-mcp/test-multi-agent.mjs"
   },
   "dependencies": {
+    "@codemirror/commands": "^6.11.1",
+    "@codemirror/language": "^6.13.1",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.14",
+    "@lezer/highlight": "^1.2.5",
+    "@lezer/markdown": "^1.8.0",
     "@types/katex": "^0.16.8",
     "katex": "^0.16.45",
     "konva": "^10.2.3",
@@ -26,12 +32,15 @@
     "react-dom": "^18.3.1",
     "react-konva": "^18.2.14",
     "react-konva-utils": "^2.0.0",
+    "turndown": "^7.2.4",
+    "turndown-plugin-gfm": "^1.0.2",
     "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
     "@types/react": "^18.3.28",
     "@types/react-dom": "^18.3.7",
+    "@types/turndown": "^5.0.6",
     "@typescript-eslint/eslint-plugin": "^8.58.2",
     "@typescript-eslint/parser": "^8.58.2",
     "@vitejs/plugin-react": "^6.0.1",

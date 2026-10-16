@@ -7,7 +7,7 @@
  * and that the T key toggles the text tool on and off.
  */
 import { test, expect } from '@playwright/test';
-import { getCanvasStore, getToolStore, waitForCanvasReady, clickCanvas, activateTool } from '../helpers';
+import { commitEditor, fillEditor, getCanvasStore, getToolStore, waitForCanvasReady, clickCanvas, activateTool } from '../helpers';
 
 test.describe('06 - Text Delete (REQ-TEXT-009, REQ-TEXT-010)', () => {
   test.beforeEach(async ({ page }) => {
@@ -20,11 +20,8 @@ test.describe('06 - Text Delete (REQ-TEXT-009, REQ-TEXT-010)', () => {
     await activateTool(page, 'text');
     await clickCanvas(page, 400, 300);
 
-    const textarea = page.locator('textarea');
-    await expect(textarea).toBeVisible();
-
-    await textarea.fill('Delete me');
-    await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+    await fillEditor(page, 'Delete me');
+    await commitEditor(page);
 
     await page.waitForTimeout(300);
 

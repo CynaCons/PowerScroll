@@ -6,7 +6,7 @@
  * live in the canvas store and haven't been saved back yet, so they were missed.
  */
 import { test, expect } from '@playwright/test';
-import { waitForCanvasReady, activateTool, clickCanvas } from '../helpers';
+import { commitEditor, fillEditor, waitForCanvasReady, activateTool, clickCanvas } from '../helpers';
 
 test.describe('34 - Search Active Page Unsaved Nodes', () => {
   test.beforeEach(async ({ page }) => {
@@ -19,10 +19,8 @@ test.describe('34 - Search Active Page Unsaved Nodes', () => {
     await activateTool(page, 'text');
     await clickCanvas(page, 400, 300);
 
-    const textarea = page.locator('textarea');
-    await expect(textarea).toBeVisible();
-    await textarea.fill('findable_unique_text');
-    await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+    await fillEditor(page, 'findable_unique_text');
+    await commitEditor(page);
     await page.waitForTimeout(300);
 
     // Open notebook-wide search (NOT page search)

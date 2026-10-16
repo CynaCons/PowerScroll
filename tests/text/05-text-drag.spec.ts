@@ -6,7 +6,7 @@
  * updates its position in the canvas store.
  */
 import { test, expect } from '@playwright/test';
-import { getCanvasStore, waitForCanvasReady, clickCanvas, activateTool } from '../helpers';
+import { commitEditor, fillEditor, getCanvasStore, waitForCanvasReady, clickCanvas, activateTool } from '../helpers';
 
 test.describe('05 - Text Drag (REQ-TEXT-006)', () => {
   test.beforeEach(async ({ page }) => {
@@ -19,11 +19,8 @@ test.describe('05 - Text Drag (REQ-TEXT-006)', () => {
     await activateTool(page, 'text');
     await clickCanvas(page, 400, 300);
 
-    const textarea = page.locator('textarea');
-    await expect(textarea).toBeVisible();
-
-    await textarea.fill('Drag me');
-    await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+    await fillEditor(page, 'Drag me');
+    await commitEditor(page);
 
     await page.waitForTimeout(300);
 

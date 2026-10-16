@@ -8,7 +8,7 @@
  * restart numbering at 1; the renderer must still nest legacy 2-space notes.
  */
 import { test, expect } from '@playwright/test';
-import { waitForCanvasReady, activateTool, clickCanvas } from '../helpers';
+import { expectEditorValue, fillEditor, selectInEditor, textEditor, waitForCanvasReady, activateTool, clickCanvas } from '../helpers';
 import { applyListIndent, normalizeListIndents } from '../../src/utils/listIndent';
 import { markdownToHtml } from '../../src/utils/renderMarkdown';
 
@@ -41,14 +41,9 @@ async function placeMarkdownNode(
 async function openEditorAtEnd(page: import('@playwright/test').Page, seed: string) {
   await activateTool(page, 'text');
   await clickCanvas(page, 300, 200);
-  const textarea = page.locator('textarea');
-  await textarea.waitFor({ state: 'visible' });
-  await textarea.fill(seed);
-  await page.evaluate(() => {
-    const ta = document.querySelector('textarea') as HTMLTextAreaElement;
-    ta.setSelectionRange(ta.value.length, ta.value.length);
-  });
-  return textarea;
+  await fillEditor(page, seed);
+  await selectInEditor(page, seed.length);
+  return textEditor(page);
 }
 
 test.describe('188 - Numbered list indent helpers (REQ-TEXT-033)', () => {
@@ -113,15 +108,15 @@ test.describe('188 - Numbered list indent in the editor (REQ-TEXT-033, REQ-TEXT-
   });
 
   test('Tab in the editor nests a numbered item', async ({ page }) => {
-    const textarea = await openEditorAtEnd(page, '1. Parent\n2. Child');
-    await textarea.press('Tab');
-    expect(await textarea.inputValue()).toBe('1. Parent\n    1. Child');
+    await openEditorAtEnd(page, '1. Parent\n2. Child');
+    await textEditor(page).press('Tab');
+    await expectEditorValue(page, '1. Parent\n    1. Child');
   });
 
   test('Shift+Tab in the editor un-nests a numbered item', async ({ page }) => {
-    const textarea = await openEditorAtEnd(page, '1. Parent\n    1. Child');
-    await textarea.press('Shift+Tab');
-    expect(await textarea.inputValue()).toBe('1. Parent\n2. Child');
+    await openEditorAtEnd(page, '1. Parent\n    1. Child');
+    await textEditor(page).press('Shift+Tab');
+    await expectEditorValue(page, '1. Parent\n2. Child');
   });
 
   test('committed nested numbered list renders as a child ol (REQ-TEXT-033)', async ({ page }) => {

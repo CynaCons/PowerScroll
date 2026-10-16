@@ -8,7 +8,7 @@
  * a text node is selected.
  */
 import { test, expect } from '@playwright/test';
-import { waitForCanvasReady, clickCanvas, activateTool } from '../helpers';
+import { commitEditor, fillEditor, waitForCanvasReady, clickCanvas, activateTool } from '../helpers';
 
 test.describe('10 - Toolbar Show (REQ-TOOL-001)', () => {
   test.beforeEach(async ({ page }) => {
@@ -51,11 +51,8 @@ test.describe('10 - Toolbar Show (REQ-TOOL-001)', () => {
     await activateTool(page, 'text');
     await clickCanvas(page, 400, 300);
 
-    const textarea = page.locator('textarea');
-    await expect(textarea).toBeVisible();
-
-    await textarea.fill('Toolbar test');
-    await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+    await fillEditor(page, 'Toolbar test');
+    await commitEditor(page);
     await page.waitForTimeout(300);
 
     // Tool auto-reverted to select after placing. Toolbar persists from text tool.

@@ -1,27 +1,35 @@
 import { create } from 'zustand';
 import type { FormatKind } from '../utils/markdownToggle';
+import type { ListKind } from '../utils/markdownCommands';
+
+/** Everything the toolbar can ask the live text editor to do. */
+export type EditorCommand =
+  | FormatKind
+  | { heading: number }
+  | { list: ListKind }
+  | 'link';
 
 interface EditorState {
-  activeEditor: HTMLTextAreaElement | null;
+  /** The live editor's root element while a text block is being edited. */
+  activeEditor: HTMLElement | null;
   applyFormat: ((kind: FormatKind) => void) | null;
+  runCommand: ((command: EditorCommand) => void) | null;
 
-  registerEditor: (
-    textarea: HTMLTextAreaElement,
-    applyFormat: (kind: FormatKind) => void,
-  ) => void;
-  unregisterEditor: (textarea: HTMLTextAreaElement) => void;
+  registerEditor: (el: HTMLElement, run: (command: EditorCommand) => void) => void;
+  unregisterEditor: (el: HTMLElement) => void;
 }
 
 export const useEditorStore = create<EditorState>((set, get) => ({
   activeEditor: null,
   applyFormat: null,
+  runCommand: null,
 
-  registerEditor: (textarea, applyFormat) =>
-    set({ activeEditor: textarea, applyFormat }),
+  registerEditor: (el, run) =>
+    set({ activeEditor: el, runCommand: run, applyFormat: (kind) => run(kind) }),
 
-  unregisterEditor: (textarea) => {
-    if (get().activeEditor === textarea) {
-      set({ activeEditor: null, applyFormat: null });
+  unregisterEditor: (el) => {
+    if (get().activeEditor === el) {
+      set({ activeEditor: null, applyFormat: null, runCommand: null });
     }
   },
 }));

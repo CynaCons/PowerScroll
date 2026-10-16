@@ -11,7 +11,7 @@
  * (or permanently enabled), and both look like a working button until you try.
  */
 import { test, expect } from '@playwright/test';
-import { getCanvasStore, waitForCanvasReady, activateTool, clickCanvas } from '../helpers';
+import { commitEditor, fillEditor, getCanvasStore, waitForCanvasReady, activateTool, clickCanvas } from '../helpers';
 
 /**
  * Places one committed text node, which is one undoable action.
@@ -22,11 +22,8 @@ import { getCanvasStore, waitForCanvasReady, activateTool, clickCanvas } from '.
 async function addBlock(page: import('@playwright/test').Page, text: string, y = 300) {
   await activateTool(page, 'text');
   await clickCanvas(page, 400, y);
-  const textarea = page.locator('textarea');
-  await expect(textarea).toBeVisible();
-  await textarea.fill(text);
-  await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
-  await expect(textarea).toHaveCount(0);
+  await fillEditor(page, text);
+  await commitEditor(page);
 }
 
 test.describe('134 - Undo button (REQ-CANVAS-010)', () => {

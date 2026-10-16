@@ -7,7 +7,7 @@
  * then navigating back preserves content on each page independently.
  */
 import { test, expect } from '@playwright/test';
-import { getCanvasStore, getWorkspaceStore, waitForCanvasReady, clickCanvas, activateTool } from '../helpers';
+import { commitEditor, fillEditor, getCanvasStore, getWorkspaceStore, waitForCanvasReady, clickCanvas, activateTool } from '../helpers';
 
 test.describe('08 - Hierarchy Navigate (REQ-HIER-004, REQ-HIER-011)', () => {
   test.beforeEach(async ({ page }) => {
@@ -61,10 +61,8 @@ test.describe('08 - Hierarchy Navigate (REQ-HIER-004, REQ-HIER-011)', () => {
     await activateTool(page, 'text');
     await clickCanvas(page, 400, 300);
 
-    const textarea = page.locator('textarea');
-    await expect(textarea).toBeVisible();
-    await textarea.fill('Page 2 content');
-    await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+    await fillEditor(page, 'Page 2 content');
+    await commitEditor(page);
     await page.waitForTimeout(300);
 
     // Verify the text node exists on this page

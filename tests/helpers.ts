@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 /**
  * Read the canvas store state from the app via window.__POWERNOTE_STORES__
@@ -220,4 +220,49 @@ export async function preloadModule(page: Page, path: string): Promise<void> {
     if (!w.__mods[p]) import(/* @vite-ignore */ p).then((m) => { w.__mods[p] = m; });
   }, path);
   await page.waitForFunction((p) => Boolean((window as any).__mods?.[p]), path);
+}
+
+// ── Text-block editor (CodeMirror) ───────────────────────────────────────
+// The editor is a contenteditable, not a textarea: drive it with the real
+// keyboard, and read/set its markdown through the app's editor hook.
+
+/** The live text-block editor's content element. */
+export function textEditor(page: Page) {
+  return page.getByTestId('text-editor');
+}
+
+/** The markdown currently in the live editor (null when none is open). */
+export async function editorValue(page: Page): Promise<string | null> {
+  return page.evaluate(() => (window as any).__POWERNOTE_TEXT_EDITOR__?.getValue() ?? null);
+}
+
+/** Wait until the live editor holds exactly `expected`. */
+export async function expectEditorValue(page: Page, expected: string) {
+  await expect.poll(() => editorValue(page)).toBe(expected);
+}
+
+/** Replace the editor's whole text (caret at the end) and keep it focused. */
+export async function fillEditor(page: Page, text: string) {
+  await textEditor(page).waitFor({ state: 'visible' });
+  await page.evaluate((t) => {
+    const ed = (window as any).__POWERNOTE_TEXT_EDITOR__;
+    ed.setSelection(0);
+    ed.setValue(t);
+  }, text);
+}
+
+/** Select [from, to) in the editor (a caret when `to` is omitted). */
+export async function selectInEditor(page: Page, from: number, to?: number) {
+  await page.evaluate(([f, t]) => (window as any).__POWERNOTE_TEXT_EDITOR__.setSelection(f, t ?? f), [from, to] as const);
+}
+
+/** The editor's selection as [from, to]. */
+export async function editorSelection(page: Page): Promise<[number, number]> {
+  return page.evaluate(() => (window as any).__POWERNOTE_TEXT_EDITOR__.getSelection());
+}
+
+/** Commit the edit the way a user does: focus leaves the editor. */
+export async function commitEditor(page: Page) {
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await expect(textEditor(page)).toHaveCount(0);
 }

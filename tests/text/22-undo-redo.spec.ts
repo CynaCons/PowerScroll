@@ -6,7 +6,7 @@
  * multiple undos work correctly, and undo history clears on page switch.
  */
 import { test, expect } from '@playwright/test';
-import { getCanvasStore, waitForCanvasReady, clickCanvas, activateTool } from '../helpers';
+import { commitEditor, fillEditor, getCanvasStore, waitForCanvasReady, clickCanvas, activateTool } from '../helpers';
 
 test.describe('22 - Undo/Redo (REQ-CANVAS-007)', () => {
   test.beforeEach(async ({ page }) => {
@@ -21,7 +21,7 @@ test.describe('22 - Undo/Redo (REQ-CANVAS-007)', () => {
     await page.waitForTimeout(200);
 
     // Commit the text by blurring
-    await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+    await commitEditor(page);
     await page.waitForTimeout(200);
 
     // Verify the node exists
@@ -45,7 +45,7 @@ test.describe('22 - Undo/Redo (REQ-CANVAS-007)', () => {
     await clickCanvas(page, 400, 300);
     await page.waitForTimeout(200);
 
-    await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+    await commitEditor(page);
     await page.waitForTimeout(200);
 
     let store = await getCanvasStore(page);
@@ -74,10 +74,8 @@ test.describe('22 - Undo/Redo (REQ-CANVAS-007)', () => {
     await activateTool(page, 'text');
     await clickCanvas(page, 400, 300);
 
-    const textarea = page.locator('textarea');
-    await expect(textarea).toBeVisible();
-    await textarea.fill('Hello');
-    await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+    await fillEditor(page, 'Hello');
+    await commitEditor(page);
     await page.waitForTimeout(200);
 
     let store = await getCanvasStore(page);
@@ -142,7 +140,7 @@ test.describe('22 - Undo/Redo (REQ-CANVAS-007)', () => {
     await activateTool(page, 'text');
     await clickCanvas(page, 400, 300);
     await page.waitForTimeout(200);
-    await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+    await commitEditor(page);
     await page.waitForTimeout(200);
 
     let store = await getCanvasStore(page);

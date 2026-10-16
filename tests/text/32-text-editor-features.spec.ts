@@ -7,7 +7,7 @@
  * and that Shift+Tab removes indentation from the current line.
  */
 import { test, expect } from '@playwright/test';
-import { waitForCanvasReady, clickCanvas, activateTool } from '../helpers';
+import { editorValue, fillEditor, textEditor, waitForCanvasReady, clickCanvas, activateTool } from '../helpers';
 
 test.describe('32 - Text Editor Features (REQ-TEXT-017, REQ-TEXT-018)', () => {
   test.beforeEach(async ({ page }) => {
@@ -20,18 +20,17 @@ test.describe('32 - Text Editor Features (REQ-TEXT-017, REQ-TEXT-018)', () => {
     await activateTool(page, 'text');
     await clickCanvas(page, 400, 300);
 
-    const textarea = page.locator('textarea');
-    await expect(textarea).toBeVisible();
+    await expect(textEditor(page)).toBeVisible();
 
     // Type a bullet item and press Enter
-    await textarea.fill('');
-    await textarea.press('End'); // ensure cursor at end
-    await textarea.type('- first');
-    await textarea.press('Enter');
+    await fillEditor(page, '');
+    await textEditor(page).press('End'); // ensure cursor at end
+    await textEditor(page).pressSequentially('- first');
+    await textEditor(page).press('Enter');
     await page.waitForTimeout(100);
 
-    // The textarea should now contain "- first\n- "
-    const value = await textarea.inputValue();
+    // The editor should now contain "- first\n- "
+    const value = await editorValue(page);
     expect(value).toContain('- first');
     expect(value).toContain('\n- '); // Auto-continued bullet
   });
@@ -40,23 +39,22 @@ test.describe('32 - Text Editor Features (REQ-TEXT-017, REQ-TEXT-018)', () => {
     await activateTool(page, 'text');
     await clickCanvas(page, 400, 300);
 
-    const textarea = page.locator('textarea');
-    await expect(textarea).toBeVisible();
+    await expect(textEditor(page)).toBeVisible();
 
     // Type an indented line: first indent with Tab, then type content
-    await textarea.fill('');
-    await textarea.press('Tab'); // adds 2 spaces
-    await textarea.type('indented');
+    await fillEditor(page, '');
+    await textEditor(page).press('Tab'); // adds 2 spaces
+    await textEditor(page).pressSequentially('indented');
     await page.waitForTimeout(100);
 
-    let value = await textarea.inputValue();
+    let value = await editorValue(page);
     expect(value).toMatch(/^\s{2}indented/); // starts with 2 spaces
 
     // Now Shift+Tab to remove the indent
-    await textarea.press('Shift+Tab');
+    await textEditor(page).press('Shift+Tab');
     await page.waitForTimeout(100);
 
-    value = await textarea.inputValue();
+    value = await editorValue(page);
     expect(value).toBe('indented'); // indent removed
   });
 });

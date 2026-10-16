@@ -3,7 +3,7 @@
  * Covers: REQ-TEXT-020, REQ-TEXT-028, REQ-TEXT-029
  */
 import { test, expect } from '@playwright/test';
-import { getCanvasStore, waitForCanvasReady, activateTool, clickCanvas } from '../helpers';
+import { commitEditor, fillEditor, getCanvasStore, textEditor, waitForCanvasReady, activateTool, clickCanvas } from '../helpers';
 
 /** Matches src/utils/pageLayout.ts DEFAULT_TEXT_WIDTH / A4_WIDTH */
 const DEFAULT_TEXT_WIDTH = 794;
@@ -18,29 +18,27 @@ test.describe('92 - Text Page Default Width + Resize (REQ-TEXT-020/028/029)', ()
     await activateTool(page, 'text');
     await clickCanvas(page, 400, 300);
 
-    const textarea = page.locator('textarea');
-    await expect(textarea).toBeVisible();
+    await expect(textEditor(page)).toBeVisible();
 
     const store = await getCanvasStore(page);
     expect(store.nodes).toHaveLength(1);
     expect(store.nodes[0].width).toBe(DEFAULT_TEXT_WIDTH);
 
-    // Editor wrap width should track intentional node width (content-box + padding ok)
-    const editorWidth = await textarea.evaluate((el) => (el as HTMLTextAreaElement).offsetWidth);
-    expect(editorWidth).toBeGreaterThanOrEqual(DEFAULT_TEXT_WIDTH - 4);
-    expect(editorWidth).toBeLessThan(DEFAULT_TEXT_WIDTH + 40);
+    // The editor's outer box includes its host's borders and padding.
+    const editorWidth = await textEditor(page).locator('xpath=ancestor::div[contains(@class, "cm-editor")]').evaluate(
+      (el) => (el as HTMLElement).offsetWidth,
+    );
+    expect(editorWidth).toBe(DEFAULT_TEXT_WIDTH + 4);
   });
 
   test('width is preserved after typing a full sentence and commit', async ({ page }) => {
     await activateTool(page, 'text');
     await clickCanvas(page, 400, 300);
 
-    const textarea = page.locator('textarea');
-    await expect(textarea).toBeVisible();
-    await textarea.fill(
+    await fillEditor(page,
       'The quick brown fox jumps over the lazy dog and keeps wrapping at page width',
     );
-    await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+    await commitEditor(page);
     await page.waitForTimeout(250);
 
     const store = await getCanvasStore(page);
@@ -51,10 +49,8 @@ test.describe('92 - Text Page Default Width + Resize (REQ-TEXT-020/028/029)', ()
     await activateTool(page, 'text');
     await clickCanvas(page, 400, 300);
 
-    const textarea = page.locator('textarea');
-    await expect(textarea).toBeVisible();
-    await textarea.fill('Resize me wider than a page');
-    await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+    await fillEditor(page, 'Resize me wider than a page');
+    await commitEditor(page);
     await page.waitForTimeout(200);
 
     // Simulate L/R handle resize via store (same field handles update)

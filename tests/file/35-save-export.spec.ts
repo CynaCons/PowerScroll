@@ -6,7 +6,7 @@
  * containing the serialized workspace data.
  */
 import { test, expect } from '@playwright/test';
-import { waitForCanvasReady, activateTool, clickCanvas, disableFSA } from '../helpers';
+import { commitEditor, fillEditor, waitForCanvasReady, activateTool, clickCanvas, disableFSA } from '../helpers';
 import * as fs from 'fs';
 
 test.describe('35 - Save / Export (REQ-FILE-001..003)', () => {
@@ -26,10 +26,8 @@ test.describe('35 - Save / Export (REQ-FILE-001..003)', () => {
     // Place some content
     await activateTool(page, 'text');
     await clickCanvas(page, 400, 300);
-    const textarea = page.locator('textarea');
-    await expect(textarea).toBeVisible();
-    await textarea.fill('# Export Test\nThis content should be in the file');
-    await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+    await fillEditor(page, '# Export Test\nThis content should be in the file');
+    await commitEditor(page);
     await page.waitForTimeout(300);
 
     // Intercept the download
