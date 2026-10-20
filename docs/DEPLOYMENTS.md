@@ -4,15 +4,15 @@ This file records externally observed deployment state. Update it after every
 release or distribution change. It is a ledger, not a substitute for querying
 the live services before a new release.
 
-**Last verified:** 2026-10-16 (Europe/Berlin)
+**Last verified:** 2026-10-20 (Europe/Berlin)
 
 ## Current public state
 
 | Surface | Deployed state | Verification |
 |---|---|---|
-| Source repository | `CynaCons/PowerScroll`; app release source is tag `v0.87.0` at `3da4a38` | [Repository](https://github.com/CynaCons/PowerScroll) |
-| Application release | `v0.87.0`, published 2026-10-16 16:56 UTC, non-draft, `Latest`; app reports `0.87.0` | [GitHub release](https://github.com/CynaCons/PowerScroll/releases/tag/v0.87.0) |
-| GitHub Pages | Public, HTTPS, workflow-deployed from `main` at `3da4a38` (run succeeded 2026-10-16); live app reports `0.87.0` | [Storefront](https://cynacons.github.io/PowerScroll/) · [Live app](https://cynacons.github.io/PowerScroll/app/) · [deployments](https://github.com/CynaCons/PowerScroll/actions/workflows/pages.yml) |
+| Source repository | `CynaCons/PowerScroll`; app release source is tag `v0.88.0` at `c1b9912` | [Repository](https://github.com/CynaCons/PowerScroll) |
+| Application release | `v0.88.0`, published 2026-10-20 14:49 UTC, non-draft, `Latest`; app reports `0.88.0` | [GitHub release](https://github.com/CynaCons/PowerScroll/releases/tag/v0.88.0) |
+| GitHub Pages | Public, HTTPS, workflow-deployed from `main` at `c1b9912` (run succeeded 2026-10-20); live app reports `0.88.0` | [Storefront](https://cynacons.github.io/PowerScroll/) · [Live app](https://cynacons.github.io/PowerScroll/app/) · [deployments](https://github.com/CynaCons/PowerScroll/actions/workflows/pages.yml) |
 | npm | `powerscroll-mcp@0.67.1`; `latest` = `0.67.1`. **0.70.0 (board tools; every board tool requires the agent's own `me`) is committed at `817bbd5` but NOT published**: npm was not signed in on the release machine (`npm whoami` 401). 0.68.0 and 0.69.0 were never published and are skipped | [npm package](https://www.npmjs.com/package/powerscroll-mcp) |
 | Official MCP Registry | `io.github.CynaCons/powerscroll@0.67.1`, active. 0.70.0 waits for npm (Registry validation queries npm) | [Registry search](https://registry.modelcontextprotocol.io/?q=powerscroll) |
 
@@ -24,14 +24,33 @@ them, and the release carries the 0.70.0 tarball as an asset.
 
 ## GitHub release assets
 
-The `v0.87.0` release contains (digests reported by the GitHub API; the HTML
+The `v0.88.0` release contains (digests reported by the GitHub API; the HTML
 size matches the committed `dist-template/index.html`):
 
 | Asset | Size | SHA-256 | Meaning |
 |---|---:|---|---|
-| `PowerScroll.html` | 3,007,877 bytes | `ef9c3e242f9d98c07fad90b3c0f370d7997b6c635c841f923f1a1430717d888a` | Primary self-contained notebook application |
-| `PowerNote.html` | 3,007,877 bytes | `ef9c3e242f9d98c07fad90b3c0f370d7997b6c635c841f923f1a1430717d888a` | Byte-identical compatibility alias for legacy updates |
+| `PowerScroll.html` | 3,029,462 bytes | `11482fca85350cabbd20b327b6a3fee769a153517d55184cd811597d0fa2f3ea` | Primary self-contained notebook application |
+| `PowerNote.html` | 3,029,462 bytes | `11482fca85350cabbd20b327b6a3fee769a153517d55184cd811597d0fa2f3ea` | Byte-identical compatibility alias for legacy updates |
 | `powerscroll-mcp.tgz` | 33,355 bytes | `27c1030a70bc51fd66cc0a9e9e285002b689ad083ed871d2260b083c8f7e2e5b` | MCP package snapshot at the app tag (package version `0.70.0`, not yet on npm) |
+
+## Verified for v0.88.0
+
+- App-only minor release (MCP package unchanged at 0.70.0; the release tarball
+  digest equals v0.87.0's). Board cards: checklist rename/reorder, card-face
+  subtask preview and progress bar, drag copy that follows the pointer, a
+  Details panel with status/assignee/label menus, a label filter, and a fix
+  for drops between two cards. Pre-tag evidence: typecheck clean; lint 0
+  errors (40 warnings); MCP package tests 13/13; bridge multi-agent tests all
+  passed; board specs 43/43; full local Playwright campaign 872/872 with no
+  retries; the built template opened from disk reporting 0.88.0 with zero
+  console errors.
+- Post-tag: `Build & Release`, CI and `Deploy GitHub Pages` all succeeded for
+  `c1b9912`; the live app page contains `0.88.0`.
+- Updater paths: `releases/latest` returns `v0.88.0`; the raw `main`
+  `package.json` fallback returns `0.88.0`; the tag-pinned
+  `dist-template/index.html` returns 3,029,462 bytes.
+- Data: no format change. Card `order` values are renumbered on every move,
+  as before; the label filter is session state and is not saved.
 
 ## Verified for v0.87.0
 

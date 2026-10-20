@@ -1665,7 +1665,7 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] SRS row (REQ-BOARD-029) + T218 reproducing the symptom: type a title letter by letter, history gains no entry until close, then exactly one [agent: claude-opus-5.5 T218 fails on old code (37 events) and passes on new; campaign 843/843]
 - [x] Release v0.86.1 (full campaign, smoke, showcase) [agent: claude-opus-5.5 tag v0.86.1 @2f54a88; Build&Release, CI, Pages green; live 0.86.1; release 3 assets; showcase https://claude.ai/artifact/Q9GEuhbn2GrV2oxPtgZMbc]
 
-### v0.87.0 — Text blocks - formatting that respects lists (2026-10-16)
+### v0.87.0 — Text blocks - formatting that respects lists (2026-10-16) (current) (ACTIVE)
 **Goal:** Fix the list bugs and make text blocks a modern, robust editor.
 - [ ] Owner report: Ctrl+B on a list row breaks the list - awaiting owner check
 - [ ] Owner report: a lone dash row makes the row above a heading - awaiting owner check
@@ -1681,7 +1681,7 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Move existing tests to the new editor and add new ones [agent: claude]
 - [x] Release v0.87.0 [agent: claude]
 
-### v0.88.0 — Board cards - a usable checklist of subtasks (2026-10-20) (current) (ACTIVE)
+### v0.88.0 — Board cards - a usable checklist of subtasks (2026-10-20) (COMPLETE)
 **Goal:** Board cards get subtasks, smoother dragging, a clearer sidebar and label filters.
 - [x] Owner request: tickets with a checklist of subtasks on PowerScroll boards [agent: claude]
 - [x] Edit a checklist item's text in place [agent: claude]
@@ -1689,7 +1689,7 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Progress bar on the card face and in the card [agent: claude]
 - [x] Requirements and tests for the checklist [agent: claude]
 - [x] Run all checks and publish the showcase [agent: claude]
-- [ ] Release v0.88.0
+- [x] Release v0.88.0 [agent: claude]
 - [x] Owner request: preview the subtasks directly on the card [agent: claude]
 - [x] Rerun checks and update the showcase [agent: claude]
 - [x] Owner request: the dragged card follows the pointer between columns [agent: claude]
