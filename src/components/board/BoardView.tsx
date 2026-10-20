@@ -9,7 +9,8 @@ import {
   moveCard,
   restoreCard,
 } from '../../board/boardOps';
-import { displayName, relativeTime } from './boardUi';
+import { boardLabelColors, displayName, relativeTime } from './boardUi';
+import { LabelColorsContext } from './labelColors';
 import {
   AGENT_ACTIVE_MS,
   AGENT_TICK_MS,
@@ -18,8 +19,11 @@ import {
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { ActivityPanel, readActivityCollapsed, writeActivityCollapsed } from './ActivityPanel';
 import { agentChips, AgentsStrip } from './AgentsStrip';
-import { BoardColumn } from './BoardColumn';
+import { BoardColumn, type CardLanding } from './BoardColumn';
+import { BoardCardFace } from './BoardCardFace';
 import { CardOverlay } from './CardOverlay';
+import { boardLabels } from './CardProperties';
+import { LabelFilter } from './LabelFilter';
 import { QuestionPrompt } from './QuestionPrompt';
 import './BoardView.css';
 
@@ -30,6 +34,13 @@ interface DragState {
   cardId: string;
   startX: number;
   startY: number;
+  /** Pointer now, and where on the card it was grabbed, for the floating copy. */
+  x: number;
+  y: number;
+  grabX: number;
+  grabY: number;
+  width: number;
+  height: number;
 }
 
 interface DropState {
@@ -56,12 +67,16 @@ export function BoardView() {
   const left = useAgentPresenceStore((state) => state.left);
   const now = useAgentPresenceStore((state) => state.now);
   const [needsMe, setNeedsMe] = useState(false);
+  // Label filter per board page, for this session only (not saved in the notebook).
+  const [labelFilters, setLabelFilters] = useState<Record<string, string[]>>({});
   const [spotlight, setSpotlight] = useState<string | null>(null);
   const [activityCollapsed, setActivityCollapsed] = useState(readActivityCollapsed);
   const [showArchived, setShowArchived] = useState(false);
   const [opened, setOpened] = useState<BoardCard | null>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
   const [drop, setDrop] = useState<DropState | null>(null);
+  const [landing, setLanding] = useState<CardLanding | null>(null);
+  const cancelledDrag = useRef(false);
   const [questionDrop, setQuestionDrop] = useState<QuestionDrop | null>(null);
   const [flashing, setFlashing] = useState<Set<string>>(() => new Set());
   const [fading, setFading] = useState<Set<string>>(() => new Set());
@@ -151,11 +166,19 @@ export function BoardView() {
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       if (opened || questionDrop) return;
+      if (drag?.active) {
+        // Escape mid-drag puts the card back where it came from.
+        cancelledDrag.current = true;
+        setLanding({ cardId: drag.cardId, left: drag.x - drag.grabX, top: drag.y - drag.grabY });
+        setDrag(null);
+        setDrop(null);
+        return;
+      }
       setSpotlight(null);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [opened, questionDrop]);
+  }, [opened, questionDrop, drag]);
 
   useEffect(() => {
     const nextActive = new Set(activeKey ? activeKey.split(',') : []);
@@ -181,13 +204,19 @@ export function BoardView() {
     .filter((card) => card.archivedAt)
     .slice()
     .sort((leftCard, rightCard) => (rightCard.archivedAt ?? 0) - (leftCard.archivedAt ?? 0));
-  const visibleCards = needsMe
-    ? live.filter((card) => card.column === 'waiting')
-    : live;
+  const labels = boardLabels(live);
+  const labelFilter = (labelFilters[page.id] ?? []).filter((label) => labels.some((entry) => entry.label === label));
+  const setLabelFilter = (selected: string[]) => setLabelFilters((current) => ({ ...current, [page.id]: selected }));
+  const visibleCards = live
+    .filter((card) => !needsMe || card.column === 'waiting')
+    .filter((card) => !labelFilter.length || card.labels.some((label) => labelFilter.includes(label)));
+  const filtered = needsMe || labelFilter.length > 0;
   const waitingCount = live.filter((card) => card.column === 'waiting').length;
   const spotlightActive = spotlight && chips.some((chip) => chip.name === spotlight)
     ? spotlight
     : null;
+
+  const draggedCard = drag?.active ? board.cards.find((card) => card.id === drag.cardId) : undefined;
 
   const archivedBy = (card: BoardCard) => {
     const event = [...board.events]
@@ -214,12 +243,26 @@ export function BoardView() {
     setDrop({ column, index });
   };
 
+  // A drop slot counts only the cards on screen; with a filter on, translate it
+  // to a place among all the column's cards so hidden cards keep their order.
+  const fullColumnIndex = (column: BoardColumnId, visibleIndex: number, cardId: string) => {
+    const all = cardsIn(live, column).filter((card) => card.id !== cardId);
+    const shown = cardsIn(visibleCards, column).filter((card) => card.id !== cardId);
+    if (shown.length === all.length) return visibleIndex;
+    const before = shown[visibleIndex];
+    if (before) return all.indexOf(before);
+    const last = shown[shown.length - 1];
+    return last ? all.indexOf(last) + 1 : all.length;
+  };
+
   const finishDrag = () => {
     if (!drag?.active || !drop) {
       setDrag(null);
       setDrop(null);
       return;
     }
+
+    setLanding({ cardId: drag.cardId, left: drag.x - drag.grabX, top: drag.y - drag.grabY });
 
     const currentCard = board.cards.find((card) => card.id === drag.cardId);
 
@@ -229,12 +272,17 @@ export function BoardView() {
       && currentCard.column !== 'waiting'
       && !currentCard.question
     ) {
-      setQuestionDrop({ cardId: currentCard.id, ...drop });
+      setQuestionDrop({
+        cardId: currentCard.id,
+        column: drop.column,
+        index: fullColumnIndex(drop.column, drop.index, currentCard.id),
+      });
     } else {
+      const index = fullColumnIndex(drop.column, drop.index, drag.cardId);
       edit((current) => moveCard(current, {
         cardId: drag.cardId,
         to: drop.column,
-        index: drop.index,
+        index,
       }, ACTOR, Date.now()));
     }
 
@@ -279,193 +327,228 @@ export function BoardView() {
   };
 
   return (
-    <main
-      className="board-view"
-      data-testid="board-view"
-      data-spotlight={spotlightActive ?? undefined}
-      onPointerMove={(event) => {
-        if ((event.target as HTMLElement).closest('.board-overlay')) return;
-        if (!drag) return;
+    <LabelColorsContext.Provider value={boardLabelColors(board.cards)}>
+      <main
+        className="board-view"
+        data-testid="board-view"
+        data-spotlight={spotlightActive ?? undefined}
+        onPointerMove={(event) => {
+          if ((event.target as HTMLElement).closest('.board-overlay')) return;
+          if (!drag) return;
 
-        const distance = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY);
-        const current = drag.active || distance >= 5 ? { ...drag, active: true } : drag;
+          const distance = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY);
+          const current = drag.active || distance >= 5
+            ? { ...drag, active: true, x: event.clientX, y: event.clientY }
+            : drag;
 
-        if (!current.active) return;
-        setDrag(current);
-        updateDrop(event, current);
-      }}
-      onPointerUpCapture={(event) => {
-        if ((event.target as HTMLElement).closest('.board-overlay')) return;
-        suppressOpen.current = Boolean(drag?.active);
-        finishDrag();
-      }}
-      onPointerCancel={(event) => {
-        if ((event.target as HTMLElement).closest('.board-overlay')) return;
-        finishDrag();
-      }}
-    >
-      <header className="board-view__header">
-        <div>
-          <h1>{page.title}</h1>
-          <p>Board · {live.length} cards</p>
-        </div>
-        <div className="board-view__controls">
-          <button
-            type="button"
-            className={!needsMe ? 'board-filter board-filter--active' : 'board-filter'}
-            onClick={() => setNeedsMe(false)}
-          >
-            All
-          </button>
-          <button
-            type="button"
-            className={needsMe ? 'board-filter board-filter--active' : 'board-filter'}
-            data-testid="board-filter-needs-me"
-            onClick={() => setNeedsMe(true)}
-          >
-            Needs me
-            {waitingCount > 0 && (
-              <span className="board-filter__badge" data-testid="board-needs-me-count">
-                {waitingCount}
-              </span>
-            )}
-          </button>
-          {archivedCards.length > 0 && (
+          if (!current.active) return;
+          setDrag(current);
+          updateDrop(event, current);
+        }}
+        onPointerUpCapture={(event) => {
+          if ((event.target as HTMLElement).closest('.board-overlay')) return;
+          suppressOpen.current = Boolean(drag?.active) || cancelledDrag.current;
+          cancelledDrag.current = false;
+          finishDrag();
+        }}
+        onPointerCancel={(event) => {
+          if ((event.target as HTMLElement).closest('.board-overlay')) return;
+          finishDrag();
+        }}
+      >
+        <header className="board-view__header">
+          <div>
+            <h1>{page.title}</h1>
+            <p data-testid="board-card-count">
+              Board · {filtered ? `${visibleCards.length} of ${live.length}` : live.length} cards
+            </p>
+          </div>
+          <div className="board-view__controls">
             <button
               type="button"
-              className={showArchived ? 'board-filter board-filter--active' : 'board-filter'}
-              data-testid="board-archived-toggle"
-              aria-pressed={showArchived}
-              onClick={() => setShowArchived((current) => !current)}
+              className={!needsMe ? 'board-filter board-filter--active' : 'board-filter'}
+              onClick={() => setNeedsMe(false)}
             >
-              Archived ({archivedCards.length})
+              All
             </button>
-          )}
-          <button
-            type="button"
-            className="board-button board-button--primary"
-            data-testid="board-new-card"
-            onClick={() => {
-              setNeedsMe(false);
-              document.querySelector<HTMLButtonElement>('[data-testid="board-add-card-todo"]')?.click();
-            }}
-          >
-            <Plus size={16} />
-            Card
-          </button>
-        </div>
-      </header>
-      <AgentsStrip
-        chips={chips}
-        spotlight={spotlightActive}
-        onToggleSpotlight={(name) => setSpotlight((current) => (current === name ? null : name))}
-        onDismiss={(name) => useAgentPresenceStore.getState().leave(name)}
-      />
-      {showArchived && archivedCards.length > 0 && (
-        <div className="board-archived" data-testid="board-archived-list">
-          {archivedCards.map((card) => (
-            <div key={card.id} className="board-archived__row">
-              <span className="board-card__number">#{card.number}</span>
-              <strong className="board-archived__title">{card.title}</strong>
-              <span className="board-archived__meta">
-                {relativeTime(card.archivedAt ?? 0)}
-                {archivedBy(card) ? ` · ${displayName(archivedBy(card))}` : ''}
-              </span>
+            <button
+              type="button"
+              className={needsMe ? 'board-filter board-filter--active' : 'board-filter'}
+              data-testid="board-filter-needs-me"
+              onClick={() => setNeedsMe(true)}
+            >
+              Needs me
+              {waitingCount > 0 && (
+                <span className="board-filter__badge" data-testid="board-needs-me-count">
+                  {waitingCount}
+                </span>
+              )}
+            </button>
+            <LabelFilter labels={labels} selected={labelFilter} onChange={setLabelFilter} />
+            {archivedCards.length > 0 && (
               <button
                 type="button"
-                className="board-button"
-                data-testid={`board-restore-${card.number}`}
-                onClick={() => edit((current) => restoreCard(current, {
-                  cardId: card.id,
-                }, ACTOR, Date.now()))}
+                className={showArchived ? 'board-filter board-filter--active' : 'board-filter'}
+                data-testid="board-archived-toggle"
+                aria-pressed={showArchived}
+                onClick={() => setShowArchived((current) => !current)}
               >
-                Restore
+                Archived ({archivedCards.length})
               </button>
-            </div>
-          ))}
-        </div>
-      )}
-      <div
-        className={`board-view__content${
-          activityCollapsed ? ' board-view__content--activity-collapsed' : ''
-        }`}
-      >
-        <div className="board-view__columns">
-          {BOARD_COLUMNS.map((column) => {
-            const cards = cardsIn(visibleCards, column.id);
-            const isDropColumn = drop?.column === column.id;
-
-            return (
-              <BoardColumn
-                key={column.id}
-                column={column}
-                cards={cards}
-                draggingCardId={drag?.active ? drag.cardId : undefined}
-                dropIndex={isDropColumn ? drop.index : undefined}
-                activeCardIds={activeCardIds}
-                fadingCardIds={fading}
-                flashingCardIds={flashing}
-                onCreate={(title) => edit((current) => createCard(current, {
-                  title,
-                  column: column.id,
-                }, ACTOR, Date.now()))}
-                onOpen={(card) => {
-                  if (!suppressOpen.current) setOpened(card);
-                  suppressOpen.current = false;
-                }}
-                onCardPointerDown={(card, event) => {
-                  if ((event.target as HTMLElement).closest('input, button[data-no-drag]')) return;
-                  event.currentTarget.setPointerCapture(event.pointerId);
-                  setDrag({
+            )}
+            <button
+              type="button"
+              className="board-button board-button--primary"
+              data-testid="board-new-card"
+              onClick={() => {
+                setNeedsMe(false);
+                document.querySelector<HTMLButtonElement>('[data-testid="board-add-card-todo"]')?.click();
+              }}
+            >
+              <Plus size={16} />
+              Card
+            </button>
+          </div>
+        </header>
+        <AgentsStrip
+          chips={chips}
+          spotlight={spotlightActive}
+          onToggleSpotlight={(name) => setSpotlight((current) => (current === name ? null : name))}
+          onDismiss={(name) => useAgentPresenceStore.getState().leave(name)}
+        />
+        {showArchived && archivedCards.length > 0 && (
+          <div className="board-archived" data-testid="board-archived-list">
+            {archivedCards.map((card) => (
+              <div key={card.id} className="board-archived__row">
+                <span className="board-card__number">#{card.number}</span>
+                <strong className="board-archived__title">{card.title}</strong>
+                <span className="board-archived__meta">
+                  {relativeTime(card.archivedAt ?? 0)}
+                  {archivedBy(card) ? ` · ${displayName(archivedBy(card))}` : ''}
+                </span>
+                <button
+                  type="button"
+                  className="board-button"
+                  data-testid={`board-restore-${card.number}`}
+                  onClick={() => edit((current) => restoreCard(current, {
                     cardId: card.id,
-                    startX: event.clientX,
-                    startY: event.clientY,
-                    active: false,
-                  });
-                }}
-                onCardPointerUp={() => undefined}
-                onCardKeyDown={moveWithKeyboard}
-                spotlightName={spotlightActive}
-                onClearDone={column.id === 'done'
-                  ? () => edit((current) => clearDone(current, ACTOR, Date.now()))
-                  : undefined}
-              />
-            );
-          })}
+                  }, ACTOR, Date.now()))}
+                >
+                  Restore
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div
+          className={`board-view__content${
+            activityCollapsed ? ' board-view__content--activity-collapsed' : ''
+          }`}
+        >
+          <div className="board-view__columns">
+            {BOARD_COLUMNS.map((column) => {
+              const cards = cardsIn(visibleCards, column.id);
+              const isDropColumn = drop?.column === column.id;
+
+              return (
+                <BoardColumn
+                  key={column.id}
+                  column={column}
+                  cards={cards}
+                  draggingCardId={drag?.active ? drag.cardId : undefined}
+                  dropIndex={isDropColumn ? drop.index : undefined}
+                  dropHeight={drag?.active ? drag.height : undefined}
+                  animate={Boolean(drag?.active || landing)}
+                  landing={landing}
+                  onLanded={() => setLanding(null)}
+                  activeCardIds={activeCardIds}
+                  fadingCardIds={fading}
+                  flashingCardIds={flashing}
+                  onCreate={(title) => edit((current) => createCard(current, {
+                    title,
+                    column: column.id,
+                  }, ACTOR, Date.now()))}
+                  onOpen={(card) => {
+                    if (!suppressOpen.current) setOpened(card);
+                    suppressOpen.current = false;
+                  }}
+                  onCardPointerDown={(card, event) => {
+                    if ((event.target as HTMLElement).closest('input, button[data-no-drag]')) return;
+                    event.currentTarget.setPointerCapture(event.pointerId);
+                    const rect = event.currentTarget.getBoundingClientRect();
+                    setDrag({
+                      cardId: card.id,
+                      startX: event.clientX,
+                      startY: event.clientY,
+                      x: event.clientX,
+                      y: event.clientY,
+                      grabX: event.clientX - rect.left,
+                      grabY: event.clientY - rect.top,
+                      width: rect.width,
+                      height: rect.height,
+                      active: false,
+                    });
+                  }}
+                  onCardPointerUp={() => undefined}
+                  onCardKeyDown={moveWithKeyboard}
+                  spotlightName={spotlightActive}
+                  onClearDone={column.id === 'done'
+                    ? () => edit((current) => clearDone(current, ACTOR, Date.now()))
+                    : undefined}
+                />
+              );
+            })}
+          </div>
+          <ActivityPanel
+            board={board}
+            collapsed={activityCollapsed}
+            onToggle={() => {
+              const next = !activityCollapsed;
+              setActivityCollapsed(next);
+              writeActivityCollapsed(next);
+            }}
+          />
         </div>
-        <ActivityPanel
-          board={board}
-          collapsed={activityCollapsed}
-          onToggle={() => {
-            const next = !activityCollapsed;
-            setActivityCollapsed(next);
-            writeActivityCollapsed(next);
-          }}
-        />
-      </div>
-      {questionDrop && (
-        <QuestionPrompt
-          onCancel={() => setQuestionDrop(null)}
-          onSubmit={(question) => {
-            edit((current) => moveCard(current, {
-              cardId: questionDrop.cardId,
-              to: questionDrop.column,
-              index: questionDrop.index,
-              question,
-            }, ACTOR, Date.now()));
-            setQuestionDrop(null);
-          }}
-        />
-      )}
-      {opened && (
-        <CardOverlay
-          card={opened}
-          cards={board.cards}
-          events={board.events}
-          edit={edit}
-          onClose={() => setOpened(null)}
-        />
-      )}
-    </main>
+        {drag?.active && draggedCard && (
+          <div
+            className="board-drag-ghost"
+            data-testid="board-drag-ghost"
+            style={{ left: drag.x - drag.grabX, top: drag.y - drag.grabY, width: drag.width }}
+          >
+            <BoardCardFace
+              card={draggedCard}
+              dragging={false}
+              ghost
+              onOpen={() => undefined}
+              onPointerDown={() => undefined}
+              onKeyDown={() => undefined}
+            />
+          </div>
+        )}
+        {questionDrop && (
+          <QuestionPrompt
+            onCancel={() => setQuestionDrop(null)}
+            onSubmit={(question) => {
+              edit((current) => moveCard(current, {
+                cardId: questionDrop.cardId,
+                to: questionDrop.column,
+                index: questionDrop.index,
+                question,
+              }, ACTOR, Date.now()));
+              setQuestionDrop(null);
+            }}
+          />
+        )}
+        {opened && (
+          <CardOverlay
+            card={opened}
+            cards={board.cards}
+            events={board.events}
+            edit={edit}
+            onClose={() => setOpened(null)}
+          />
+        )}
+      </main>
+    </LabelColorsContext.Provider>
   );
 }

@@ -266,7 +266,9 @@ export function moveCard(
       ...board,
       cards: normalizeOrders([
         ...remaining.filter((item) => item.column !== args.to),
-        ...destination,
+        // Number the column in its new order; the moved card still carries its
+        // old `order`, which would otherwise sort it back where it came from.
+        ...destination.map((item, order) => ({ ...item, order })),
       ]),
     },
     'moved',

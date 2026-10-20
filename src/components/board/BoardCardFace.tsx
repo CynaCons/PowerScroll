@@ -1,5 +1,6 @@
 import { CheckSquare, MessageSquare } from 'lucide-react';
 import { ChecklistPreview, ChecklistProgress } from './Checklist';
+import { useLabelColor } from './labelColors';
 import type { BoardCard } from '../../types/data';
 import {
   avatarColor,
@@ -18,6 +19,8 @@ interface BoardCardFaceProps {
   spotlight?: boolean;
   dimmed?: boolean;
   spotlightColor?: string;
+  /** The copy that follows the pointer while dragging: no ids, no handlers. */
+  ghost?: boolean;
   onOpen: () => void;
   onPointerDown: (event: React.PointerEvent<HTMLButtonElement>) => void;
   onKeyDown: (event: React.KeyboardEvent<HTMLButtonElement>) => void;
@@ -32,10 +35,12 @@ export function BoardCardFace({
   spotlight = false,
   dimmed = false,
   spotlightColor,
+  ghost = false,
   onOpen,
   onPointerDown,
   onKeyDown,
 }: BoardCardFaceProps) {
+  const labelColor = useLabelColor();
   const complete = card.checklist.filter((item) => item.done).length;
   const metadata = card.checklist.length
     ? `${complete}/${card.checklist.length}`
@@ -51,14 +56,17 @@ export function BoardCardFace({
     flashing ? 'board-card--flash' : '',
     spotlight ? 'board-card--spotlight' : '',
     dimmed ? 'board-card--dimmed' : '',
+    ghost ? 'board-card--ghost' : '',
   ].filter(Boolean).join(' ');
 
   return (
     <button
       type="button"
       className={className}
-      data-testid={`board-card-${card.number}`}
-      data-board-card={card.id}
+      data-testid={ghost ? undefined : `board-card-${card.number}`}
+      data-board-card={ghost ? undefined : card.id}
+      tabIndex={ghost ? -1 : undefined}
+      aria-hidden={ghost || undefined}
       data-active={active ? 'true' : 'false'}
       data-spotlighted={spotlight ? 'true' : 'false'}
       style={active || fading || spotlight ? {
@@ -66,15 +74,15 @@ export function BoardCardFace({
         ['--agent-glow' as string]: colorWithAlpha(agentColor, 0.22),
         ['--spotlight-color' as string]: spotlightColor ?? agentColor,
       } : undefined}
-      onPointerDown={onPointerDown}
-      onPointerUp={onOpen}
-      onKeyDown={onKeyDown}
+      onPointerDown={ghost ? undefined : onPointerDown}
+      onPointerUp={ghost ? undefined : onOpen}
+      onKeyDown={ghost ? undefined : onKeyDown}
     >
       <div className="board-card__meta">
         <span className="board-card__number">#{card.number}</span>
         <span className="board-card__labels">
           {card.labels.map((label) => (
-            <span key={label} className="board-label">
+            <span key={label} className="board-label" style={labelColor(label)}>
               {label}
             </span>
           ))}

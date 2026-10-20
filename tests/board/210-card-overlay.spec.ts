@@ -46,9 +46,13 @@ test('title, markdown description, checklist, labels and assignee update the car
   const checkbox = overlay.getByRole('checkbox', { name: 'Check it' });
   await checkbox.click();
   await expect(checkbox).toBeChecked();
-  await overlay.getByLabel('Add label').fill('Design');
-  await overlay.getByLabel('Add label').press('Enter');
-  await overlay.getByLabel('Assignee').fill('Ada');
+  await overlay.getByLabel('Add label').click();
+  await overlay.getByLabel('Label name').fill('Design');
+  await overlay.getByLabel('Label name').press('Enter');
+  await page.keyboard.press('Escape');
+  await overlay.getByLabel('Assignee', { exact: true }).click();
+  await overlay.getByLabel('Assignee name').fill('Ada');
+  await overlay.getByLabel('Assignee name').press('Enter');
   await overlay.getByLabel('Close card').click();
 
   const card = page.getByTestId('board-card-1');
@@ -60,7 +64,8 @@ test('title, markdown description, checklist, labels and assignee update the car
 
 test('signed replies move waiting cards and history records card work', async ({ page }) => {
   const overlay = await openCard(page, 'doing');
-  await overlay.getByLabel('Status').selectOption('waiting');
+  await overlay.getByLabel('Status').click();
+  await overlay.getByRole('option', { name: 'Waiting for feedback' }).click();
   await overlay.locator('.board-overlay__question input').fill('Please approve');
   await overlay.getByRole('button', { name: 'Move', exact: true }).click();
   await expect(overlay).toContainText('Needs you');

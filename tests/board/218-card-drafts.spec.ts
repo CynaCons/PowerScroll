@@ -1,6 +1,6 @@
 /**
  * Test 218: typing in a card is saved when the card closes, not per letter.
- * Covers: REQ-BOARD-029
+ * Covers: REQ-BOARD-029, REQ-BOARD-036
  *
  * Owner report 2026-10-14: "while I was typing, I just noticed that on every
  * letter, it created a new entry in the history of that task ... whatever the
@@ -42,21 +42,26 @@ test('typing title, description and assignee writes no history until the card cl
   await title.pressSequentially('Typed letter by letter');
   await overlay.locator('.board-description').click();
   await overlay.getByLabel('Description').pressSequentially('Some notes');
-  await overlay.getByLabel('Assignee').fill('');
-  await overlay.getByLabel('Assignee').pressSequentially('Ada');
-  await overlay.getByLabel('Assignee').press('Enter');
+  // The assignee is picked from a menu (REQ-BOARD-036): typing in its search
+  // field writes nothing either.
+  await overlay.getByLabel('Assignee', { exact: true }).click();
+  await overlay.getByLabel('Assignee name').pressSequentially('Ada');
 
   // The owner's symptom: one history entry per letter. Now: none while typing.
   expect((await cardEvents(page, boardId)).length).toBe(before);
   await expect(overlay.locator('.board-history li')).toHaveCount(1);
   await expect(title).toHaveValue('Typed letter by letter');
 
+  // Choosing the name is one event, saved at once.
+  await overlay.getByLabel('Assignee name').press('Enter');
+  expect((await cardEvents(page, boardId)).slice(before)).toEqual([{ type: 'claimed', actor: 'Ada' }]);
+
   await page.keyboard.press('Escape');
   await expect(overlay).toHaveCount(0);
   const added = (await cardEvents(page, boardId)).slice(before);
   expect(added).toEqual([
-    { type: 'updated', actor: 'you' },
     { type: 'claimed', actor: 'Ada' },
+    { type: 'updated', actor: 'you' },
   ]);
   const card = page.getByTestId('board-card-1');
   await expect(card).toContainText('Typed letter by letter');

@@ -1,18 +1,17 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import type { BoardCard, BoardColumnId, BoardData } from '../../types/data';
 import {
   addNote,
   archiveCard,
-  claimCard,
   moveCard,
-  releaseCard,
   updateCard,
   BOARD_COLUMNS,
 } from '../../board/boardOps';
 import { markdownToHtml } from '../../utils/renderMarkdown';
+import { CardProperties } from './CardProperties';
 import { Checklist } from './Checklist';
-import { avatarColor, avatarInitial, collapseEditRuns, displayName, relativeTime, statusClass } from './boardUi';
+import { avatarColor, avatarInitial, collapseEditRuns, displayName, relativeTime } from './boardUi';
 
 const ACTOR = 'you';
 
@@ -20,10 +19,9 @@ const ACTOR = 'you';
 interface Drafts {
   title: string | null;
   description: string | null;
-  assignee: string | null;
 }
 
-const NO_DRAFTS: Drafts = { title: null, description: null, assignee: null };
+const NO_DRAFTS: Drafts = { title: null, description: null };
 
 interface CardOverlayProps {
   card: BoardCard;
@@ -58,7 +56,6 @@ export function CardOverlay({ card, cards, events, edit, onClose }: CardOverlayP
   const restoreFocus = useRef<HTMLElement | null>(document.activeElement as HTMLElement);
   const [descriptionEditing, setDescriptionEditing] = useState(false);
   const [note, setNote] = useState('');
-  const [label, setLabel] = useState('');
   const [question, setQuestion] = useState(card.question ?? '');
   const [askingQuestion, setAskingQuestion] = useState(false);
   const [drafts, setDrafts] = useState<Drafts>(NO_DRAFTS);
@@ -67,10 +64,6 @@ export function CardOverlay({ card, cards, events, edit, onClose }: CardOverlayP
     draftsRef.current = { ...draftsRef.current, [field]: value };
     setDrafts(draftsRef.current);
   };
-  const names = useMemo(
-    () => [...new Set(['you', ...cards.map((item) => item.assignee).filter(Boolean) as string[]])],
-    [cards],
-  );
 
   useEffect(() => {
     dialog.current?.focus();
@@ -79,8 +72,9 @@ export function CardOverlay({ card, cards, events, edit, onClose }: CardOverlayP
     return () => previousFocus?.focus();
   }, []);
 
-  // Saves typed text in one go: one 'updated' entry for title and description,
-  // one claim or release for the assignee. Never one entry per keystroke.
+  // Saves typed text in one go: one 'updated' entry for title and description.
+  // Never one entry per keystroke. Status, assignee and labels are menu choices
+  // and save at once (CardProperties).
   const saveDrafts = () => {
     const pending = draftsRef.current;
     draftsRef.current = NO_DRAFTS;
@@ -94,15 +88,6 @@ export function CardOverlay({ card, cards, events, edit, onClose }: CardOverlayP
     try {
       if (Object.keys(changes).length) {
         edit((board) => updateCard(board, { cardId: card.id, ...changes }, ACTOR, Date.now()));
-      }
-      if (pending.assignee !== null) {
-        const value = pending.assignee.trim();
-        const assignee = value.toLowerCase() === 'you' ? 'you' : value;
-        if (assignee && assignee !== card.assignee) {
-          edit((board) => claimCard(board, { cardId: card.id }, assignee, Date.now()));
-        } else if (!assignee && card.assignee) {
-          edit((board) => releaseCard(board, { cardId: card.id }, ACTOR, Date.now()));
-        }
       }
     } catch {
       // The card was archived or deleted meanwhile: nothing left to save to.
@@ -126,8 +111,8 @@ export function CardOverlay({ card, cards, events, edit, onClose }: CardOverlayP
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
-      // Escape in a checklist item being edited cancels that edit, not the card.
-      if ((event.target as HTMLElement | null)?.closest?.('[data-checklist-edit]')) return;
+      // Escape in a checklist item being edited, or in an open menu, closes that, not the card.
+      if ((event.target as HTMLElement | null)?.closest?.('[data-checklist-edit], [data-board-menu]')) return;
       event.stopPropagation();
       onClose();
     };
@@ -174,15 +159,6 @@ export function CardOverlay({ card, cards, events, edit, onClose }: CardOverlayP
     }
   };
 
-  const addLabel = () => {
-    if (!label.trim() || card.labels.includes(label.trim())) return;
-
-    edit((board) => updateCard(board, {
-      cardId: card.id,
-      labels: [...card.labels, label.trim()],
-    }, ACTOR, Date.now()));
-    setLabel('');
-  };
 
   const reply = (moveAfterReply = false) => {
     if (!note.trim()) return;
@@ -230,66 +206,6 @@ export function CardOverlay({ card, cards, events, edit, onClose }: CardOverlayP
                 if (event.key === 'Enter') event.currentTarget.blur();
               }}
             />
-            <div className="board-overlay__chips">
-              <label className={`board-status ${statusClass(card.column)}`}>
-                <span />
-                <select
-                  value={card.column}
-                  aria-label="Status"
-                  onChange={(event) => move(event.target.value as BoardColumnId)}
-                >
-                  {BOARD_COLUMNS.map((column) => (
-                    <option key={column.id} value={column.id}>
-                      {column.title}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="board-assignee-chip">
-                <span
-                  className="board-avatar board-avatar--medium"
-                  style={{ backgroundColor: avatarColor(card.assignee) }}
-                >
-                  {avatarInitial(card.assignee)}
-                </span>
-                <input
-                  list="board-assignees"
-                  aria-label="Assignee"
-                  value={drafts.assignee ?? (card.assignee ? displayName(card.assignee) : '')}
-                  placeholder="Unassigned"
-                  onChange={(event) => setDraft('assignee', event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') event.currentTarget.blur();
-                  }}
-                />
-                <datalist id="board-assignees">
-                  {names.map((name) => <option key={name} value={displayName(name)} />)}
-                </datalist>
-              </label>
-              {card.labels.map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  className="board-label"
-                  onClick={() => edit((board) => updateCard(board, {
-                    cardId: card.id,
-                    labels: card.labels.filter((value) => value !== item),
-                  }, ACTOR, Date.now()))}
-                >
-                  {item} ×
-                </button>
-              ))}
-              <input
-                className="board-label-add"
-                aria-label="Add label"
-                value={label}
-                placeholder="+ label"
-                onChange={(event) => setLabel(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') addLabel();
-                }}
-              />
-            </div>
           </div>
           <div className="board-overlay__header-actions">
             <button
@@ -402,13 +318,7 @@ export function CardOverlay({ card, cards, events, edit, onClose }: CardOverlayP
             </section>
           </main>
           <aside className="board-overlay__sidebar">
-            <section className="board-overlay__section">
-              <h2>Details</h2>
-              <dl className="board-details">
-                <div><dt>Created</dt><dd>by {displayName(card.createdBy)}, {relativeTime(card.createdAt)}</dd></div>
-                <div><dt>Updated</dt><dd>{relativeTime(card.updatedAt)}</dd></div>
-              </dl>
-            </section>
+            <CardProperties card={card} cards={cards} edit={edit} onMove={move} />
             <section className="board-overlay__section">
               <h2>History</h2>
               <EventHistory card={card} events={events} />
