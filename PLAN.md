@@ -1665,7 +1665,7 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] SRS row (REQ-BOARD-029) + T218 reproducing the symptom: type a title letter by letter, history gains no entry until close, then exactly one [agent: claude-opus-5.5 T218 fails on old code (37 events) and passes on new; campaign 843/843]
 - [x] Release v0.86.1 (full campaign, smoke, showcase) [agent: claude-opus-5.5 tag v0.86.1 @2f54a88; Build&Release, CI, Pages green; live 0.86.1; release 3 assets; showcase https://claude.ai/artifact/Q9GEuhbn2GrV2oxPtgZMbc]
 
-### v0.87.0 — Text blocks - formatting that respects lists (2026-10-16) (current) (ACTIVE)
+### v0.87.0 — Text blocks - formatting that respects lists (2026-10-16)
 **Goal:** Fix the list bugs and make text blocks a modern, robust editor.
 - [ ] Owner report: Ctrl+B on a list row breaks the list - awaiting owner check
 - [ ] Owner report: a lone dash row makes the row above a heading - awaiting owner check
@@ -1680,6 +1680,16 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Pasting from web pages, Word and Google Docs keeps formatting [agent: claude]
 - [x] Move existing tests to the new editor and add new ones [agent: claude]
 - [x] Release v0.87.0 [agent: claude]
+
+### v0.88.0 — Board cards - a usable checklist of subtasks (2026-10-20) (current) (ACTIVE)
+**Goal:** A card holds a checklist of subtasks you can edit, reorder and track.
+- [x] Owner request: tickets with a checklist of subtasks on PowerScroll boards [agent: claude]
+- [x] Edit a checklist item's text in place [agent: claude]
+- [x] Reorder checklist items by drag and by keyboard [agent: claude]
+- [x] Progress bar on the card face and in the card [agent: claude]
+- [x] Requirements and tests for the checklist [agent: claude]
+- [x] Run all checks and publish the showcase [agent: claude]
+- [ ] Release v0.88.0
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.
