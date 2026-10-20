@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import { GripVertical } from 'lucide-react';
+import { CheckSquare, GripVertical, Square } from 'lucide-react';
 import type { BoardCard, BoardCheckItem, BoardData } from '../../types/data';
 import {
   addChecklistItem,
@@ -29,6 +29,28 @@ export function ChecklistProgress({ items, testId }: { items: BoardCheckItem[]; 
     >
       <span className="board-progress__fill" style={{ width: `${percent}%` }} />
     </span>
+  );
+}
+
+/** Subtasks shown on the card face. */
+export const PREVIEW_LIMIT = 5;
+
+/** Read-only list of the first subtasks on a card face; the card opens on click as before. */
+export function ChecklistPreview({ items, testId }: { items: BoardCheckItem[]; testId?: string }) {
+  if (!items.length) return null;
+  const shown = items.slice(0, PREVIEW_LIMIT);
+  const more = items.length - shown.length;
+
+  return (
+    <ul className="board-card__subtasks" data-testid={testId}>
+      {shown.map((item) => (
+        <li key={item.id} className={item.done ? 'board-card__subtask--done' : undefined}>
+          {item.done ? <CheckSquare size={12} aria-label="done" /> : <Square size={12} aria-label="open" />}
+          <span>{item.text}</span>
+        </li>
+      ))}
+      {more > 0 && <li className="board-card__subtasks-more">+{more} more</li>}
+    </ul>
   );
 }
 

@@ -1076,6 +1076,55 @@
   cursor: pointer;
 }
 
+.board-card__subtasks {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  color: #2f3738;
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: left;
+}
+
+.board-card__subtasks li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.board-card__subtasks svg {
+  flex: none;
+  color: #9aa3a5;
+}
+
+.board-card__subtasks span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board-card__subtask--done {
+  color: #5c6467;
+}
+
+.board-card__subtask--done span {
+  text-decoration: line-through;
+}
+
+.board-card__subtask--done svg {
+  color: #2563eb;
+}
+
+.board-card__subtasks-more {
+  padding-left: 18px;
+  color: #5c6467;
+}
+
 .board-progress {
   display: block;
   height: 4px;

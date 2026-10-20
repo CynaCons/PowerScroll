@@ -1690,6 +1690,8 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Requirements and tests for the checklist [agent: claude]
 - [x] Run all checks and publish the showcase [agent: claude]
 - [ ] Release v0.88.0
+- [ ] Owner request: preview the subtasks directly on the card
+- [ ] Rerun checks and update the showcase
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.

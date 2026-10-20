@@ -46,6 +46,7 @@ canvas undo history.
 | REQ-BOARD-030 | Clicking a checklist item's text in the card overlay shall turn it into an input; Enter or leaving the input saves the new text as one `updated` event, Escape cancels the edit without closing the card, and blank or unchanged text saves nothing. Owner request 2026-10-20 | Must | T223 |
 | REQ-BOARD-031 | Checklist items shall reorder by dragging their grip handle (mouse, pen or touch) and by Alt+Up / Alt+Down on a focused item; the new order is saved with the card and keeps keyboard focus on the moved item. Owner request 2026-10-20 | Must | T223 |
 | REQ-BOARD-032 | A card with checklist items shall show a done/total progress bar on its face and in the overlay; the bar fills in proportion and turns green when every item is ticked. Cards without items show no bar. Owner request 2026-10-20 | Must | T223 |
+| REQ-BOARD-033 | A card face shall preview its first 5 checklist items in their order, each with an open or ticked box, ticked items struck through, text cut to one line, then "+N more" when there are more; the preview is read-only and clicking it opens the card. Cards without items show no preview. Owner request 2026-10-20 | Must | T223 |
 
 ## Traceability
 

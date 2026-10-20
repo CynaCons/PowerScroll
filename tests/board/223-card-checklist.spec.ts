@@ -1,6 +1,6 @@
 /**
  * Test 223: a card's checklist of subtasks - edit in place, reorder, progress.
- * Covers: REQ-BOARD-030, REQ-BOARD-031, REQ-BOARD-032
+ * Covers: REQ-BOARD-030, REQ-BOARD-031, REQ-BOARD-032, REQ-BOARD-033
  *
  * Owner request 2026-10-20: "within a powerboard, we need to be able to have a
  * ticket, with subtasks inside ... Checklist of tasks. Like Trello."
@@ -140,4 +140,25 @@ test('the card face and overlay show checklist progress, green when every item i
   await expect(bar).toHaveAttribute('aria-valuenow', '2');
   await expect(bar).toHaveClass(/board-progress--complete/);
   await expect(page.getByTestId('board-card-1')).toContainText('2/2');
+});
+
+test('the card face previews the first five subtasks, ticked ones struck through, then +N more', async ({ page }) => {
+  const boardId = await openCard(page, ['One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven']);
+  await runBridge(page, 'card_check', { boardId, card: 1, item: 2, done: true, actor: 'planner' });
+  await runBridge(page, 'card_create', { boardId, title: 'No subtasks', actor: 'planner' });
+  await expect(page.getByTestId('board-card-subtasks-2')).toHaveCount(0);
+
+  const preview = page.getByTestId('board-card-subtasks-1');
+  await expect(preview.locator('li')).toHaveText(['One', 'Two', 'Three', 'Four', 'Five', '+2 more']);
+  await expect(preview.locator('.board-card__subtask--done')).toHaveText(['Two']);
+
+  // Changes made in the card show on the face; clicking the preview opens the card.
+  await preview.getByText('Three').click();
+  const overlay = page.getByTestId('board-card-overlay');
+  await expect(overlay).toBeVisible();
+  await overlay.getByRole('checkbox', { name: 'Three' }).click();
+  await overlay.getByRole('button', { name: 'Remove Six' }).click();
+  await page.keyboard.press('Escape');
+  await expect(preview.locator('.board-card__subtask--done')).toHaveText(['Two', 'Three']);
+  await expect(preview.locator('li').last()).toHaveText('+1 more');
 });
