@@ -1682,7 +1682,7 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Release v0.87.0 [agent: claude]
 
 ### v0.88.0 — Board cards - a usable checklist of subtasks (2026-10-20) (current) (ACTIVE)
-**Goal:** A card holds a checklist of subtasks you can edit, reorder and track.
+**Goal:** Board cards get subtasks, smoother dragging, a clearer sidebar and label filters.
 - [x] Owner request: tickets with a checklist of subtasks on PowerScroll boards [agent: claude]
 - [x] Edit a checklist item's text in place [agent: claude]
 - [x] Reorder checklist items by drag and by keyboard [agent: claude]
@@ -1690,8 +1690,11 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Requirements and tests for the checklist [agent: claude]
 - [x] Run all checks and publish the showcase [agent: claude]
 - [ ] Release v0.88.0
-- [ ] Owner request: preview the subtasks directly on the card
-- [ ] Rerun checks and update the showcase
+- [x] Owner request: preview the subtasks directly on the card [agent: claude]
+- [x] Rerun checks and update the showcase [agent: claude]
+- [x] Owner request: the dragged card follows the pointer between columns [agent: claude]
+- [x] Owner request: redesign the card sidebar (status, assignee) [agent: claude]
+- [x] Owner request: filter the board by label [agent: claude]
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.
