@@ -998,13 +998,68 @@
 .board-checklist li {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-height: 28px;
+  border-radius: 4px;
   font-size: 13px;
 }
 
-.board-checklist input {
+.board-checklist li:hover {
+  background: #eef1f0;
+}
+
+.board-checklist__row--dragging {
+  background: #eef1f0;
+  box-shadow: 0 0 0 1px #c3cbc9;
+  opacity: 0.85;
+}
+
+.board-checklist input[type='checkbox'] {
   accent-color: #2563eb;
+}
+
+.board-checklist__handle {
+  display: inline-flex;
+  padding: 2px 0;
+  border: none;
+  background: transparent;
+  color: #9aa3a5;
+  cursor: grab;
+  touch-action: none;
+}
+
+.board-checklist li:hover .board-checklist__handle,
+.board-checklist__handle:focus-visible,
+.board-checklist__row--dragging .board-checklist__handle {
+  color: #5c6467;
+}
+
+.board-checklist__row--dragging .board-checklist__handle {
+  cursor: grabbing;
+}
+
+.board-checklist__text {
+  flex: 1;
+  min-width: 0;
+  padding: 3px 0;
+  border: none;
+  background: transparent;
+  color: #14181a;
+  font: inherit;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: text;
+}
+
+.board-checklist__edit {
+  flex: 1;
+  min-width: 0;
+  padding: 3px 6px;
+  border: 1px solid #2563eb;
+  border-radius: 4px;
+  color: #14181a;
+  font: inherit;
+  outline: none;
 }
 
 .board-checklist__done {
@@ -1012,13 +1067,38 @@
   text-decoration: line-through;
 }
 
-.board-checklist button {
+.board-checklist__remove {
   margin-left: auto;
   border: none;
   background: transparent;
   color: #5c6467;
   font-size: 17px;
   cursor: pointer;
+}
+
+.board-progress {
+  display: block;
+  height: 4px;
+  margin: 8px 0 2px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: #e2e7e6;
+}
+
+.board-overlay__section .board-progress {
+  margin: 4px 0 8px;
+}
+
+.board-progress__fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #2563eb;
+  transition: width 160ms ease;
+}
+
+.board-progress--complete .board-progress__fill {
+  background: #2f8a4f;
 }
 
 .board-notes {

@@ -398,9 +398,7 @@ export function setChecklistItem(
 ): BoardData {
   const found = requireLive(getCard(board, args.cardId));
 
-  if (!found.checklist.some((item) => item.id === args.itemId)) {
-    throw new BoardOperationError('NOT_FOUND', `Checklist item "${args.itemId}" was not found`);
-  }
+  const target = requireChecklistItem(found, args.itemId);
 
   return appendEvent(
     {
@@ -416,8 +414,80 @@ export function setChecklistItem(
     'checked',
     actor,
     now,
-    { cardId: args.cardId },
+    { cardId: args.cardId, text: target.text },
   );
+}
+
+/** Renames a checklist item. Blank text is refused rather than saved as an empty row. */
+export function renameChecklistItem(
+  board: BoardData,
+  args: { cardId: string; itemId: string; text: string },
+  actor: string,
+  now: number,
+): BoardData {
+  const found = requireLive(getCard(board, args.cardId));
+  const target = requireChecklistItem(found, args.itemId);
+  const text = args.text.trim();
+
+  if (!text || text === target.text) return board;
+
+  return appendEvent(
+    {
+      ...board,
+      cards: replaceCard(board, args.cardId, (current) => ({
+        ...current,
+        checklist: current.checklist.map((item) =>
+          item.id === args.itemId ? { ...item, text } : item,
+        ),
+        updatedAt: now,
+      })),
+    },
+    'updated',
+    actor,
+    now,
+    { cardId: args.cardId, text },
+  );
+}
+
+/** Moves a checklist item to `index` (clamped) in the card's list. */
+export function moveChecklistItem(
+  board: BoardData,
+  args: { cardId: string; itemId: string; index: number },
+  actor: string,
+  now: number,
+): BoardData {
+  const found = requireLive(getCard(board, args.cardId));
+  const target = requireChecklistItem(found, args.itemId);
+  const from = found.checklist.indexOf(target);
+  const to = Math.max(0, Math.min(found.checklist.length - 1, Math.round(args.index)));
+
+  if (from === to) return board;
+
+  const checklist = found.checklist.filter((item) => item.id !== args.itemId);
+  checklist.splice(to, 0, target);
+
+  return appendEvent(
+    {
+      ...board,
+      cards: replaceCard(board, args.cardId, (current) => ({
+        ...current,
+        checklist,
+        updatedAt: now,
+      })),
+    },
+    'updated',
+    actor,
+    now,
+    { cardId: args.cardId, text: target.text },
+  );
+}
+
+function requireChecklistItem(card: BoardCard, itemId: string): BoardCheckItem {
+  const item = card.checklist.find((entry) => entry.id === itemId);
+  if (!item) {
+    throw new BoardOperationError('NOT_FOUND', `Checklist item "${itemId}" was not found`);
+  }
+  return item;
 }
 
 export function removeChecklistItem(

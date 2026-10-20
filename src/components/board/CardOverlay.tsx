@@ -2,18 +2,16 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import type { BoardCard, BoardColumnId, BoardData } from '../../types/data';
 import {
-  addChecklistItem,
   addNote,
   archiveCard,
   claimCard,
   moveCard,
   releaseCard,
-  removeChecklistItem,
-  setChecklistItem,
   updateCard,
   BOARD_COLUMNS,
 } from '../../board/boardOps';
 import { markdownToHtml } from '../../utils/renderMarkdown';
+import { Checklist } from './Checklist';
 import { avatarColor, avatarInitial, collapseEditRuns, displayName, relativeTime, statusClass } from './boardUi';
 
 const ACTOR = 'you';
@@ -60,7 +58,6 @@ export function CardOverlay({ card, cards, events, edit, onClose }: CardOverlayP
   const restoreFocus = useRef<HTMLElement | null>(document.activeElement as HTMLElement);
   const [descriptionEditing, setDescriptionEditing] = useState(false);
   const [note, setNote] = useState('');
-  const [checklistItem, setChecklistDraft] = useState('');
   const [label, setLabel] = useState('');
   const [question, setQuestion] = useState(card.question ?? '');
   const [askingQuestion, setAskingQuestion] = useState(false);
@@ -129,6 +126,8 @@ export function CardOverlay({ card, cards, events, edit, onClose }: CardOverlayP
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
+      // Escape in a checklist item being edited cancels that edit, not the card.
+      if ((event.target as HTMLElement | null)?.closest?.('[data-checklist-edit]')) return;
       event.stopPropagation();
       onClose();
     };
@@ -349,54 +348,7 @@ export function CardOverlay({ card, cards, events, edit, onClose }: CardOverlayP
                 />
               )}
             </section>
-            <section className="board-overlay__section">
-              <div className="board-overlay__section-heading">
-                <h2>Checklist</h2>
-                <span>{card.checklist.filter((item) => item.done).length} of {card.checklist.length}</span>
-              </div>
-              <ul className="board-checklist">
-                {card.checklist.map((item) => (
-                  <li key={item.id}>
-                    <input
-                      type="checkbox"
-                      checked={item.done}
-                      aria-label={item.text}
-                      onChange={() => edit((board) => setChecklistItem(board, {
-                        cardId: card.id,
-                        itemId: item.id,
-                        done: !item.done,
-                      }, ACTOR, Date.now()))}
-                    />
-                    <span className={item.done ? 'board-checklist__done' : ''}>{item.text}</span>
-                    <button
-                      type="button"
-                      aria-label={`Remove ${item.text}`}
-                      onClick={() => edit((board) => removeChecklistItem(board, {
-                        cardId: card.id,
-                        itemId: item.id,
-                      }, ACTOR, Date.now()))}
-                    >
-                      ×
-                    </button>
-                  </li>
-                ))}
-              </ul>
-              <input
-                className="board-add-input"
-                aria-label="Add checklist item"
-                value={checklistItem}
-                placeholder="Add item"
-                onChange={(event) => setChecklistDraft(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key !== 'Enter' || !checklistItem.trim()) return;
-                  edit((board) => addChecklistItem(board, {
-                    cardId: card.id,
-                    text: checklistItem,
-                  }, ACTOR, Date.now()));
-                  setChecklistDraft('');
-                }}
-              />
-            </section>
+            <Checklist card={card} edit={edit} />
             <section className="board-overlay__section">
               <h2>Notes</h2>
               <div className="board-notes">

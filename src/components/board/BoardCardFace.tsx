@@ -1,4 +1,5 @@
 import { CheckSquare, MessageSquare } from 'lucide-react';
+import { ChecklistProgress } from './Checklist';
 import type { BoardCard } from '../../types/data';
 import {
   avatarColor,
@@ -86,6 +87,7 @@ export function BoardCardFace({
         </>
       )}
       <strong className="board-card__title">{card.title}</strong>
+      <ChecklistProgress items={card.checklist} testId={`board-card-progress-${card.number}`} />
       <footer className="board-card__footer">
         <span
           className="board-avatar board-avatar--small"

@@ -43,6 +43,9 @@ canvas undo history.
 | REQ-BOARD-027 | Clicking an agent chip body shall toggle a transient spotlight on that name (`aria-pressed`, `data-spotlight` on the board): cards whose assignee or createdBy is that name stay at full opacity with a 2 px ring in the agent's colour; all other cards dim to about 0.35 opacity. Columns stay in place. Clicking the same chip, another chip, or Escape (when no overlay is open) shall change or clear it. Spotlight shall combine with the All / Needs me filter; dimmed cards stay clickable; active highlighting still shows on top. | Must | T215 |
 | REQ-BOARD-028 | The activity panel shall collapse to a 44 px rail from a button in its header, giving the columns the space; the rail shows the live dot, the count of events that arrived while collapsed, and expands on click (the count then clears). The collapsed state is a device preference (localStorage), not saved in the notebook. Owner request 2026-10-14 | Must | T216 |
 | REQ-BOARD-029 | Text typed in the card overlay (title, description, assignee) shall stay a draft until the overlay closes (X, Escape, backdrop, Archive, leaving the board or the tab going hidden); closing then writes at most one `updated` event for title and description together and one `claimed`/`released` for the assignee, and nothing if the text is unchanged. Typing shall never write an event per keystroke. Enter in the title or assignee ends editing without saving early. Card history and the activity list shall show a run of adjacent `updated` events by the same actor on the same card as one line. Owner report 2026-10-14 | Must | T218 |
+| REQ-BOARD-030 | Clicking a checklist item's text in the card overlay shall turn it into an input; Enter or leaving the input saves the new text as one `updated` event, Escape cancels the edit without closing the card, and blank or unchanged text saves nothing. Owner request 2026-10-20 | Must | T223 |
+| REQ-BOARD-031 | Checklist items shall reorder by dragging their grip handle (mouse, pen or touch) and by Alt+Up / Alt+Down on a focused item; the new order is saved with the card and keeps keyboard focus on the moved item. Owner request 2026-10-20 | Must | T223 |
+| REQ-BOARD-032 | A card with checklist items shall show a done/total progress bar on its face and in the overlay; the bar fills in proportion and turns green when every item is ticked. Cards without items show no bar. Owner request 2026-10-20 | Must | T223 |
 
 ## Traceability
 
@@ -55,3 +58,4 @@ canvas undo history.
 - T215 — `tests/board/215-agent-spotlight.spec.ts`
 - T216 — `tests/board/216-activity-collapse.spec.ts`
 - T218 — `tests/board/218-card-drafts.spec.ts`
+- T223 — `tests/board/223-card-checklist.spec.ts`
