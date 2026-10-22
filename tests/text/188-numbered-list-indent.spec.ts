@@ -92,7 +92,8 @@ test.describe('188 - Numbered list indent helpers (REQ-TEXT-033)', () => {
     expect(padded.startsWith('1. First\n')).toBe(true);
     expect(padded.split('\n')[1].match(/^ +/)?.[0].length).toBeGreaterThanOrEqual(3);
     const html = markdownToHtml('1. First\n  2. Nested');
-    expect(html).toMatch(/<ol>\s*<li>First\s*<ol/i);
+    // The renderer is the text engine's own DOM (REQ-TEXT-054): rows carry a paragraph.
+    expect(html).toMatch(/<ol[^>]*>\s*<li>(?:<p>)?First(?:<\/p>)?\s*<ol/i);
   });
 
   test('normalizeListIndents does not touch fenced code', () => {

@@ -1,24 +1,24 @@
 /**
  * Shared markdown → HTML pipeline for text nodes.
  *
- * Extracted so the canvas renderer (TextNode) and the agent bridge measure
- * blocks through exactly the same path — if the two ever diverge, agent-placed
- * blocks would be laid out against heights the renderer disagrees with.
+ * The finished block, the board card description and the agent bridge's
+ * height measurement all go through this one path, and it is the same
+ * document model the editor shows live (docs/DESIGN_TEXT.md): markdown is
+ * parsed into the text schema, drawn by the schema's own DOM serializer and
+ * then sanitised. If the two ever diverged, text would move when editing
+ * starts and agent-placed blocks would be laid out against heights the
+ * renderer disagrees with.
  */
 
 import type { CSSProperties } from 'react';
-import { marked } from 'marked';
-import DOMPurify from 'dompurify';
+import { DOMSerializer } from 'prosemirror-model';
 import type { TextNodeData } from '../types/data';
-import { preprocessMath, restoreMath } from './mathParser';
-import { normalizeListIndents } from './listIndent';
+import { parseMarkdown } from '../text/parse';
+import { schema, sanitizeHtml } from '../text/schema';
+import { docToHtmlString } from '../text/htmlString';
 import { MIN_TEXT_HEIGHT, MIN_TEXT_WIDTH } from './pageLayout';
 
-// Configure marked for GFM + task lists
-marked.setOptions({
-  breaks: true,
-  gfm: true,
-});
+export { neutralizeSetextHeadings } from './setext';
 
 /** CSS class the rendered markdown container carries on the canvas. */
 export const MARKDOWN_CLASS = 'powernote-markdown';
@@ -37,6 +37,9 @@ export const MARKDOWN_LINE_HEIGHT = '1.4';
  * MUST apply the same styles or it will get a different answer than the
  * renderer does. (Measuring with only the class attached under-reports by
  * ~12px on a heading, which is enough to overlap the block below it.)
+ *
+ * `fontStyle` is only read for blocks saved before the redesign that still
+ * carry a whole-block bold or italic (REQ-TEXT-052); it is never written.
  */
 export function markdownBoxStyle(
   data: Pick<TextNodeData, 'fontSize' | 'fontFamily' | 'fontStyle' | 'fill'>,
@@ -54,6 +57,7 @@ export function markdownBoxStyle(
     color: color ?? data.fill,
     padding: MARKDOWN_PADDING,
     lineHeight: MARKDOWN_LINE_HEIGHT,
+    whiteSpace: 'pre-wrap',
     wordWrap: 'break-word',
     overflowWrap: 'break-word',
     pointerEvents: 'none',
@@ -61,70 +65,22 @@ export function markdownBoxStyle(
   };
 }
 
-const DASH_OR_EQUALS_LINE = /^(\s*)(-+|=+)[ \t\u00a0]*$/;
+let domSerializer: DOMSerializer | null = null;
 
 /**
- * Stop a line of '-' or '=' from turning the line above into a heading.
- *
- * Markdown reads 'two\n-' as a level-2 heading "two" (a setext heading). In a
- * note that is never what was meant: it happens when a new list row holds only
- * its dash (Tab on an empty bullet gives '- two\n  - ') or when a dash is typed
- * under a line. Headings come from '#'. So, after a non-blank line:
- * - a lone '-' is an empty list row, as typed;
- * - '---' or longer is a horizontal rule;
- * - '--', '=' and other short runs are plain text.
- * Code fences are left alone. Source is not mutated: this runs on the copy
- * handed to marked.
- */
-export function neutralizeSetextHeadings(markdown: string): string {
-  const lines = markdown.split('\n');
-  let inFence = false;
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (/^\s*(```|~~~)/.test(line)) {
-      inFence = !inFence;
-      continue;
-    }
-    if (inFence || i === 0 || /^\s*$/.test(lines[i - 1])) continue;
-    const match = line.match(DASH_OR_EQUALS_LINE);
-    if (!match) continue;
-    const [, indent, run] = match;
-    if (run === '-') lines[i] = `${indent}- \u200b`;
-    else if (run[0] === '-' && run.length >= 3) lines[i] = `\n${line}`;
-    else lines[i] = `${indent}\\${run}`;
-  }
-  return lines.join('\n');
-}
-
-/**
- * Render markdown to the HTML shown inside a text node: math extracted and
- * KaTeX-rendered, GFM on, and task-list checkboxes left clickable.
+ * Render markdown to the HTML shown inside a text node: the same DOM the
+ * editor shows (headings, lists, clickable task boxes, KaTeX math, links),
+ * then sanitised so nothing in it can run script (REQ-TEXT-053).
  */
 export function markdownToHtml(text: string): string {
   if (!text) return '';
-  // 1) Extract $$...$$ and $...$ math blocks, replace with placeholders
-  const { text: textWithoutMath, blocks } = preprocessMath(text);
-  // 2) Pad under-indented numbered children so Tab's 2-space habit still nests
-  const withNestedLists = normalizeListIndents(neutralizeSetextHeadings(textWithoutMath));
-  // 3) Run marked on the cleaned text
-  let html = marked.parse(withNestedLists) as string;
-  // 4) Restore math placeholders with KaTeX-rendered HTML
-  html = restoreMath(html, blocks);
-  // 5) Remove disabled attribute from task-list checkboxes so clicks work
-  html = html
-    .replace(/<input\s+disabled=""\s+type="checkbox"/g, '<input type="checkbox"')
-    .replace(/<input\s+checked=""\s+disabled=""\s+type="checkbox"/g, '<input checked="" type="checkbox"');
-  // 6) Strip anything that can run script (REQ-TEXT-053): blocks come from
-  // files and agents, and markdown passes raw HTML through.
-  return sanitize(html);
-}
-
-/** Page links (powernote://) on top of DOMPurify's default safe schemes. */
-const SAFE_URI = /^(?:(?:(?:f|ht)tps?|mailto|tel|powernote):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i;
-
-function sanitize(html: string): string {
-  if (typeof window === 'undefined') return html;
-  return DOMPurify.sanitize(html, { ALLOWED_URI_REGEXP: SAFE_URI, FORBID_TAGS: ['style', 'form'] });
+  const doc = parseMarkdown(text);
+  // Outside a page (unit tests, tooling) the same specs are written out as a string.
+  if (typeof document === 'undefined') return docToHtmlString(doc);
+  domSerializer ??= DOMSerializer.fromSchema(schema);
+  const host = document.createElement('div');
+  host.appendChild(domSerializer.serializeFragment(doc.content, { document }));
+  return sanitizeHtml(host.innerHTML);
 }
 
 /**
@@ -160,6 +116,7 @@ export function measureMarkdownHeight(
     fontStyle: String(style.fontStyle),
     padding: `${MARKDOWN_PADDING}px`,
     lineHeight: MARKDOWN_LINE_HEIGHT,
+    whiteSpace: 'pre-wrap',
     wordWrap: 'break-word',
     overflowWrap: 'break-word',
     // Keep it out of sight and out of the layout flow.
