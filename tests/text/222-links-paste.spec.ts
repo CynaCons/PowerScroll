@@ -8,7 +8,7 @@
  */
 import { expect, test, type Page } from '@playwright/test';
 import {
-  activateTool, clickCanvas, commitEditor, editorSelection, editorValue, expectEditorValue, fillEditor,
+  activateTool, clickCanvas, commitEditor, editorSelection, expectEditorValue, fillEditor,
   selectInEditor, textEditor, waitForCanvasReady,
 } from '../helpers';
 
@@ -32,15 +32,20 @@ async function paste(page: Page, data: { html?: string; text: string }) {
   }, data);
 }
 
-test('Ctrl+K links the selection and selects the address; pasting a URL over a word links it', async ({ page }) => {
+test('Ctrl+K opens the link box for the selection; pasting a URL over a word links it', async ({ page }) => {
+  // REQ-TEXT-061 (supersedes REQ-TEXT-045): Ctrl+K asks for the address in a
+  // small box; Enter applies it to the selected words.
   await editing(page, 'see the docs');
   await selectInEditor(page, 8, 12);
   await page.keyboard.press('Control+k');
-  await expectEditorValue(page, 'see the [docs](https://)');
-  const [from, to] = await editorSelection(page);
-  expect((await editorValue(page))!.slice(from, to)).toBe('https://');
+  await expect(page.getByTestId('link-box-url')).toBeFocused();
   await page.keyboard.type('https://example.com');
+  await page.keyboard.press('Enter');
   await expectEditorValue(page, 'see the [docs](https://example.com)');
+  await expect(textEditor(page)).toBeFocused();
+  const [from, to] = await editorSelection(page);
+  expect(to).toBe(12);
+  expect(from).toBeLessThanOrEqual(12);
 
   await fillEditor(page, 'read this');
   await selectInEditor(page, 5, 9);

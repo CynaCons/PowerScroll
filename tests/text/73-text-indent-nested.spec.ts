@@ -66,15 +66,16 @@ test.describe('73 - Text Indent for Nested Lists', () => {
     await activateTool(page, 'text');
     await clickCanvas(page, 300, 200);
 
-    await fillEditor(page, '- item');
+    // REQ-TEXT-058: Tab nests the row under the row above, wherever the caret is in it.
+    await fillEditor(page, '- parent\n- item');
     await page.waitForTimeout(100);
 
-    // Cursor in the middle of "item"
-    await selectInEditor(page, 4); // After "- it"
+    // Cursor in the middle of "item" (offsets count the visible text)
+    await selectInEditor(page, 'parent\nit'.length);
 
     await textEditor(page).press('Tab');
     await page.waitForTimeout(100);
 
-    await expectEditorValue(page, '  - item');
+    await expectEditorValue(page, '- parent\n  - item');
   });
 });

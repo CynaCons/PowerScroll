@@ -62,7 +62,8 @@ test.describe('84 - Extended inline formatting (REQ-TEXT-025..027, REQ-TOOL-007)
     expect(await editorValue(page)).toBe('Hello ~~brave~~ world');
   });
 
-  test('clicking Bold with editor closed still toggles the whole-node fontStyle', async ({ page }) => {
+  test('clicking Bold with the editor closed bolds all the text of the selected block', async ({ page }) => {
+    // REQ-TEXT-050/052: no whole-block style; the text itself is formatted.
     // Commit the edit so the editor closes but the node stays selected
     await commitEditor(page);
     await page.waitForTimeout(200);
@@ -74,8 +75,7 @@ test.describe('84 - Extended inline formatting (REQ-TEXT-025..027, REQ-TOOL-007)
     await page.waitForTimeout(150);
 
     store = await getCanvasStore(page);
-    expect(store.nodes[0].data.fontStyle).toContain('bold');
-    // The committed text content must not have markdown markers added
-    expect(store.nodes[0].data.text).toBe('Hello brave world');
+    expect(store.nodes[0].data.fontStyle).toBe('normal');
+    expect(store.nodes[0].data.text).toBe('**Hello brave world**');
   });
 });

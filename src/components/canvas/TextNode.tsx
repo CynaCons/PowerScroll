@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useMemo } from 'react';
+import { useRef, useState, useEffect, useLayoutEffect, useMemo } from 'react';
 import { Group, Rect } from 'react-konva';
 import { Html } from 'react-konva-utils';
 import type Konva from 'konva';
@@ -21,6 +21,7 @@ import { multiDragStart, multiDragMove, multiDragEnd, multiDragBounds } from '..
 import { TextEditor } from './TextEditor';
 import { calculateObjectSnap, calculateScrollSnap, type SnapGuide } from './SnapGuides';
 import { markdownToHtml, markdownBoxStyle } from '../../utils/renderMarkdown';
+import { toggleTaskAt } from '../../text/doc';
 import { reflowAfterHeightChange } from '../../utils/columnReflow';
 
 // Handle powernote:// internal links
@@ -41,19 +42,6 @@ function handleInternalLink(href: string) {
   const page = section?.pages.find((p) => p.id === pageId);
   canvas.loadPageNodes(page?.nodes ?? []);
   useDrawStore.getState().loadPageStrokes(page?.strokes ?? []);
-}
-
-// Toggle a checkbox in raw markdown text by its index
-function toggleCheckbox(text: string, checkboxIndex: number): string {
-  let count = 0;
-  return text.replace(/- \[([ x])\]/g, (match, state) => {
-    if (count === checkboxIndex) {
-      count++;
-      return state === 'x' ? '- [ ]' : '- [x]';
-    }
-    count++;
-    return match;
-  });
 }
 
 interface TextNodeProps {
@@ -86,8 +74,10 @@ export function TextNode({ node, isSelected, onSelect, stageScale, autoEdit, onS
 
   // Height auto-sizes to laid-out content at the intentional width.
   // Width is intentional (page default or user resize) — never shrink-to-content.
-  useEffect(() => {
-    const timer = setTimeout(() => {
+  // Measured right after the paint so the click area is never stale, and
+  // again a moment later once fonts and math have settled.
+  useLayoutEffect(() => {
+    const measure = () => {
       if (!htmlRef.current) return;
       const h = Math.max(MIN_TEXT_HEIGHT, htmlRef.current.offsetHeight);
       if (Math.abs(h - (node.height || 0)) > 2) {
@@ -97,9 +87,22 @@ export function TextNode({ node, isSelected, onSelect, stageScale, autoEdit, onS
           updateNodeSilent(node.id, { height: h });
         }
       }
-    }, 60);
+    };
+    measure();
+    const timer = setTimeout(measure, 60);
     return () => clearTimeout(timer);
   }, [renderedHtml, node.id, node.width, node.height, updateNodeSilent]);
+
+  // Enter / F2 on the selected block opens it with the caret at the end (REQ-TEXT-059).
+  useEffect(() => {
+    const open = (e: Event) => {
+      if ((e as CustomEvent<string>).detail !== node.id) return;
+      setCaretAt(null);
+      setIsEditing(true);
+    };
+    window.addEventListener('powerscroll:open-text-edit', open);
+    return () => window.removeEventListener('powerscroll:open-text-edit', open);
+  }, [node.id]);
 
   const clampTextWidth = (w: number) =>
     Math.min(MAX_TEXT_WIDTH, Math.max(MIN_TEXT_WIDTH, w));
@@ -206,11 +209,16 @@ export function TextNode({ node, isSelected, onSelect, stageScale, autoEdit, onS
     }
   };
 
-  const handleFinishEdit = (newText: string, escape?: boolean) => {
+  const handleFinishEdit = (newText: string, escape?: boolean, changed?: boolean) => {
     setIsEditing(false);
-    updateNode(node.id, {
-      data: { ...data, text: newText },
-    });
+    // Formatting lives in the text: an edited block drops any whole-block
+    // bold/italic of old files, now carried as marks (REQ-TEXT-052). An
+    // unchanged session leaves the data exactly as it was (REQ-TEXT-064).
+    if (changed || newText !== data.text) {
+      updateNode(node.id, {
+        data: { ...data, text: newText, fontStyle: 'normal' },
+      });
+    }
     undoBatchEnd(); // End batch started on text placement (if any)
     // Escape lets go of the block (REQ-TEXT-048): nothing stays selected, so
     // the next press drags it rather than landing on its handles. The editor
@@ -301,7 +309,7 @@ export function TextNode({ node, isSelected, onSelect, stageScale, autoEdit, onS
               if (checkboxes) {
                 const idx = Array.from(checkboxes).indexOf(target as HTMLInputElement);
                 if (idx >= 0) {
-                  const newText = toggleCheckbox(data.text, idx);
+                  const newText = toggleTaskAt(data.text, idx);
                   updateNode(node.id, { data: { ...data, text: newText } });
                 }
               }

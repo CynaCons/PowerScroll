@@ -21,33 +21,38 @@ async function newBlock(page: Page) {
   await expect(textEditor(page)).toBeFocused();
 }
 
-/** Computed style of the editor span holding exactly `text`. */
+/** Computed style of the element in the editor whose own text is exactly `text`. */
 function spanStyle(page: Page, text: string) {
   return page.evaluate((t) => {
-    const span = [...document.querySelectorAll('[data-testid="text-editor"] span')].find((s) => s.textContent === t);
-    if (!span) return null;
-    const cs = getComputedStyle(span);
+    const el = [...document.querySelectorAll('[data-testid="text-editor"] *')].find((s) => s.textContent === t);
+    if (!el) return null;
+    const cs = getComputedStyle(el);
     return { weight: cs.fontWeight, size: parseFloat(cs.fontSize), style: cs.fontStyle, color: cs.color };
   }, text);
 }
 
-test('bold, italic and headings are drawn styled while editing, markers dimmed', async ({ page }) => {
+test('bold, italic and headings are drawn styled while editing, no markers shown', async ({ page }) => {
+  // REQ-TEXT-054 (supersedes REQ-TEXT-038): the editor shows the block as it
+  // will render, with no markdown markers; the stored text stays markdown.
   await newBlock(page);
   await page.keyboard.type('# Plan');
   await page.keyboard.press('Enter');
-  await page.keyboard.type('**bold** and *soft*');
+  // A closed `**bold**` formats as typed (REQ-TEXT-056); a single `*` never does, so italic comes from Ctrl+I.
+  await page.keyboard.type('**bold** and ');
+  await page.keyboard.press('Control+i');
+  await page.keyboard.type('soft');
+  await page.keyboard.press('Control+i');
 
   const body = await page.evaluate(() => parseFloat(getComputedStyle(document.querySelector('[data-testid="text-editor"]')!).fontSize));
-  const heading = await spanStyle(page, ' Plan');
+  const heading = await spanStyle(page, 'Plan');
   expect(heading!.size).toBeGreaterThan(body * 1.5);
   expect(Number(heading!.weight)).toBeGreaterThanOrEqual(700);
   expect(Number((await spanStyle(page, 'bold'))!.weight)).toBeGreaterThanOrEqual(700);
   expect((await spanStyle(page, 'soft'))!.style).toBe('italic');
 
-  // The markers are there (the text is markdown) but drawn fainter than the words.
-  const marker = await spanStyle(page, '**');
-  const word = await spanStyle(page, 'bold');
-  expect(marker!.color).not.toBe(word!.color);
+  // No markers on screen; the text is still markdown underneath.
+  expect(await textEditor(page).innerText()).not.toMatch(/[#*]/);
+  await expectEditorValue(page, '# Plan\n\n**bold** and *soft*');
 
   await commitEditor(page);
   const md = page.locator('.powernote-markdown').first();

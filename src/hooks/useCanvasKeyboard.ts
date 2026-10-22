@@ -10,6 +10,7 @@ import { getGroupMembers } from '../utils/groups';
 import { redoActive, undoActive } from '../utils/undoOps';
 import { recomputeBoundArrows } from '../utils/arrowBinding';
 import { SHAPE_KEYS } from '../components/toolbar/shapeTypes';
+import { formatSelectedTextBlocks } from '../text/canvasFormat';
 
 /** Holding an arrow key coalesces repeats into one undo entry. */
 const NUDGE_COALESCE_MS = 300;
@@ -111,6 +112,29 @@ export function useCanvasKeyboard(
           toolStore.setTool('select');
         }
         clearSelection();
+      }
+
+      // Ctrl+B / Ctrl+I / Ctrl+U: format all the text of the selected text blocks (REQ-TEXT-050)
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && ['b', 'i', 'u'].includes(e.key.toLowerCase())) {
+        const key = e.key.toLowerCase();
+        const kind = key === 'b' ? 'bold' : key === 'i' ? 'italic' : 'underline';
+        if (formatSelectedTextBlocks(kind)) {
+          e.preventDefault();
+          return;
+        }
+      }
+
+      // Enter / F2 on one selected text block opens it with the caret at the end (REQ-TEXT-059)
+      if ((e.key === 'Enter' || e.key === 'F2') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const canvas = useCanvasStore.getState();
+        if (canvas.selectedNodeIds.length === 1) {
+          const only = canvas.nodes.find((n) => n.id === canvas.selectedNodeIds[0]);
+          if (only?.type === 'text' && !(only.groupId && !useGroupStore.getState().editingGroupId)) {
+            e.preventDefault();
+            window.dispatchEvent(new CustomEvent('powerscroll:open-text-edit', { detail: only.id }));
+            return;
+          }
+        }
       }
 
       // Ctrl+G: group / Ctrl+Shift+G: ungroup

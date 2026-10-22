@@ -25,7 +25,7 @@ test.describe('92 - Text Page Default Width + Resize (REQ-TEXT-020/028/029)', ()
     expect(store.nodes[0].width).toBe(DEFAULT_TEXT_WIDTH);
 
     // The editor's outer box includes its host's borders and padding.
-    const editorWidth = await textEditor(page).locator('xpath=ancestor::div[contains(@class, "cm-editor")]').evaluate(
+    const editorWidth = await textEditor(page).locator('xpath=ancestor::div[contains(@class, "powernote-text-editor")]').evaluate(
       (el) => (el as HTMLElement).offsetWidth,
     );
     expect(editorWidth).toBe(DEFAULT_TEXT_WIDTH + 4);

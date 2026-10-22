@@ -222,7 +222,7 @@ export async function preloadModule(page: Page, path: string): Promise<void> {
   await page.waitForFunction((p) => Boolean((window as any).__mods?.[p]), path);
 }
 
-// ── Text-block editor (CodeMirror) ───────────────────────────────────────
+// ── Text-block editor (ProseMirror) ──────────────────────────────────────
 // The editor is a contenteditable, not a textarea: drive it with the real
 // keyboard, and read/set its markdown through the app's editor hook.
 

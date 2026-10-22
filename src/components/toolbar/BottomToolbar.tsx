@@ -41,6 +41,9 @@ export function BottomToolbar() {
   ).length;
   const allSelectedAreImages =
     selectedNodeIds.length > 1 && selectedImageCount === selectedNodeIds.length;
+  // Every selected text block gets the text toolbar, so Bold can format them all (REQ-TEXT-050).
+  const selectedTextNodes = nodes.filter((n) => selectedNodeIds.includes(n.id) && n.type === 'text');
+  const allSelectedAreText = selectedNodeIds.length > 0 && selectedTextNodes.length === selectedNodeIds.length;
 
   // In select mode: show toolbar for selected node type, or last creation tool's toolbar
   const effectiveTool = activeTool === 'select' ? lastToolbarTool : activeTool;
@@ -49,7 +52,7 @@ export function BottomToolbar() {
   const isDrawContext = effectiveTool === 'draw';
   const isShapeContext = effectiveTool === 'shape' || !!selectedShapeNode;
   const isImageContext = effectiveTool === 'image' || !!selectedImageNode || allSelectedAreImages;
-  const isTextContext = effectiveTool === 'text' || !!selectedTextNode;
+  const isTextContext = effectiveTool === 'text' || !!selectedTextNode || allSelectedAreText;
 
   // The group segment is deliberately outside the context chain below. A
   // diagram matches no context at all, so gating it the same way is what left
@@ -113,20 +116,21 @@ export function BottomToolbar() {
     );
   }
 
-  const currentOptions: TextOptions = selectedTextNode
+  const firstTextNode = selectedTextNode ?? (allSelectedAreText ? selectedTextNodes[0] : null);
+  const currentOptions: TextOptions = firstTextNode
     ? {
-        fontSize: (selectedTextNode.data as any).fontSize,
-        fontFamily: (selectedTextNode.data as any).fontFamily,
-        fontStyle: (selectedTextNode.data as any).fontStyle,
-        fill: (selectedTextNode.data as any).fill,
+        fontSize: (firstTextNode.data as any).fontSize,
+        fontFamily: (firstTextNode.data as any).fontFamily,
+        fontStyle: (firstTextNode.data as any).fontStyle,
+        fill: (firstTextNode.data as any).fill,
       }
     : textOptions;
 
   const handleChange = (updates: Partial<TextOptions>) => {
-    if (selectedTextNode) {
-      updateNode(selectedTextNode.id, {
-        data: { ...selectedTextNode.data, ...updates },
-      });
+    if (firstTextNode) {
+      for (const node of selectedTextNodes) {
+        updateNode(node.id, { data: { ...node.data, ...updates } });
+      }
     } else {
       setTextOptions(updates);
     }
@@ -134,7 +138,7 @@ export function BottomToolbar() {
 
   return (
     <div className="bottom-toolbar" data-testid="bottom-toolbar">
-      <TextToolbar options={currentOptions} onChange={handleChange} />
+      <TextToolbar options={currentOptions} onChange={handleChange} selectedTextNodes={selectedTextNodes} />
       {group}
     </div>
   );

@@ -96,7 +96,8 @@ test.describe('83 - Partial bold/italic (REQ-TEXT-022/023, REQ-TOOL-007)', () =>
     expect(store.nodes[0].data.fontStyle).toBe('normal');
   });
 
-  test('toolbar bold still toggles the whole block when not editing', async ({ page }) => {
+  test('toolbar bold on a selected block bolds all of its text, never a block style', async ({ page }) => {
+    // REQ-TEXT-050/052 (supersede the block-wide fontStyle): formatting lives in the text.
     await page.goto('/');
     await waitForCanvasReady(page);
 
@@ -115,9 +116,8 @@ test.describe('83 - Partial bold/italic (REQ-TEXT-022/023, REQ-TOOL-007)', () =>
     await page.waitForTimeout(100);
 
     const store = await getCanvasStore(page);
-    // Legacy behavior preserved: whole-block fontStyle becomes bold
-    expect(store.nodes[0].data.fontStyle).toContain('bold');
-    // Text content is untouched (no markdown markers injected)
-    expect(store.nodes[0].data.text).toBe('hello');
+    // All of the block's text is bold; no hidden whole-block style
+    expect(store.nodes[0].data.fontStyle).toBe('normal');
+    expect(store.nodes[0].data.text).toBe('**hello**');
   });
 });

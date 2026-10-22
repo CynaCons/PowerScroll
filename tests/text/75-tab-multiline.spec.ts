@@ -15,33 +15,34 @@ test.describe('75 - Tab Multi-line Selection', () => {
     await activateTool(page, 'text');
     await clickCanvas(page, 300, 200);
 
-    const text = '- item1\n- item2\n- item3';
+    // REQ-TEXT-058: Tab nests the selected rows under the row above them.
+    const text = '- top\n- item1\n- item2\n- item3';
     await fillEditor(page, text);
     await page.waitForTimeout(100);
 
-    // Select all three lines
-    await selectInEditor(page, 0, text.length);
+    // Select the three rows under "top" (offsets count the visible text)
+    await selectInEditor(page, 'top\n'.length, 'top\nitem1\nitem2\nitem3'.length);
 
     await textEditor(page).press('Tab');
     await page.waitForTimeout(100);
 
-    await expectEditorValue(page, '  - item1\n  - item2\n  - item3');
+    await expectEditorValue(page, '- top\n  - item1\n  - item2\n  - item3');
   });
 
   test('Shift+Tab un-indents all selected lines', async ({ page }) => {
     await activateTool(page, 'text');
     await clickCanvas(page, 300, 200);
 
-    const text = '  - item1\n  - item2\n  - item3';
+    const text = '- top\n  - item1\n  - item2\n  - item3';
     await fillEditor(page, text);
     await page.waitForTimeout(100);
 
-    await selectInEditor(page, 0, text.length);
+    await selectInEditor(page, 'top\n'.length, 'top\nitem1\nitem2\nitem3'.length);
 
     await textEditor(page).press('Shift+Tab');
     await page.waitForTimeout(100);
 
-    await expectEditorValue(page, '- item1\n- item2\n- item3');
+    await expectEditorValue(page, '- top\n- item1\n- item2\n- item3');
   });
 
   test('Tab indents checkbox lines in multi-line selection', async ({ page }) => {
@@ -52,8 +53,8 @@ test.describe('75 - Tab Multi-line Selection', () => {
     await fillEditor(page, text);
     await page.waitForTimeout(100);
 
-    // Select the middle 2 lines (from start of line 2 to end of line 3)
-    await selectInEditor(page, text.indexOf('\n') + 1, text.length);
+    // Select the last 2 rows (offsets count the visible text: "todo1\ndone\ntodo2")
+    await selectInEditor(page, 'todo1\n'.length, 'todo1\ndone\ntodo2'.length);
 
     await textEditor(page).press('Tab');
     await page.waitForTimeout(100);
@@ -82,16 +83,16 @@ test.describe('75 - Tab Multi-line Selection', () => {
     await activateTool(page, 'text');
     await clickCanvas(page, 300, 200);
 
-    await fillEditor(page, '- item');
+    await fillEditor(page, '- parent\n- item');
     await page.waitForTimeout(100);
 
-    // Select "item" (partial single line)
-    await selectInEditor(page, 2, 6); // "item"
+    // Select "item" (partial single row; offsets count the visible text)
+    await selectInEditor(page, 'parent\n'.length, 'parent\nitem'.length);
 
     await textEditor(page).press('Tab');
     await page.waitForTimeout(100);
 
-    // Single-line partial selection: indent whole line
-    await expectEditorValue(page, '  - item');
+    // Single-row partial selection: the whole row nests, the text stays (REQ-TEXT-058)
+    await expectEditorValue(page, '- parent\n  - item');
   });
 });

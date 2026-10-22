@@ -222,3 +222,74 @@ button:disabled {
   background: #f9fafb;
   font-weight: 600;
 }
+
+/* ── Text blocks: one DOM for the finished block and the live editor ─────── */
+.powernote-markdown li.task-list-item {
+  list-style: none;
+  position: relative;
+}
+.powernote-markdown li.task-list-item > input[type="checkbox"] {
+  position: absolute;
+  left: -1.4em;
+  top: 0.25em;
+  margin: 0;
+}
+.powernote-markdown .powernote-math--display {
+  display: block;
+  text-align: center;
+}
+.powernote-markdown .powernote-html {
+  display: inline;
+}
+.powernote-markdown div.powernote-html {
+  display: block;
+}
+.powernote-markdown p.powernote-placeholder::before {
+  content: attr(data-placeholder);
+  color: #94a3b8;
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+.powernote-text-editor .powernote-markdown {
+  position: relative;
+}
+.powernote-text-editor .powernote-markdown a {
+  cursor: text;
+}
+.powernote-text-editor .ProseMirror-hideselection *::selection {
+  background: transparent;
+}
+.powernote-text-editor .ProseMirror-selectednode {
+  outline: 2px solid #93c5fd;
+}
+.powernote-link-box {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  margin-top: 4px;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: #ffffff;
+  border: 1px solid #c3cbc9;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 20;
+  font-size: 13px;
+}
+.powernote-link-box input {
+  width: 260px;
+  padding: 3px 6px;
+  border: 1px solid #c3cbc9;
+  border-radius: 3px;
+  font: inherit;
+}
+.powernote-link-box button {
+  padding: 3px 8px;
+  border: 1px solid #c3cbc9;
+  border-radius: 3px;
+  background: #eef1f0;
+  cursor: pointer;
+  font: inherit;
+}

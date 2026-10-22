@@ -35,26 +35,32 @@ test.describe('32 - Text Editor Features (REQ-TEXT-017, REQ-TEXT-018)', () => {
     expect(value).toContain('\n- '); // Auto-continued bullet
   });
 
-  test('Shift+Tab removes indent from current line', async ({ page }) => {
+  test('Shift+Tab un-nests the current list row', async ({ page }) => {
+    // REQ-TEXT-058: Tab/Shift+Tab nest and un-nest list rows; on an ordinary
+    // line Tab changes nothing visible (never an indent that becomes code).
     await activateTool(page, 'text');
     await clickCanvas(page, 400, 300);
 
     await expect(textEditor(page)).toBeVisible();
 
-    // Type an indented line: first indent with Tab, then type content
-    await fillEditor(page, '');
-    await textEditor(page).press('Tab'); // adds 2 spaces
-    await textEditor(page).pressSequentially('indented');
+    await fillEditor(page, '- parent\n- child');
+    await textEditor(page).press('Tab'); // nests "child" under "parent"
     await page.waitForTimeout(100);
 
     let value = await editorValue(page);
-    expect(value).toMatch(/^\s{2}indented/); // starts with 2 spaces
+    expect(value).toBe('- parent\n  - child');
 
-    // Now Shift+Tab to remove the indent
+    // Now Shift+Tab to un-nest it
     await textEditor(page).press('Shift+Tab');
     await page.waitForTimeout(100);
 
     value = await editorValue(page);
-    expect(value).toBe('indented'); // indent removed
+    expect(value).toBe('- parent\n- child');
+
+    // Tab on an ordinary line: nothing visible changes.
+    await fillEditor(page, 'plain');
+    await textEditor(page).press('Tab');
+    await textEditor(page).pressSequentially(' words');
+    expect(await editorValue(page)).toBe('plain words');
   });
 });
