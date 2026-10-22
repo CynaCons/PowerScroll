@@ -1665,7 +1665,7 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] SRS row (REQ-BOARD-029) + T218 reproducing the symptom: type a title letter by letter, history gains no entry until close, then exactly one [agent: claude-opus-5.5 T218 fails on old code (37 events) and passes on new; campaign 843/843]
 - [x] Release v0.86.1 (full campaign, smoke, showcase) [agent: claude-opus-5.5 tag v0.86.1 @2f54a88; Build&Release, CI, Pages green; live 0.86.1; release 3 assets; showcase https://claude.ai/artifact/Q9GEuhbn2GrV2oxPtgZMbc]
 
-### v0.87.0 — Text blocks - formatting that respects lists (2026-10-16) (current) (ACTIVE)
+### v0.87.0 — Text blocks - formatting that respects lists (2026-10-16)
 **Goal:** Fix the list bugs and make text blocks a modern, robust editor.
 - [ ] Owner report: Ctrl+B on a list row breaks the list - awaiting owner check
 - [ ] Owner report: a lone dash row makes the row above a heading - awaiting owner check
@@ -1695,6 +1695,15 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Owner request: the dragged card follows the pointer between columns [agent: claude]
 - [x] Owner request: redesign the card sidebar (status, assignee) [agent: claude]
 - [x] Owner request: filter the board by label [agent: claude]
+
+### v0.88.1 — Text blocks - Escape lets go of a new block (2026-10-22) (current) (ACTIVE)
+**Goal:** Escape after placing a text block lets go of it so it can be moved.
+- [ ] Owner report: Escape on a new text block does not let go of it - awaiting owner check
+- [x] Requirement and failing test for the place, Escape and move flow [agent: claude]
+- [x] Escape leaves editing and clears the selection [agent: claude]
+- [x] Run all checks and publish the showcase [agent: claude]
+- [x] Smoke test: npm run dev launches with zero console errors [agent: claude]
+- [ ] Release v0.88.1
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.
