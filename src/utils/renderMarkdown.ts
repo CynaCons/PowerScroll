@@ -8,6 +8,7 @@
 
 import type { CSSProperties } from 'react';
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import type { TextNodeData } from '../types/data';
 import { preprocessMath, restoreMath } from './mathParser';
 import { normalizeListIndents } from './listIndent';
@@ -110,9 +111,20 @@ export function markdownToHtml(text: string): string {
   // 4) Restore math placeholders with KaTeX-rendered HTML
   html = restoreMath(html, blocks);
   // 5) Remove disabled attribute from task-list checkboxes so clicks work
-  return html
+  html = html
     .replace(/<input\s+disabled=""\s+type="checkbox"/g, '<input type="checkbox"')
     .replace(/<input\s+checked=""\s+disabled=""\s+type="checkbox"/g, '<input checked="" type="checkbox"');
+  // 6) Strip anything that can run script (REQ-TEXT-053): blocks come from
+  // files and agents, and markdown passes raw HTML through.
+  return sanitize(html);
+}
+
+/** Page links (powernote://) on top of DOMPurify's default safe schemes. */
+const SAFE_URI = /^(?:(?:(?:f|ht)tps?|mailto|tel|powernote):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i;
+
+function sanitize(html: string): string {
+  if (typeof window === 'undefined') return html;
+  return DOMPurify.sanitize(html, { ALLOWED_URI_REGEXP: SAFE_URI, FORBID_TAGS: ['style', 'form'] });
 }
 
 /**
