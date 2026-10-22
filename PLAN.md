@@ -1714,22 +1714,22 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Map how text blocks behave today and every way they break [agent: claude]
 - [x] Choose the editing engine and record the decision [agent: claude]
 - [x] Write text block requirements from the user's point of view [agent: claude]
-- [ ] Failing tests for the bold trap and the standard use cases
-- [ ] Formats toggle on and off on exactly the selected text
-- [ ] Remove the hidden whole-block bold and italic setting
-- [ ] Toolbar shows the format state of the selection
-- [ ] Editing looks like the finished block, with no visible markers
+- [x] Failing tests for the bold trap and the standard use cases [agent: claude]
+- [x] Formats toggle on and off on exactly the selected text [agent: claude]
+- [x] Remove the hidden whole-block bold and italic setting [agent: claude]
+- [x] Toolbar shows the format state of the selection [agent: claude]
+- [x] Editing looks like the finished block, with no visible markers [agent: claude]
 - [ ] Exploratory user testing pass, fix what it finds
 - [ ] Run all checks and publish the showcase
 - [ ] Smoke test: npm run dev launches with zero console errors
 - [ ] Release v0.89.0
 - [x] Raw HTML in a text block must never run script [agent: claude]
-- [ ] Markdown parse and serialize for the new editor
-- [ ] Finished block drawn from the same document as the editor
-- [ ] New editor with commands, shortcuts and line-start shortcuts
-- [ ] Link box, paste and copy in the new editor
-- [ ] Migrate existing text tests to word-level selection
-- [ ] Remove CodeMirror and the marker-based commands
+- [x] Markdown parse and serialize for the new editor [agent: claude]
+- [x] Finished block drawn from the same document as the editor [agent: claude]
+- [x] New editor with commands, shortcuts and line-start shortcuts [agent: claude]
+- [x] Link box, paste and copy in the new editor [agent: claude]
+- [x] Migrate existing text tests to word-level selection [agent: claude]
+- [x] Remove CodeMirror and the marker-based commands [agent: claude]
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.
