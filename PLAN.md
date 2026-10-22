@@ -1730,6 +1730,13 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Link box, paste and copy in the new editor [agent: claude]
 - [x] Migrate existing text tests to word-level selection [agent: claude]
 - [x] Remove CodeMirror and the marker-based commands [agent: claude]
+- [ ] Typing and editing math formulas while editing a block
+- [ ] Tab moves between table cells and adds rows
+- [ ] Blank lines made with Enter are kept
+- [ ] Pasted markdown text arrives formatted, Ctrl+Shift+V pastes as typed
+- [ ] Links typed without https work; Link button shows its state
+- [ ] Keys typed after a size or colour change are not lost
+- [ ] Heading back to text stays out of lists; checklist rows aligned
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.
@@ -1753,3 +1760,6 @@ See `docs/VISION.md` for deferred post-MVP items (cloud sync, collaboration, pai
 - Recent notebooks: show the linked file name on each browser copy - autosave calls saveRecovery(workspace) without the handle name, so RecoveryEntry.fileName stays empty (REQ-FILE-033). Found in the v0.81.0 showcase, left out to keep the release equal to the tested build
 - Top bar: while a stored link needs permission (hosted app), the path still reads 'Not linked to a file' next to 'Reconnect to <file>' - show the linked file name instead
 - Dependabot reports 40 alerts on main after the v0.81.0 push (1 critical, 18 high, 20 moderate, 1 low) - triage which ship in the single-file build vs dev-only, and merge the open bump PRs (2026-10-14)
+- Reload shows an empty page while the top bar says saved
+- Ctrl+V of outside text on the canvas creates a text block
+- Cut leaves a double space; dragging a selection onto itself adds a blank line
