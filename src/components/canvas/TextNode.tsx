@@ -206,12 +206,16 @@ export function TextNode({ node, isSelected, onSelect, stageScale, autoEdit, onS
     }
   };
 
-  const handleFinishEdit = (newText: string) => {
+  const handleFinishEdit = (newText: string, escape?: boolean) => {
     setIsEditing(false);
     updateNode(node.id, {
       data: { ...data, text: newText },
     });
     undoBatchEnd(); // End batch started on text placement (if any)
+    // Escape lets go of the block (REQ-TEXT-048): nothing stays selected, so
+    // the next press drags it rather than landing on its handles. The editor
+    // is gone, so the keyboard is back on the canvas.
+    if (escape) useCanvasStore.getState().clearSelection();
   };
 
   const handleCancelEdit = () => {

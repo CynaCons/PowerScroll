@@ -121,7 +121,8 @@ interface TextEditorProps {
   stageScale: number;
   /** Where the user double-clicked (client px), to put the caret there. */
   caretAt?: { x: number; y: number } | null;
-  onFinish: (newText: string) => void;
+  /** `escape` is true when the user left with Escape rather than by clicking away. */
+  onFinish: (newText: string, escape?: boolean) => void;
   onCancel: () => void;
 }
 
@@ -144,10 +145,10 @@ function MarkdownEditor({ node, caretAt, onFinish, onCancel }: Omit<TextEditorPr
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
-    const finish = (view: EditorView) => {
+    const finish = (view: EditorView, escape = false) => {
       if (done.current) return;
       done.current = true;
-      callbacks.current.onFinish(view.state.doc.toString());
+      callbacks.current.onFinish(view.state.doc.toString(), escape);
     };
 
     const shortcuts = keymap.of([
@@ -183,8 +184,8 @@ function MarkdownEditor({ node, caretAt, onFinish, onCancel }: Omit<TextEditorPr
           return { value: next.text, selStart: next.selStart, selEnd: next.selEnd };
         }),
       },
-      // Escape leaves editing and keeps the text (as the app always did); Ctrl+Z reverts.
-      { key: 'Escape', run: (v) => (finish(v), true) },
+      // Escape leaves editing, keeps the text and lets go of the block; Ctrl+Z reverts.
+      { key: 'Escape', run: (v) => (finish(v, true), true) },
     ]);
 
     const extensions: Extension[] = [

@@ -1,6 +1,6 @@
 /**
  * Test 04: Text Edit
- * Covers: REQ-TEXT-003, REQ-TEXT-004, REQ-TEXT-047 — Commit text with Enter,
+ * Covers: REQ-TEXT-003, REQ-TEXT-004, REQ-TEXT-047, REQ-TEXT-048 — Commit text with Enter,
  * leave with Escape (text kept), commit on blur, and double-click to re-edit
  *
  * Verifies text editing behavior: Enter commits text, Escape keeps the text,
