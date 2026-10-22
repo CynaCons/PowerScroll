@@ -53,8 +53,9 @@ test.describe('11 - Toolbar Format (REQ-TOOL-002..005)', () => {
     expect(store.nodes[0].data.fontSize).not.toBe(initialFontSize);
   });
 
-  test('clicking bold button toggles fontStyle to bold', async ({ page }) => {
-    // Verify initial style is 'normal'
+  test('clicking bold button bolds all the text of the selected block', async ({ page }) => {
+    // REQ-TEXT-050/052 (v0.89.0) supersede the block-wide fontStyle: Bold on a
+    // selected block formats its text, and fontStyle is never written.
     let store = await getCanvasStore(page);
     expect(store.nodes[0].data.fontStyle).toBe('normal');
 
@@ -63,7 +64,8 @@ test.describe('11 - Toolbar Format (REQ-TOOL-002..005)', () => {
     await page.waitForTimeout(200);
 
     store = await getCanvasStore(page);
-    expect(store.nodes[0].data.fontStyle).toContain('bold');
+    expect(store.nodes[0].data.text).toBe('**Hello**');
+    expect(store.nodes[0].data.fontStyle).toBe('normal');
   });
 
   test('clicking color swatch changes fill color', async ({ page }) => {
