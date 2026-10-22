@@ -1703,7 +1703,7 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Escape leaves editing and clears the selection [agent: claude]
 - [x] Run all checks and publish the showcase [agent: claude]
 - [x] Smoke test: npm run dev launches with zero console errors [agent: claude]
-- [ ] Release v0.88.1
+- [x] Release v0.88.1 [agent: claude]
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.
