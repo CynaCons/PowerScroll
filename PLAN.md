@@ -1696,7 +1696,7 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Owner request: redesign the card sidebar (status, assignee) [agent: claude]
 - [x] Owner request: filter the board by label [agent: claude]
 
-### v0.88.1 — Text blocks - Escape lets go of a new block (2026-10-22) (current) (ACTIVE)
+### v0.88.1 — Text blocks - Escape lets go of a new block (2026-10-22)
 **Goal:** Escape after placing a text block lets go of it so it can be moved.
 - [ ] Owner report: Escape on a new text block does not let go of it - awaiting owner check
 - [x] Requirement and failing test for the place, Escape and move flow [agent: claude]
@@ -1704,6 +1704,32 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Run all checks and publish the showcase [agent: claude]
 - [x] Smoke test: npm run dev launches with zero console errors [agent: claude]
 - [x] Release v0.88.1 [agent: claude]
+
+## v0.89 — Text blocks - a redesign that edits like a normal editor
+
+### v0.89.0 — Text blocks - redesign, tested from the user's side (2026-10-22) (current) (ACTIVE)
+**Goal:** Owner: "This text block needs a redesign" - formatting and editing that just work.
+- [ ] Owner report: bolding selected text made the whole block bold, no unbold - awaiting owner check
+- [ ] Owner report: text blocks need a redesign that just works - awaiting owner check
+- [x] Map how text blocks behave today and every way they break [agent: claude]
+- [x] Choose the editing engine and record the decision [agent: claude]
+- [x] Write text block requirements from the user's point of view [agent: claude]
+- [ ] Failing tests for the bold trap and the standard use cases
+- [ ] Formats toggle on and off on exactly the selected text
+- [ ] Remove the hidden whole-block bold and italic setting
+- [ ] Toolbar shows the format state of the selection
+- [ ] Editing looks like the finished block, with no visible markers
+- [ ] Exploratory user testing pass, fix what it finds
+- [ ] Run all checks and publish the showcase
+- [ ] Smoke test: npm run dev launches with zero console errors
+- [ ] Release v0.89.0
+- [x] Raw HTML in a text block must never run script [agent: claude]
+- [ ] Markdown parse and serialize for the new editor
+- [ ] Finished block drawn from the same document as the editor
+- [ ] New editor with commands, shortcuts and line-start shortcuts
+- [ ] Link box, paste and copy in the new editor
+- [ ] Migrate existing text tests to word-level selection
+- [ ] Remove CodeMirror and the marker-based commands
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.
