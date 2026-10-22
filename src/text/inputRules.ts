@@ -50,9 +50,25 @@ function closedMarkRule(regexp: RegExp, type: MarkType, markerLength: number): I
   });
 }
 
+/**
+ * A closed `$...$` with no space just inside the dollars becomes an inline
+ * formula, `$$...$$` alone on a line a display formula (REQ-TEXT-067).
+ * `costs $5 or $6` has a space inside and stays text (REQ-TEXT-056).
+ */
+function mathRules(): InputRule[] {
+  const inline = new InputRule(/(?:^|[^$\\])(\$([^\s$](?:[^$\n]*?[^\s$])?)\$)$/, (state, match, start, end) => {
+    const textStart = start + match[0].length - match[1].length;
+    return state.tr.replaceWith(textStart, end, n.math.create({ src: match[2], display: false }));
+  });
+  const display = new InputRule(/^\$\$([^$\n]+?)\$\$$/, (state, match, start, end) =>
+    state.tr.replaceWith(start, end, n.math.create({ src: match[1].trim(), display: true })));
+  return [display, inline];
+}
+
 export function textInputRules() {
   return inputRules({
     rules: [
+      ...mathRules(),
       textblockTypeInputRule(/^(#{1,6})\s$/, n.heading, (match) => ({ level: match[1].length })),
       wrappingInputRule(/^\s*>\s$/, n.blockquote),
       wrappingInputRule(

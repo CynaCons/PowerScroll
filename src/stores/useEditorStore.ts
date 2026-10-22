@@ -18,8 +18,10 @@ interface EditorState {
   runCommand: ((command: EditorCommand) => void) | null;
   /** Formats on at the caret or over the whole selection, refreshed on every transaction (REQ-TEXT-051). */
   formats: ActiveFormats | null;
+  /** Give the keyboard back to the editor with its selection (after a toolbar popover, REQ-TEXT-072). */
+  focusEditor: (() => void) | null;
 
-  registerEditor: (el: HTMLElement, run: (command: EditorCommand) => void, formats: ActiveFormats) => void;
+  registerEditor: (el: HTMLElement, run: (command: EditorCommand) => void, formats: ActiveFormats, focus: () => void) => void;
   setFormats: (el: HTMLElement, formats: ActiveFormats) => void;
   unregisterEditor: (el: HTMLElement) => void;
 }
@@ -29,9 +31,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   applyFormat: null,
   runCommand: null,
   formats: null,
+  focusEditor: null,
 
-  registerEditor: (el, run, formats) =>
-    set({ activeEditor: el, runCommand: run, applyFormat: (kind) => run(kind), formats }),
+  registerEditor: (el, run, formats, focus) =>
+    set({ activeEditor: el, runCommand: run, applyFormat: (kind) => run(kind), formats, focusEditor: focus }),
 
   setFormats: (el, formats) => {
     if (get().activeEditor === el) set({ formats });
@@ -39,7 +42,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   unregisterEditor: (el) => {
     if (get().activeEditor === el) {
-      set({ activeEditor: null, applyFormat: null, runCommand: null, formats: null });
+      set({ activeEditor: null, applyFormat: null, runCommand: null, formats: null, focusEditor: null });
     }
   },
 }));

@@ -293,3 +293,19 @@ button:disabled {
   cursor: pointer;
   font: inherit;
 }
+.powernote-markdown p:empty {
+  /* A kept blank line (REQ-TEXT-069): one line high, as the editor shows it. */
+  min-height: 1.4em;
+}
+.powernote-text-editor .powernote-math-source {
+  font: 0.92em ui-monospace, "Cascadia Mono", Consolas, monospace;
+  padding: 0 4px;
+  border: 1px solid #2563eb;
+  border-radius: 3px;
+  background: #fff;
+  color: #14181a;
+  outline: none;
+}
+.powernote-text-editor .powernote-math--editing {
+  display: inline-block;
+}

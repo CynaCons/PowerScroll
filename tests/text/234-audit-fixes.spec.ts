@@ -179,18 +179,19 @@ test('Ctrl+K with nothing selected inserts the link as its own text, not glued t
   await newBlock(page, 'visit today');
   await page.keyboard.press('Control+k');
   await expect(page.getByTestId('link-box-url')).toBeFocused();
-  await page.keyboard.type('a.b/c');
+  await page.keyboard.type('my.site/c');
   await page.keyboard.press('Enter');
   await clickAway(page);
-  expect(await finishedText(page, 'visit')).toMatch(/^visit today \S+a\.b\/c$/);
+  expect(await finishedText(page, 'visit')).toMatch(/^visit today \S+my\.site\/c$/);
   const link = finishedBlock(page, 'visit').locator('a');
-  await expect(link).toHaveAttribute('href', 'https://a.b/c');
-  await expect(link).toHaveText(/a\.b\/c$/);
+  await expect(link).toHaveAttribute('href', 'https://my.site/c');
+  await expect(link).toHaveText(/my\.site\/c$/);
 });
 
 test('the Link button is pressed with the caret inside a link', async ({ page }) => {
   await addTextBlock(page, 'linked', 'see [the docs](https://example.com) now', 'docs');
-  await editBlock(page, 'docs');
+  // Open on a plain word: a double-click on the link itself follows the link.
+  await editBlock(page, 'see');
   await caretInEditor(page, 'docs', 2);
   await expect(pressed(page, 'format-link')).toHaveAttribute('aria-pressed', 'true');
   await caretInEditor(page, 'now', 1);

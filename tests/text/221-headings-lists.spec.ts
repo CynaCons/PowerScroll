@@ -23,7 +23,7 @@ async function editing(page: Page, text: string) {
   await fillEditor(page, text);
 }
 
-test('Ctrl+Alt+2 / Ctrl+Shift+2 turn a list row into a title that splits the list; back to text restores the bullet', async ({ page }) => {
+test('Ctrl+Alt+2 / Ctrl+Shift+2 turn a list row into a title that splits the list; back to text is a plain paragraph', async ({ page }) => {
   await editing(page, LIST);
   // Selection offsets count the visible text (the markers take no characters).
   await selectInEditor(page, 'Call the bank\nWee'.length);
@@ -31,20 +31,21 @@ test('Ctrl+Alt+2 / Ctrl+Shift+2 turn a list row into a title that splits the lis
   // The heading splits the list; blocks are separated by a blank line (REQ-TEXT-064 dialect).
   await expectEditorValue(page, '- Call the bank\n\n## Weekend\n\n- Clean the bike');
 
-  // Back to text between list rows: the bullet comes back.
+  // Back to text between list rows: an ordinary paragraph, never a row of a neighbour (REQ-TEXT-073).
+  const SPLIT = '- Call the bank\n\nWeekend\n\n- Clean the bike';
   await page.keyboard.press('Control+Alt+0');
-  await expectEditorValue(page, LIST);
+  await expectEditorValue(page, SPLIT);
 
   // Ctrl+Shift+digit does the same on every keyboard layout; the level a line
   // already has turns it back to text.
   await page.keyboard.press('Control+Shift+Digit1');
   await expectEditorValue(page, '- Call the bank\n\n# Weekend\n\n- Clean the bike');
   await page.keyboard.press('Control+Shift+Digit1');
-  await expectEditorValue(page, LIST);
+  await expectEditorValue(page, SPLIT);
   await page.keyboard.press('Control+Shift+Digit3');
   await expectEditorValue(page, '- Call the bank\n\n### Weekend\n\n- Clean the bike');
   await page.keyboard.press('Control+Shift+Digit0');
-  await expectEditorValue(page, LIST);
+  await expectEditorValue(page, SPLIT);
 
   await page.keyboard.press('Control+Shift+Digit2');
   await commitEditor(page);
@@ -125,9 +126,10 @@ test('Enter continues lists, numbers count up, an empty row ends the list', asyn
   await page.keyboard.press('Enter');
   await expectEditorValue(page, '1. first\n2. second\n3. ');
   // Enter on the empty row ends the list: what follows is a paragraph below it.
+  // The empty row the caret now sits in is a kept blank line (REQ-TEXT-069).
   await page.keyboard.press('Enter');
-  await expectEditorValue(page, '1. first\n2. second\n\n');
+  await expectEditorValue(page, '1. first\n2. second\n\n<br>');
   await page.keyboard.type('after');
   await page.keyboard.press('Enter');
-  await expectEditorValue(page, '1. first\n2. second\n\nafter\n\n');
+  await expectEditorValue(page, '1. first\n2. second\n\nafter\n\n<br>');
 });

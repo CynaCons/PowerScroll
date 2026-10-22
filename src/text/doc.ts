@@ -184,7 +184,9 @@ export function activeFormats(state: EditorState): ActiveFormats {
     code: markActive(state, schema.marks.code),
     heading: parent.type === n.heading ? parent.attrs.level : 0,
     list,
-    link: !!schema.marks.link.isInSet(state.storedMarks ?? $from.marks()),
+    // A caret at either edge of a link still counts as inside it (REQ-TEXT-051).
+    link: !!(schema.marks.link.isInSet(state.storedMarks ?? $from.marks())
+      || ($from.nodeAfter && schema.marks.link.isInSet($from.nodeAfter.marks) && $from.nodeBefore && schema.marks.link.isInSet($from.nodeBefore.marks))),
   };
 }
 

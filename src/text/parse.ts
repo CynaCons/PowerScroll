@@ -187,9 +187,13 @@ function blocks(tokens: Token[], pieces: MathPiece[]): PMNode[] {
       case 'hr':
         out.push(n.horizontal_rule.create());
         break;
-      case 'html':
-        out.push(n.html_block.create({ html: restoreRaw((t as Tokens.HTML).text, pieces).replace(/\n+$/, '') }));
+      case 'html': {
+        const html = restoreRaw((t as Tokens.HTML).text, pieces).replace(/\n+$/, '');
+        // A line holding only <br> is how a blank line (empty paragraph) is stored (REQ-TEXT-069).
+        if (/^<br\s*\/?>$/i.test(html)) out.push(n.paragraph.create());
+        else out.push(n.html_block.create({ html }));
         break;
+      }
       case 'list': {
         const list = t as Tokens.List;
         const items = list.items.map((it) => {

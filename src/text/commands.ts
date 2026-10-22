@@ -12,6 +12,7 @@ import {
 import type { Node as PMNode, ResolvedPos, NodeType, Attrs } from 'prosemirror-model';
 import { canJoin, findWrapping } from 'prosemirror-transform';
 import { liftListItem, sinkListItem, splitListItem } from 'prosemirror-schema-list';
+import { addRowAfter, goToNextCell, isInTable } from 'prosemirror-tables';
 import { chainCommands, createParagraphNear, liftEmptyBlock, newlineInCode, splitBlock } from 'prosemirror-commands';
 import { schema, isListNode } from './schema';
 import type { ListKind } from './doc';
@@ -199,34 +200,13 @@ export function setHeading(level: number): Command {
         const pos = liftOutOfLists(tr, b.pos);
         tr.setBlockType(pos + 1, pos + 1, n.heading, { level });
       } else {
+        // Back to text is an ordinary paragraph, never a row of a neighbouring list (REQ-TEXT-073).
         tr.setBlockType(b.pos + 1, b.pos + 1, n.paragraph);
-        if (b.node.type === n.heading) rejoinNeighbourList(tr, b.pos);
       }
     }
-    // A row given its marker back sits between two lists: they become one again.
-    joinAdjacentLists(tr);
     if (dispatch) dispatch(tr.scrollIntoView());
     return true;
   };
-}
-
-/** A heading turned back to text takes its neighbouring row's marker (REQ-TEXT-042). */
-function rejoinNeighbourList(tr: Transaction, pos: number): void {
-  const node = tr.doc.nodeAt(pos);
-  if (!node) return;
-  const $ = tr.doc.resolve(pos);
-  const before = $.nodeBefore;
-  const after = tr.doc.resolve(pos + node.nodeSize).nodeAfter;
-  const neighbour = before && isListNode(before) ? before : after && isListNode(after) ? after : null;
-  if (!neighbour) return;
-  const sample = neighbour === before ? neighbour.lastChild : neighbour.firstChild;
-  const checked = sample && sample.attrs.checked !== null ? false : null;
-  const range = tr.doc.resolve(pos + 1).blockRange();
-  if (!range) return;
-  const wrapping = findWrapping(range, neighbour.type, neighbour.type === n.ordered_list ? { order: 1 } : {});
-  if (!wrapping) return;
-  tr.wrap(range, wrapping);
-  tr.setNodeMarkup(range.start + 1, undefined, { checked });
 }
 
 // ---------------------------------------------------------------- lists
@@ -343,11 +323,26 @@ export const backspaceMarker: Command = (state, dispatch) => {
   return liftListItem(n.list_item)(state, dispatch);
 };
 
+/** Tab in a table moves to the next cell, adding a row after the last one (REQ-TEXT-068). */
+const tabInTable: Command = (state, dispatch) => {
+  if (!isInTable(state)) return false;
+  if (goToNextCell(1)(state, dispatch)) return true;
+  return addRowAfter(state, (tr) => {
+    const next = EditorState.create({ doc: tr.doc, selection: tr.selection });
+    goToNextCell(1)(next, (t) => {
+      for (const step of t.steps) tr.step(step);
+      tr.setSelection(t.selection.map(tr.doc, tr.mapping.slice(tr.steps.length - t.steps.length)));
+    });
+    dispatch?.(tr.scrollIntoView());
+  });
+};
+
 /** Tab nests a row; outside a list nothing visible happens (never a code block). */
-export const tabKey: Command = (state, dispatch) => sinkListItem(n.list_item)(state, dispatch) || true;
+export const tabKey: Command = (state, dispatch) => tabInTable(state, dispatch) || sinkListItem(n.list_item)(state, dispatch) || true;
 
 /** Shift+Tab un-nests a nested row; a top-level row (nothing to un-nest) stays as it is. */
 export const shiftTabKey: Command = (state, dispatch) => {
+  if (isInTable(state)) return goToNextCell(-1)(state, dispatch) || true;
   const { $from } = state.selection;
   const d = listItemDepth($from);
   if (d >= 2 && $from.node(d - 2).type === n.list_item) return liftListItem(n.list_item)(state, dispatch) || true;
@@ -406,16 +401,29 @@ export function linkRangeAt(doc: PMNode, pos: number): { from: number; to: numbe
   return { from, to, href: mark.attrs.href };
 }
 
-/** Apply (or, with an empty address, remove) a link over a range; with nothing selected the address becomes the text. */
+/** An address typed without a scheme (`example.com`, `www.x.org`) is stored with https:// (REQ-TEXT-071). */
+export function normalizeHref(href: string): string {
+  const url = href.trim();
+  if (!url || /^[a-z][a-z0-9+.-]*:/i.test(url) || url.startsWith('#') || url.startsWith('/')) return url;
+  return /^(www\.|[\w-]+(\.[\w-]+)*\.[a-z]{2,})(?=[/?#:]|$)/i.test(url) ? `https://${url}` : url;
+}
+
+/**
+ * Apply (or, with an empty address, remove) a link over a range; with nothing
+ * selected the address is inserted as its own linked text, separated from the
+ * word before it (REQ-TEXT-071).
+ */
 export function applyLink(from: number, to: number, href: string): Command {
   return (state, dispatch) => {
     const tr = state.tr;
-    const url = href.trim();
+    const url = normalizeHref(href);
     if (from === to) {
       if (!url) return false;
-      tr.insertText(url, from, to);
-      tr.addMark(from, from + url.length, schema.marks.link.create({ href: url, auto: true }));
-      tr.setSelection(TextSelection.create(tr.doc, from + url.length));
+      const before = state.doc.textBetween(Math.max(0, from - 1), from, '\n', '\n');
+      const lead = before && !/\s/.test(before) ? ' ' : '';
+      tr.insertText(lead + url, from, to);
+      tr.addMark(from + lead.length, from + lead.length + url.length, schema.marks.link.create({ href: url, auto: true }));
+      tr.setSelection(TextSelection.create(tr.doc, from + lead.length + url.length));
     } else {
       tr.removeMark(from, to, schema.marks.link);
       if (url) tr.addMark(from, to, schema.marks.link.create({ href: url }));

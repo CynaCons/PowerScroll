@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Html } from 'react-konva-utils';
-import { EditorState, Plugin, TextSelection, type Command } from 'prosemirror-state';
+import { EditorState, NodeSelection, Plugin, TextSelection, type Command } from 'prosemirror-state';
 import { Decoration, DecorationSet, EditorView } from 'prosemirror-view';
+import { tableEditing } from 'prosemirror-tables';
+import { EDIT_MATH_EVENT, MathView } from '../../text/mathView';
+import { looksLikeMarkdown } from '../../text/paste';
 import { keymap } from 'prosemirror-keymap';
 import { history, redo, undo } from 'prosemirror-history';
 import { baseKeymap, chainCommands, toggleMark } from 'prosemirror-commands';
@@ -16,7 +19,7 @@ import { activeFormats, offsetFromPos, posFromOffset } from '../../text/doc';
 import { docWithLegacyStyle } from '../../text/blockFormat';
 import { textInputRules } from '../../text/inputRules';
 import {
-  applyLink, backspaceMarker, enterKey, isUrl, linkRangeAt, moveRow, setHeading, setTaskChecked, shiftTabKey,
+  applyLink, backspaceMarker, enterKey, isUrl, linkRangeAt, moveRow, normalizeHref, setHeading, setTaskChecked, shiftTabKey,
   tabKey, toggleList, toggleTaskChecked,
 } from '../../text/commands';
 import { htmlToMarkdown } from '../../utils/htmlToMarkdown';
@@ -73,6 +76,9 @@ function wordRangeAt(doc: PMNode, pos: number): { from: number; to: number } | n
   while (b < text.length && WORD_CHAR.test(text[b])) b++;
   return { from: $pos.start() + a, to: $pos.start() + b };
 }
+
+/** Set by Ctrl+Shift+V: the next paste (within this time) goes in as typed. */
+let plainPasteUntil = 0;
 
 /** Where focus may go without ending the edit: the editor itself and the bottom toolbar. */
 const KEEPS_EDITING = '.bottom-toolbar, [data-testid="bottom-toolbar"], .toolbar-popover';
@@ -245,8 +251,9 @@ function MarkdownEditor({ node, caretAt, onFinish }: Omit<TextEditorProps, 'stag
       state: EditorState.create({
         doc: initialDoc,
         selection: TextSelection.atEnd(initialDoc),
-        plugins: [textInputRules(), shortcuts, keymap(baseKeymap), history(), placeholderPlugin],
+        plugins: [textInputRules(), shortcuts, keymap(baseKeymap), history(), placeholderPlugin, tableEditing()],
       }),
+      nodeViews: { math: (node, v, getPos) => new MathView(node, v, getPos) },
       attributes: {
         class: MARKDOWN_CLASS,
         'data-testid': 'text-editor',
@@ -267,8 +274,20 @@ function MarkdownEditor({ node, caretAt, onFinish }: Omit<TextEditorProps, 'stag
       handleDoubleClick(v, pos) {
         return wordRangeAt(v.state.doc, pos) !== null;
       },
-      handleKeyDown(v) {
+      handleKeyDown(v, event) {
         syncSelection(v);
+        // Ctrl+Shift+V: the paste that follows goes in as typed (REQ-TEXT-070).
+        if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'v') {
+          plainPasteUntil = Date.now() + 2000;
+          return false;
+        }
+        // A key typed on a selected formula opens its source instead of replacing it (REQ-TEXT-067).
+        const sel = v.state.selection;
+        if (sel instanceof NodeSelection && sel.node.type === schema.nodes.math
+          && event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+          v.nodeDOM(sel.from)?.dispatchEvent(new Event(EDIT_MATH_EVENT));
+          return true;
+        }
         return false;
       },
       handlePaste(v, event) {
@@ -277,18 +296,30 @@ function MarkdownEditor({ node, caretAt, onFinish }: Omit<TextEditorProps, 'stag
         syncSelection(v);
         const plain = clip.getData('text/plain') ?? '';
         const html = clip.getData('text/html') ?? '';
+        // Ctrl+Shift+V itself raises a paste with nothing in it: keep the flag for the real one.
+        if (!plain && !html) return false;
         const { from, to, empty, $from, $to } = v.state.selection;
+        const inCode = !!$from.parent.type.spec.code;
         // A URL over selected words links them (REQ-TEXT-065).
-        if (!empty && $from.sameParent($to) && isUrl(plain) && !$from.parent.type.spec.code) {
-          v.dispatch(v.state.tr.addMark(from, to, schema.marks.link.create({ href: plain.trim() })));
+        if (!empty && $from.sameParent($to) && isUrl(plain) && !inCode) {
+          v.dispatch(v.state.tr.addMark(from, to, schema.marks.link.create({ href: normalizeHref(plain) })));
           return true;
         }
+        const asTyped = Date.now() < plainPasteUntil;
+        plainPasteUntil = 0;
         // The editor's own copies carry their structure; let ProseMirror read them.
-        if (!html || html.includes('data-pm-slice')) return false;
-        const md = htmlToMarkdown(html);
-        const slice = md !== null && md !== plain.trim()
-          ? new Slice(parseMarkdown(md).content, 1, 1)
-          : plainTextSlice(plain, !!$from.parent.type.spec.code);
+        if (html.includes('data-pm-slice')) return false;
+        let slice: Slice | null = null;
+        if (html && !asTyped) {
+          const md = htmlToMarkdown(html);
+          if (md !== null && md !== plain.trim()) slice = new Slice(parseMarkdown(md).content, 1, 1);
+        }
+        // Plain text that is markdown (a chat or agent answer) pastes formatted (REQ-TEXT-070).
+        if (!slice && !asTyped && !inCode && looksLikeMarkdown(plain)) slice = new Slice(parseMarkdown(plain).content, 1, 1);
+        if (!slice) {
+          if (!html) return false; // ProseMirror pastes the text as typed (clipboardTextParser).
+          slice = plainTextSlice(plain, inCode);
+        }
         v.dispatch(v.state.tr.replaceSelection(slice).scrollIntoView());
         return true;
       },
@@ -387,7 +418,7 @@ function MarkdownEditor({ node, caretAt, onFinish }: Omit<TextEditorProps, 'stag
         : 'heading' in command ? setHeading(command.heading) : toggleList(command.list);
       cmd(view.state, view.dispatch, view);
     };
-    useEditorStore.getState().registerEditor(view.dom, runCommand, activeFormats(view.state));
+    useEditorStore.getState().registerEditor(view.dom, runCommand, activeFormats(view.state), () => view.focus());
 
     const handle: TextEditorHandle = {
       getValue: () => serialized(view.state.doc),

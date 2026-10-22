@@ -204,9 +204,13 @@ function serializeList(list: PMNode): string {
   return items.join(list.attrs.tight ? '\n' : '\n\n');
 }
 
-function serializeBlock(node: PMNode, tight: boolean): string {
+function serializeBlock(node: PMNode, tight: boolean, parent: PMNode): string {
   switch (node.type) {
     case n.paragraph:
+      // A blank line made with Enter is kept as a line holding <br>, which any
+      // markdown renderer shows as a blank line (REQ-TEXT-069). Inside a list
+      // row an empty paragraph is just the empty row.
+      if (node.content.size === 0 && (parent.type === n.doc || parent.type === n.blockquote)) return '<br>';
       return serializeInline(node);
     case n.heading:
       return `${'#'.repeat(node.attrs.level)} ${serializeInline(node)}`;
@@ -251,7 +255,7 @@ function serializeBlock(node: PMNode, tight: boolean): string {
 function serializeBlocks(parent: PMNode, tight = false): string {
   const parts: string[] = [];
   parent.forEach((child, _off, i) => {
-    const text = serializeBlock(child, tight);
+    const text = serializeBlock(child, tight, parent);
     if (i === 0) {
       parts.push(text);
       return;

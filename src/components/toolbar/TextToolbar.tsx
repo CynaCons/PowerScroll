@@ -27,6 +27,12 @@ interface TextToolbarProps {
 export function TextToolbar({ options, onChange, selectedTextNodes = [] }: TextToolbarProps) {
   const runCommand = useEditorStore((s) => s.runCommand);
   const liveFormats = useEditorStore((s) => s.formats);
+  const focusEditor = useEditorStore((s) => s.focusEditor);
+  // Size and colour apply to the block and hand the keyboard straight back (REQ-TEXT-060, REQ-TEXT-072).
+  const change = (updates: Partial<TextOptions>) => {
+    onChange(updates);
+    focusEditor?.();
+  };
   const editing = !!runCommand;
   const [headingsOpen, setHeadingsOpen] = useState(false);
   const headingRef = useRef<HTMLButtonElement>(null);
@@ -78,7 +84,7 @@ export function TextToolbar({ options, onChange, selectedTextNodes = [] }: TextT
     <div className="text-toolbar">
       <SizePopover
         value={options.fontSize}
-        onChange={(fontSize) => onChange({ fontSize })}
+        onChange={(fontSize) => change({ fontSize })}
         min={8}
         max={72}
         label="Font Size"
@@ -144,7 +150,7 @@ export function TextToolbar({ options, onChange, selectedTextNodes = [] }: TextT
 
       <ColorPopover
         value={options.fill}
-        onChange={(fill) => onChange({ fill })}
+        onChange={(fill) => change({ fill })}
         label="Text Color"
       />
     </div>
