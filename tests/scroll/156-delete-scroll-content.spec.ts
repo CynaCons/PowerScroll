@@ -14,6 +14,7 @@ import {
   waitForBridgeReady,
   runBridge,
   runBridgeExpectingError,
+  preloadModule,
 } from '../helpers';
 
 const FRAME = 'band-frame';
@@ -23,10 +24,16 @@ const GROUP_INK = 'band-group-ink';
 const BAND_INK = 'band-loose-ink';
 const KEEP_INK = 'band-keep-ink';
 
+const LAYOUT = '/src/utils/pageLayout.ts';
+
 async function seedTwoScrolls(page: import('@playwright/test').Page) {
+  // preloadModule, never `await import()` inside evaluate (see helpers.ts):
+  // the pending-import promise can be collected and the run fails with
+  // "Execution context was destroyed".
+  await preloadModule(page, LAYOUT);
   return page.evaluate(
     async ({ frame, overhang, survivor, groupInk, bandInk, keepInk }) => {
-      const layout = await import('/src/utils/pageLayout.ts');
+      const layout = (window as any).__mods['/src/utils/pageLayout.ts'];
       const S = (window as any).__POWERNOTE_STORES__;
       const ws = S.workspace.getState();
       const created = ws.createScroll(ws.activePageId, 'Neighbour');
@@ -121,8 +128,9 @@ async function seedTwoScrolls(page: import('@playwright/test').Page) {
 }
 
 async function live(page: import('@playwright/test').Page) {
+  await preloadModule(page, LAYOUT);
   return page.evaluate(async () => {
-    const layout = await import('/src/utils/pageLayout.ts');
+    const layout = (window as any).__mods['/src/utils/pageLayout.ts'];
     const S = (window as any).__POWERNOTE_STORES__;
     const ws = S.workspace.getState();
     const pageRec = ws.getActivePage();
