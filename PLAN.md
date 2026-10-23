@@ -1719,9 +1719,9 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Remove the hidden whole-block bold and italic setting [agent: claude]
 - [x] Toolbar shows the format state of the selection [agent: claude]
 - [x] Editing looks like the finished block, with no visible markers [agent: claude]
-- [ ] Exploratory user testing pass, fix what it finds
-- [ ] Run all checks and publish the showcase
-- [ ] Smoke test: npm run dev launches with zero console errors
+- [x] Exploratory user testing pass, fix what it finds [agent: claude]
+- [x] Run all checks and publish the showcase [agent: claude]
+- [x] Smoke test: npm run dev launches with zero console errors [agent: claude]
 - [ ] Release v0.89.0
 - [x] Raw HTML in a text block must never run script [agent: claude]
 - [x] Markdown parse and serialize for the new editor [agent: claude]
@@ -1730,13 +1730,15 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Link box, paste and copy in the new editor [agent: claude]
 - [x] Migrate existing text tests to word-level selection [agent: claude]
 - [x] Remove CodeMirror and the marker-based commands [agent: claude]
-- [ ] Typing and editing math formulas while editing a block
-- [ ] Tab moves between table cells and adds rows
-- [ ] Blank lines made with Enter are kept
-- [ ] Pasted markdown text arrives formatted, Ctrl+Shift+V pastes as typed
-- [ ] Links typed without https work; Link button shows its state
-- [ ] Keys typed after a size or colour change are not lost
-- [ ] Heading back to text stays out of lists; checklist rows aligned
+- [x] Typing and editing math formulas while editing a block [agent: claude]
+- [x] Tab moves between table cells and adds rows [agent: claude]
+- [x] Blank lines made with Enter are kept [agent: claude]
+- [x] Pasted markdown text arrives formatted, Ctrl+Shift+V pastes as typed [agent: claude]
+- [x] Links typed without https work; Link button shows its state [agent: claude]
+- [x] Keys typed after a size or colour change are not lost [agent: claude]
+- [x] Heading back to text stays out of lists; checklist rows aligned [agent: claude]
+- [x] Formatting that ends next to punctuation never shows stray markers [agent: claude]
+- [x] Old and agent-written markdown renders and saves as before [agent: claude]
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.
