@@ -1709,8 +1709,8 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 
 ### v0.89.0 — Text blocks - redesign, tested from the user's side (2026-10-22) (current) (ACTIVE)
 **Goal:** Owner: "This text block needs a redesign" - formatting and editing that just work.
-- [ ] Owner report: bolding selected text made the whole block bold, no unbold - awaiting owner check
-- [ ] Owner report: text blocks need a redesign that just works - awaiting owner check
+- [ ] Owner report: bolding selected text made the whole block bold, no unbold - fixed, awaiting owner check
+- [ ] Owner report: text blocks need a redesign that just works - released, awaiting owner check
 - [x] Map how text blocks behave today and every way they break [agent: claude]
 - [x] Choose the editing engine and record the decision [agent: claude]
 - [x] Write text block requirements from the user's point of view [agent: claude]
@@ -1722,7 +1722,7 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Exploratory user testing pass, fix what it finds [agent: claude]
 - [x] Run all checks and publish the showcase [agent: claude]
 - [x] Smoke test: npm run dev launches with zero console errors [agent: claude]
-- [ ] Release v0.89.0
+- [x] Release v0.89.0 [agent: claude]
 - [x] Raw HTML in a text block must never run script [agent: claude]
 - [x] Markdown parse and serialize for the new editor [agent: claude]
 - [x] Finished block drawn from the same document as the editor [agent: claude]
