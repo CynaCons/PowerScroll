@@ -1766,6 +1766,8 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Each lane boxed per column, board shows between lanes [agent: claude]
 - [x] Run the checks and smoke test [agent: claude]
 - [x] Release v0.91.1 [agent: claude]
+- [x] A collapsed lane shows only its header bar (v0.91.2) [agent: claude]
+- [ ] Update the board showcase
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.

@@ -69,6 +69,8 @@ test('cards sit in one lane per label, in first-used order, rows aligned across 
   // Collapsing a lane hides its cards in every column and keeps its count.
   await page.getByRole('button', { name: 'Collapse engine lane' }).click();
   await expect(lane(page, 'todo', 'engine').locator('.board-card__title')).toHaveCount(0);
+  // A collapsed lane is only its header bar: no empty boxes under it.
+  expect((await lane(page, 'doing', 'engine').boundingBox())?.height ?? 0).toBeLessThan(4);
   await expect(page.getByTestId('board-lane-title').first()).toContainText('2');
   await expect(lane(page, 'todo', 'ui').locator('.board-card__title')).toHaveText(['Shared model']);
   await page.getByRole('button', { name: 'Expand engine lane' }).click();
