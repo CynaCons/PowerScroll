@@ -107,6 +107,10 @@ const BOARD_ME_TOOLS = new Set([
   'card_note',
   'card_check',
   'card_checklist_add',
+  'card_checklist_update',
+  'card_checklist_remove',
+  'card_checklist_move',
+  'card_checklist_set',
   'card_archive',
   'card_restore',
   'agent_status',
@@ -115,7 +119,7 @@ const BOARD_ME_TOOLS = new Set([
 ]);
 const BOARD_WORKFLOW =
   'Workflow: board_read the board, card_claim a card, card_move it to doing, ' +
-  'work and call card_check/card_note as you go, agent_status for what you are doing now, ' +
+  'work and call card_check/card_note as you go (card_checklist_* to edit the checklist), agent_status for what you are doing now, ' +
   'card_move to waiting WITH a question when you need the owner, ' +
   'board_updates {mine:true, wait_seconds} to hear back, then card_move to done.';
 const HUB_CONNECTED_AT = Date.now();
@@ -125,6 +129,23 @@ const ME_PROP = {
     'Required: your agent name (^[a-z0-9][a-z0-9._-]{0,39}$, e.g. "feature-1"). Use the same ' +
     'name every session; PowerScroll never invents one. Only POWERNOTE_AGENT_NAME in the ' +
     'server environment can stand in for it. Recorded on cards, notes and events.',
+};
+
+/** A checklist item as an agent writes it (REQ-BOARD-042). */
+const CHECK_ENTRY = {
+  anyOf: [
+    { type: 'string' },
+    {
+      type: 'object',
+      properties: {
+        text: { type: 'string' },
+        done: { type: 'boolean' },
+        depth: { type: 'integer', minimum: 0, maximum: 3 },
+      },
+      required: ['text'],
+      additionalProperties: false,
+    },
+  ],
 };
 
 /** Idle grace between one agent's commands before another may take over. */
@@ -1728,8 +1749,10 @@ const TOOLS = [
         labels: { type: 'array', items: { type: 'string' } },
         checklist: {
           type: 'array',
-          items: { type: 'string' },
-          description: 'Checklist item titles, all unchecked.',
+          items: CHECK_ENTRY,
+          description:
+            'Checklist items: titles, or { text, done?, depth? } where depth 0-3 nests an item ' +
+            'under the one above it.',
         },
         me: ME_PROP,
       },
@@ -1855,16 +1878,99 @@ const TOOLS = [
   },
   {
     name: 'card_checklist_add',
-    description: 'Append a checklist item to a card. ' + BOARD_WORKFLOW,
+    description:
+      'Add a checklist item to a card: at the end, `under` an item (as its last sub-item), or at a ' +
+      '1-based `position`. Items nest up to depth 3, like PowerPlan tasks. Returns the card with ' +
+      '`item` (the new item) and `items` (the whole list: id, index, text, done, depth). ' +
+      BOARD_WORKFLOW,
     inputSchema: {
       type: 'object',
       properties: {
         boardId: { type: 'string' },
         card: { description: 'Card id, number, or "#15".' },
         text: { type: 'string' },
+        under: { description: 'Parent item id or 1-based index; the new item becomes its last sub-item.' },
+        position: { type: 'integer', minimum: 1, description: '1-based position in the list (ignored with `under`).' },
+        depth: { type: 'integer', minimum: 0, maximum: 3, description: 'Level, clamped to one below the item above. Default: the level of the item at `position`, else 0.' },
+        done: { type: 'boolean' },
         me: ME_PROP,
       },
       required: ['boardId', 'card', 'text'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'card_checklist_update',
+    description:
+      'Edit a checklist item: new `text`, `done`, and/or `depth` (0-3; its sub-items move with it). ' +
+      '`item` is the item id or a 1-based index. ' +
+      BOARD_WORKFLOW,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        boardId: { type: 'string' },
+        card: { description: 'Card id, number, or "#15".' },
+        item: { description: 'Checklist item id or 1-based index.' },
+        text: { type: 'string' },
+        done: { type: 'boolean' },
+        depth: { type: 'integer', minimum: 0, maximum: 3 },
+        me: ME_PROP,
+      },
+      required: ['boardId', 'card', 'item'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'card_checklist_remove',
+    description:
+      'Remove a checklist item. Its sub-items stay, one level up. `item` is the item id or a ' +
+      '1-based index. ' +
+      BOARD_WORKFLOW,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        boardId: { type: 'string' },
+        card: { description: 'Card id, number, or "#15".' },
+        item: { description: 'Checklist item id or 1-based index.' },
+        me: ME_PROP,
+      },
+      required: ['boardId', 'card', 'item'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'card_checklist_move',
+    description: 'Move a checklist item (alone) to a 1-based position. ' + BOARD_WORKFLOW,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        boardId: { type: 'string' },
+        card: { description: 'Card id, number, or "#15".' },
+        item: { description: 'Checklist item id or 1-based index.' },
+        position: { type: 'integer', minimum: 1 },
+        me: ME_PROP,
+      },
+      required: ['boardId', 'card', 'item', 'position'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'card_checklist_set',
+    description:
+      'Replace the whole checklist, from `items` or from PowerPlan-style `text` ' +
+      '("- [ ] task" / "- [x] done", two spaces per level). Items whose text is unchanged keep ' +
+      'their id. ' +
+      BOARD_WORKFLOW,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        boardId: { type: 'string' },
+        card: { description: 'Card id, number, or "#15".' },
+        items: { type: 'array', items: CHECK_ENTRY },
+        text: { type: 'string', description: 'One item per line: "- [ ] text", indented two spaces per level.' },
+        me: ME_PROP,
+      },
+      required: ['boardId', 'card'],
       additionalProperties: false,
     },
   },
@@ -2103,7 +2209,7 @@ async function writeReadImageFile(result, params) {
 }
 
 const server = new Server(
-  { name: 'powerscroll-mcp', version: '0.70.0' },
+  { name: 'powerscroll-mcp', version: '0.71.0' },
   { capabilities: { tools: {} } },
 );
 

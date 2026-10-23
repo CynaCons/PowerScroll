@@ -1707,7 +1707,7 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 
 ## v0.89 — Text blocks - a redesign that edits like a normal editor
 
-### v0.89.0 — Text blocks - redesign, tested from the user's side (2026-10-22) (current) (ACTIVE)
+### v0.89.0 — Text blocks - redesign, tested from the user's side (2026-10-22)
 **Goal:** Owner: "This text block needs a redesign" - formatting and editing that just work.
 - [ ] Owner report: bolding selected text made the whole block bold, no unbold - fixed, awaiting owner check
 - [ ] Owner report: text blocks need a redesign that just works - released, awaiting owner check
@@ -1739,6 +1739,16 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Heading back to text stays out of lists; checklist rows aligned [agent: claude]
 - [x] Formatting that ends next to punctuation never shows stray markers [agent: claude]
 - [x] Old and agent-written markdown renders and saves as before [agent: claude]
+
+### v0.90.0 — Board checklists - nested items, agents edit them (current) (ACTIVE)
+**Goal:** Owner: checklists nest like PowerPlan, and agents can add, edit, tick, move and remove items.
+- [ ] Owner request: nested checklist items, edited by agents over MCP
+- [x] Requirements and failing tests for nesting and agent edits [agent: claude]
+- [x] Checklist items carry a depth; indent and outdent operations [agent: claude]
+- [x] Bridge and MCP tools: add, update, remove, move, set the checklist [agent: claude]
+- [x] Card overlay and card face show and edit nesting [agent: claude]
+- [x] Run the checks and smoke test [agent: claude]
+- [ ] Release v0.90.0
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.

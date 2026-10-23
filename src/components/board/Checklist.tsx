@@ -1,12 +1,15 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import { CheckSquare, GripVertical, Square } from 'lucide-react';
+import { CheckSquare, GripVertical, IndentDecrease, IndentIncrease, Square } from 'lucide-react';
 import type { BoardCard, BoardCheckItem, BoardData } from '../../types/data';
 import {
   addChecklistItem,
+  depthOf,
+  MAX_CHECK_DEPTH,
   moveChecklistItem,
   removeChecklistItem,
   renameChecklistItem,
   setChecklistItem,
+  setChecklistItemDepth,
 } from '../../board/boardOps';
 
 const ACTOR = 'you';
@@ -44,7 +47,12 @@ export function ChecklistPreview({ items, testId }: { items: BoardCheckItem[]; t
   return (
     <ul className="board-card__subtasks" data-testid={testId}>
       {shown.map((item) => (
-        <li key={item.id} className={item.done ? 'board-card__subtask--done' : undefined}>
+        <li
+          key={item.id}
+          className={item.done ? 'board-card__subtask--done' : undefined}
+          data-depth={depthOf(item)}
+          style={{ paddingLeft: depthOf(item) * 12 }}
+        >
           {item.done ? <CheckSquare size={12} aria-label="done" /> : <Square size={12} aria-label="open" />}
           <span>{item.text}</span>
         </li>
@@ -98,6 +106,20 @@ export function Checklist({ card, edit }: ChecklistProps) {
     }
   };
 
+  // Indent or outdent from the board itself, so held keys use the latest levels (REQ-BOARD-041).
+  const shift = (item: BoardCheckItem, step: number) => {
+    edit((board) => {
+      const current = board.cards.find((entry) => entry.id === card.id)?.checklist.find((entry) => entry.id === item.id);
+      if (!current) return board;
+      return setChecklistItemDepth(
+        board,
+        { cardId: card.id, itemId: item.id, depth: depthOf(current) + step },
+        ACTOR,
+        Date.now(),
+      );
+    });
+  };
+
   const move = (item: BoardCheckItem, index: number) => {
     edit((board) => moveChecklistItem(board, { cardId: card.id, itemId: item.id, index }, ACTOR, Date.now()));
   };
@@ -131,7 +153,13 @@ export function Checklist({ card, edit }: ChecklistProps) {
   };
 
   const moveByKey = (event: React.KeyboardEvent<HTMLLIElement>, item: BoardCheckItem) => {
-    if (!event.altKey || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) return;
+    if (!event.altKey) return;
+    if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+      event.preventDefault();
+      shift(item, event.key === 'ArrowRight' ? 1 : -1);
+      return;
+    }
+    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
     event.preventDefault();
     const step = event.key === 'ArrowUp' ? -1 : 1;
     refocus.current = { id: item.id, part: (event.target as HTMLElement).dataset.checkFocus ?? 'handle' };
@@ -168,10 +196,12 @@ export function Checklist({ card, edit }: ChecklistProps) {
       </div>
       <ChecklistProgress items={card.checklist} testId="card-checklist-progress" />
       <ul className="board-checklist" ref={list}>
-        {items.map((item) => (
+        {items.map((item, index) => (
           <li
             key={item.id}
             data-check-item={item.id}
+            data-depth={depthOf(item)}
+            style={{ paddingLeft: depthOf(item) * 22 }}
             className={drag?.id === item.id ? 'board-checklist__row--dragging' : undefined}
             onKeyDown={(event) => moveByKey(event, item)}
           >
@@ -211,7 +241,11 @@ export function Checklist({ card, edit }: ChecklistProps) {
                   setEditing(editingRef.current);
                 }}
                 onKeyDown={(event) => {
-                  if (event.key === 'Enter') {
+                  if (event.key === 'Tab') {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    shift(item, event.shiftKey ? -1 : 1);
+                  } else if (event.key === 'Enter') {
                     event.preventDefault();
                     finishEditing(true);
                   } else if (event.key === 'Escape') {
@@ -232,6 +266,30 @@ export function Checklist({ card, edit }: ChecklistProps) {
                 {item.text}
               </button>
             )}
+            <button
+              type="button"
+              className="board-checklist__level"
+              aria-label={`Outdent ${item.text}`}
+              title="Outdent (Alt+Left)"
+              disabled={depthOf(item) === 0}
+              onClick={() => shift(item, -1)}
+            >
+              <IndentDecrease size={14} />
+            </button>
+            <button
+              type="button"
+              className="board-checklist__level"
+              aria-label={`Indent ${item.text}`}
+              title="Indent (Alt+Right)"
+              disabled={
+                index === 0
+                || depthOf(item) >= MAX_CHECK_DEPTH
+                || depthOf(item) > depthOf(items[index - 1])
+              }
+              onClick={() => shift(item, 1)}
+            >
+              <IndentIncrease size={14} />
+            </button>
             <button
               type="button"
               className="board-checklist__remove"

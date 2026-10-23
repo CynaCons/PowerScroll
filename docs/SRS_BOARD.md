@@ -53,6 +53,9 @@ canvas undo history.
 | REQ-BOARD-037 | The board header shall offer a Labels filter menu listing every label on live cards with its count, most used first; choosing one or more labels shows only cards carrying any of them, combined with All / Needs me; the trigger shows the chosen labels, an x clears them, the subtitle reads "N of M cards", and columns count only shown cards. A drag while filtered keeps hidden cards in their order. The filter is per board for the session and is not saved in the notebook. Owner request 2026-10-20 | Must | T225 |
 | REQ-BOARD-038 | Each label shall have one colour per board, the same on card faces, in the card and in the filter, out of eight soft tints (no orange). Labels take colours in the order they were first used; each gets its name's colour unless an earlier label on the board has it, then the next free one, so up to eight labels on a board all differ. Owner request 2026-10-20 | Should | T225 |
 | REQ-BOARD-039 | A card moved to a column position (drag, keyboard or bridge) shall end at exactly that position among the column's live cards; the other cards keep their relative order. Found 2026-10-20: the moved card kept its old `order` and was sorted back. | Must | T224, T225 |
+| REQ-BOARD-040 | Checklist items shall nest up to four levels (depth 0 to 3), like PowerPlan's indented tasks: an item is at most one level deeper than the item above it, and the first item is at the top level. Rows show their level as indentation in the card and on the card face. Notebooks saved before nesting open with every item at the top level. Owner request 2026-10-23 | Must | T237 |
+| REQ-BOARD-041 | In the card, each item shall have Indent and Outdent buttons, and Alt+Right / Alt+Left on a focused item or Tab / Shift+Tab while editing its text shall indent or outdent it; its sub-items move with it. Removing an item keeps its sub-items, one level up. Owner request 2026-10-23 | Must | T237 |
+| REQ-BOARD-042 | Agents shall create, read, update and delete checklist items over MCP: `card_checklist_add` (text, optional `under` an item or `position` and `depth`), `card_checklist_update` (text, done, depth), `card_checklist_remove`, `card_checklist_move` (to a 1-based position) and `card_checklist_set` (the whole list from items or `- [ ]` Markdown lines, two spaces per level; items whose text is unchanged keep their id). Items are named by id or 1-based position; `card_get` returns each item's id, position, text, done and depth. Every change records the agent as the actor. Owner request 2026-10-23 | Must | T237, T211 |
 
 ## Traceability
 
@@ -68,3 +71,4 @@ canvas undo history.
 - T223 — `tests/board/223-card-checklist.spec.ts`
 - T224 — `tests/board/224-card-drag.spec.ts`
 - T225 — `tests/board/225-card-properties-label-filter.spec.ts`
+- T237 — `tests/board/237-checklist-nesting.spec.ts`

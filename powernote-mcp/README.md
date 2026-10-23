@@ -89,7 +89,8 @@ socket on their machine.
 | `card_create` / `card_get` / `card_update` | Create, read (id or `#15`) and edit a card. |
 | `card_claim` / `card_release` | Assign the card to `me` / clear the assignee. |
 | `card_move` | Move to todo/doing/waiting/done. `question` is required for waiting. |
-| `card_note` / `card_check` / `card_checklist_add` | Signed notes and checklist ticks (`item` is id or 1-based index). |
+| `card_note` / `card_check` | Signed notes and checklist ticks (`item` is id or 1-based index). |
+| `card_checklist_add` / `_update` / `_remove` / `_move` / `_set` | Edit the checklist: add (at the end, `under` an item or at a `position`), change text, done or `depth` (0-3, nested like PowerPlan), remove, move, or replace the whole list from `- [ ]` lines. |
 | `card_archive` / `card_restore` | Archive a card (hide it; stays in the file) / restore it to the end of its column. |
 | `agent_status` | One-line status for the agents strip; naming a card marks you active on it. |
 | `agent_leave` | Sign off: drop this name from the board's active agents. |

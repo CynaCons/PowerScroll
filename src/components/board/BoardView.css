@@ -1328,8 +1328,37 @@
   text-decoration: line-through;
 }
 
-.board-checklist__remove {
+.board-checklist__level {
+  display: inline-flex;
+  padding: 3px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: transparent;
+  cursor: pointer;
+}
+
+.board-checklist li:hover .board-checklist__level,
+.board-checklist__level:focus-visible {
+  color: #5c6467;
+}
+
+.board-checklist__level:hover:not(:disabled) {
+  background: #dde3e1;
+  color: #14181a;
+}
+
+.board-checklist li:hover .board-checklist__level:disabled {
+  color: #c3cbc9;
+  cursor: default;
+}
+
+.board-checklist__text + .board-checklist__level,
+.board-checklist__edit + .board-checklist__level {
   margin-left: auto;
+}
+
+.board-checklist__remove {
   border: none;
   background: transparent;
   color: #5c6467;
