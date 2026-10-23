@@ -78,6 +78,8 @@ setInnerMarkdownRenderer((inner) => markdownToHtml(inner));
 export function markdownToHtml(text: string): string {
   if (!text || !text.trim()) return '';
   const doc = parseMarkdown(text);
+  // Text that holds nothing (one blank line, e.g. `<br>`) shows nothing, as `''` does.
+  if (doc.childCount === 1 && doc.firstChild!.type === schema.nodes.paragraph && doc.firstChild!.content.size === 0) return '';
   // Outside a page (unit tests, tooling) the same specs are written out as a string.
   if (typeof document === 'undefined') return docToHtmlString(doc);
   domSerializer ??= DOMSerializer.fromSchema(schema);

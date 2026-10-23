@@ -119,21 +119,23 @@ export function serializeInline(parent: PMNode, options: InlineOptions = {}): st
     else pieces.push({ text: '', marks: child.marks, leaf: child });
   });
 
-  // Whitespace at the edges of a formatted run stays outside the markers.
+  // Whitespace at the edges of a formatted run stays outside the markers; a
+  // space between two pieces keeps the marks both share, so a run is not cut.
   const hasFormat = (ms: readonly Mark[]) => ms.some((mk) => mk.type.name !== 'code' && mk.type.name !== 'link');
+  const shared = (a: readonly Mark[], b: readonly Mark[] | undefined) => (b ? a.filter((mk) => mk.isInSet(b)) : []);
   const expelled: Piece[] = [];
-  for (const p of pieces) {
+  pieces.forEach((p, i) => {
     if (p.leaf || !hasFormat(p.marks) || p.marks.some((mk) => mk.type.name === 'code')) {
       expelled.push(p);
-      continue;
+      return;
     }
     const lead = p.text.match(/^\s*/)![0];
     const trail = p.text.length > lead.length ? p.text.match(/\s*$/)![0] : '';
     const core = p.text.slice(lead.length, p.text.length - trail.length);
-    if (lead) expelled.push({ text: lead, marks: [] });
+    if (lead) expelled.push({ text: lead, marks: shared(p.marks, pieces[i - 1]?.marks) });
     if (core) expelled.push({ text: core, marks: p.marks });
-    if (trail) expelled.push({ text: trail, marks: [] });
-  }
+    if (trail) expelled.push({ text: trail, marks: shared(p.marks, pieces[i + 1]?.marks) });
+  });
 
   // Text of the whole run a mark covers from piece i on (for code fences and autolinks).
   const runText = (start: number, mark: Mark) => {
