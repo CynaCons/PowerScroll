@@ -6,7 +6,7 @@
  * as typed (REQ-TEXT-056).
  */
 import type { Mark, Node as PMNode } from 'prosemirror-model';
-import { schema } from './schema';
+import { isListNode, schema } from './schema';
 
 const n = schema.nodes;
 
@@ -15,7 +15,7 @@ const n = schema.nodes;
 const WORD = /[\p{L}\p{N}]/u;
 
 /** Escape the characters that would otherwise format, inside a run of text. */
-function escapeInline(text: string): string {
+function escapeInline(text: string, inLink = false): string {
   let out = '';
   for (let i = 0; i < text.length; i++) {
     const c = text[i];
@@ -45,8 +45,8 @@ function escapeInline(text: string): string {
         out += /^(#x[0-9a-f]+|#\d+|[a-z]+);/i.test(text.slice(i + 1)) ? '\\&' : c;
         break;
       case '@':
-        // A typed e-mail address stays text; GFM would autolink it.
-        out += /[\w.+-]/.test(prev) && /[\w-]/.test(next) ? '\\@' : c;
+        // A typed e-mail address stays text; GFM would autolink it. Inside a link it already is one.
+        out += !inLink && /[\w.+-]/.test(prev) && /[\w-]/.test(next) ? '\\@' : c;
         break;
       default:
         out += c;
@@ -87,7 +87,8 @@ function markIO(mark: Mark, runText: string): MarkIO {
       return { open: fence + pad, close: pad + fence };
     }
     case 'link': {
-      if (mark.attrs.auto && runText === mark.attrs.href) return { open: '', close: '' };
+      // `<mailto:a@b>` autolinks: GFM would not find them bare, the angle form keeps them.
+      if (mark.attrs.auto && runText === mark.attrs.href) return /^mailto:/i.test(runText) ? { open: '<', close: '>' } : { open: '', close: '' };
       const href = String(mark.attrs.href).replace(/[()"\s]/g, (c) => (c === ' ' ? '%20' : '\\' + c));
       const title = mark.attrs.title ? ` "${String(mark.attrs.title).replace(/"/g, '\\"')}"` : '';
       return { open: '[', close: `](${href}${title})` };
@@ -156,7 +157,7 @@ export function serializeInline(parent: PMNode, options: InlineOptions = {}): st
   };
   /** What each piece writes (without line-start escapes), for flanking decisions. */
   const raw = expelled.map((p) =>
-    p.leaf ? leafMarkdown(p.leaf) : p.marks.some((mk) => mk.type.name === 'code') ? p.text.replace(/\n/g, ' ') : escapeInline(p.text),
+    p.leaf ? leafMarkdown(p.leaf) : p.marks.some((mk) => mk.type.name === 'code') ? p.text.replace(/\n/g, ' ') : escapeInline(p.text, p.marks.some((mk) => mk.type.name === 'link')),
   );
   /** How many marks piece j shares with piece j-1 (in schema order); marks above that close before j. */
   const keepAt = (j: number): number => {
@@ -176,9 +177,9 @@ export function serializeInline(parent: PMNode, options: InlineOptions = {}): st
     out += s;
     atLineStart = s.endsWith('\n');
   };
-  const writeText = (text: string) => {
+  const writeText = (text: string, inLink = false) => {
     if (!text) return;
-    const lines = escapeInline(text).split('\n');
+    const lines = escapeInline(text, inLink).split('\n');
     const first = atLineStart ? escapeLineStart(lines[0]) : lines[0];
     const rest = lines.slice(1).map(escapeLineStart);
     write([first, ...rest].join('\n'));
@@ -219,7 +220,7 @@ export function serializeInline(parent: PMNode, options: InlineOptions = {}): st
     } else if (p.marks.some((mk) => mk.type.name === 'code')) {
       write(p.text.replace(/\n/g, ' '));
     } else {
-      writeText(p.text);
+      writeText(p.text, p.marks.some((mk) => mk.type.name === 'link'));
     }
   });
   while (active.length) write(active.pop()!.io.close);
@@ -241,18 +242,26 @@ function indent(text: string, first: string, rest: string): string {
     .join('\n');
 }
 
-function serializeList(list: PMNode): string {
+/**
+ * `alternate` picks the second marker style (`*` / `)`) so a list right after
+ * a list of the same kind stays a separate list (CommonMark merges lists
+ * that share a marker).
+ */
+function serializeList(list: PMNode, alternate = false): string {
   const ordered = list.type === n.ordered_list;
   const start: number = ordered ? list.attrs.order : 1;
   const width = ordered ? String(start + list.childCount - 1).length + 2 : 2;
-  const pad = ' '.repeat(ordered ? Math.max(4, width) : 2);
+  const bullet = alternate ? '* ' : '- ';
+  const delim = alternate ? ')' : '.';
   const items: string[] = [];
   list.forEach((item, _off, i) => {
-    const marker = ordered ? `${String(start + i).padStart(width - 2, ' ')}. ` : '- ';
+    const marker = ordered ? `${String(start + i).padStart(width - 2, ' ')}${delim} ` : bullet;
     const box = item.attrs.checked === null ? '' : item.attrs.checked ? '[x] ' : '[ ] ';
-    const body = serializeBlocks(item, list.attrs.tight);
+    // Continuation lines sit at the row's content column; nested lists under
+    // a numbered row keep the app's 4-space habit (normalizeListIndents).
+    const body = serializeBlocks(item, list.attrs.tight, ordered ? Math.max(4, width) - marker.length : 0);
     // An empty row is its marker alone (`- `); the parser reads that as a row.
-    items.push(indent(body, marker + box, pad));
+    items.push(indent(body, marker + box, ' '.repeat(marker.length)));
   });
   return items.join(list.attrs.tight ? '\n' : '\n\n');
 }
@@ -304,20 +313,27 @@ function serializeBlock(node: PMNode, tight: boolean, parent: PMNode): string {
   }
 }
 
-/** Serialize a sequence of blocks (a doc, list item, or blockquote body). */
-function serializeBlocks(parent: PMNode, tight = false): string {
+/**
+ * Serialize a sequence of blocks (a doc, list item, or blockquote body).
+ * `nestedListIndent` is the extra indent a nested list gets inside a list
+ * row beyond the row's content column (the app's 4-space habit for numbers).
+ */
+function serializeBlocks(parent: PMNode, tight = false, nestedListIndent = 0): string {
+  const extra = ' '.repeat(nestedListIndent);
   const parts: string[] = [];
+  let alternate = false;
   parent.forEach((child, _off, i) => {
-    const text = serializeBlock(child, tight, parent);
+    const prev = i > 0 ? parent.child(i - 1) : null;
+    // Two lists of the same kind in a row alternate their marker so they stay apart.
+    if (isListNode(child)) alternate = !!prev && prev.type === child.type ? !alternate : false;
+    let text = isListNode(child) ? serializeList(child, alternate) : serializeBlock(child, tight, parent);
+    if (isListNode(child) && extra) text = text.split('\n').map((l) => (l ? extra + l : l)).join('\n');
     if (i === 0) {
       parts.push(text);
       return;
     }
     // Inside a tight list item, a nested list follows its paragraph on the next line.
-    const prev = parent.child(i - 1);
-    const joiner = tight && parent.type === n.list_item && (child.type === n.bullet_list || child.type === n.ordered_list) && prev.isTextblock
-      ? '\n'
-      : '\n\n';
+    const joiner = tight && parent.type === n.list_item && isListNode(child) && prev!.isTextblock ? '\n' : '\n\n';
     parts.push(joiner + text);
   });
   return parts.join('');
@@ -325,5 +341,7 @@ function serializeBlocks(parent: PMNode, tight = false): string {
 
 /** Serialize a document to the app's markdown dialect. */
 export function serializeMarkdown(doc: PMNode): string {
+  // A document holding nothing (one empty paragraph) is the empty text.
+  if (doc.childCount === 1 && doc.firstChild!.type === n.paragraph && doc.firstChild!.content.size === 0) return '';
   return serializeBlocks(doc);
 }

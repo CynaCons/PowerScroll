@@ -293,7 +293,7 @@ export function moveRow(dir: -1 | 1): Command {
 export const enterInList: Command = (state, dispatch) => {
   const { $from, empty } = state.selection;
   const d = listItemDepth($from);
-  if (d < 0 || $from.depth !== d + 1) return false;
+  if (d < 0 || $from.depth !== d + 1 || $from.parent.type.spec.code) return false;
   if (empty && $from.parent.content.size === 0) return liftListItem(n.list_item)(state, dispatch);
   return splitListItem(n.list_item)(state, (tr) => {
     // A new task row starts unticked.

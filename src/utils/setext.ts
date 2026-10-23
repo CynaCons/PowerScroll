@@ -1,3 +1,9 @@
+/**
+ * Marks an empty list row for marked (a private-use character, never typed by
+ * a user; a real U+200B in text is kept). Stripped again by the parser.
+ */
+export const EMPTY_ROW_MARK = '\uE002';
+
 const DASH_OR_EQUALS_LINE = /^(\s*)(-+|=+)[ \t\u00a0]*$/;
 
 /**
@@ -26,7 +32,7 @@ export function neutralizeSetextHeadings(markdown: string): string {
     const match = line.match(DASH_OR_EQUALS_LINE);
     if (!match) continue;
     const [, indent, run] = match;
-    if (run === '-') lines[i] = `${indent}- \u200b`;
+    if (run === '-') lines[i] = `${indent}- ${EMPTY_ROW_MARK}`;
     else if (run[0] === '-' && run.length >= 3) lines[i] = `\n${line}`;
     else lines[i] = `${indent}\\${run}`;
   }

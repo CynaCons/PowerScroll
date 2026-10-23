@@ -6,7 +6,7 @@
  * out here.
  */
 import type { DOMOutputSpec, Mark, Node as PMNode } from 'prosemirror-model';
-import { renderMath, schema } from './schema';
+import { htmlBlockHtml, renderMath, schema } from './schema';
 
 const n = schema.nodes;
 
@@ -46,7 +46,7 @@ function nodeToHtml(node: PMNode): string {
   } else if (node.type === n.html_inline) {
     html = `<span class="powernote-html">${node.attrs.html}</span>`;
   } else if (node.type === n.html_block) {
-    html = `<div class="powernote-html">${node.attrs.html}</div>`;
+    html = `<div class="powernote-html">${htmlBlockHtml(node.attrs as { html: string })}</div>`;
   } else {
     const content = node.content.size ? fragmentToHtml(node) : '';
     html = specToHtml(node.type.spec.toDOM!(node), content);

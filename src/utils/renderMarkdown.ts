@@ -14,7 +14,7 @@ import type { CSSProperties } from 'react';
 import { DOMSerializer } from 'prosemirror-model';
 import type { TextNodeData } from '../types/data';
 import { parseMarkdown } from '../text/parse';
-import { schema, sanitizeHtml } from '../text/schema';
+import { schema, sanitizeHtml, setInnerMarkdownRenderer } from '../text/schema';
 import { docToHtmlString } from '../text/htmlString';
 import { MIN_TEXT_HEIGHT, MIN_TEXT_WIDTH } from './pageLayout';
 
@@ -67,13 +67,16 @@ export function markdownBoxStyle(
 
 let domSerializer: DOMSerializer | null = null;
 
+// Markdown inside a raw HTML block (<details>, <div align>) renders through this same path.
+setInnerMarkdownRenderer((inner) => markdownToHtml(inner));
+
 /**
  * Render markdown to the HTML shown inside a text node: the same DOM the
  * editor shows (headings, lists, clickable task boxes, KaTeX math, links),
  * then sanitised so nothing in it can run script (REQ-TEXT-053).
  */
 export function markdownToHtml(text: string): string {
-  if (!text) return '';
+  if (!text || !text.trim()) return '';
   const doc = parseMarkdown(text);
   // Outside a page (unit tests, tooling) the same specs are written out as a string.
   if (typeof document === 'undefined') return docToHtmlString(doc);

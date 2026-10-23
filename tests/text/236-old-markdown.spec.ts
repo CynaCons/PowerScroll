@@ -44,8 +44,10 @@ async function probe(page: Page, cases: string[]): Promise<Record<string, Probe>
     const metrics = (md: string) => {
       const html = render.markdownToHtml(md);
       box.innerHTML = html;
+      // The engine's rows carry a <p> (v0.88.1's did not); it is layout-neutral in tight lists and not counted.
+      const rowParagraph = (el: Element) => el.tagName === 'P' && (el.parentElement?.tagName === 'LI' || el.parentElement?.classList.contains('task-list-body'));
       const tags = Array.from(box.querySelectorAll('*'))
-        .filter((el) => want.has(el.tagName.toLowerCase()) && !el.closest('.katex'))
+        .filter((el) => want.has(el.tagName.toLowerCase()) && !el.closest('.katex') && !rowParagraph(el))
         .map((el) => el.tagName.toLowerCase() + (el.tagName === 'INPUT' ? ((el as HTMLInputElement).checked ? '[x]' : '[ ]') : ''))
         .join(' ');
       const text = (box.textContent ?? '').replace(/\s+/g, ' ').trim();
@@ -156,7 +158,8 @@ test('short display math and inline $$...$$ render as formulas (M2)', async () =
     expect(r.first.text, key).not.toContain('$$');
     expect(r.again.html, key).toContain('katex');
   }
-  expect(of('mathLines').first.text).toMatch(/^before .* after$/);
+  expect(of('mathLines').first.tags).toBe('p br br');
+  expect(of('mathLines').first.text).toMatch(/^before.*after$/);
 });
 
 test('named and numeric HTML entities are decoded (M3)', async () => {

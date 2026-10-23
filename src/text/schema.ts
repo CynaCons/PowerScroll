@@ -38,6 +38,24 @@ function rawHtmlElement(tag: 'span' | 'div', html: string, display: boolean): HT
   return el;
 }
 
+let innerMarkdownRenderer: (markdown: string) => string = () => '';
+
+/** The renderer used for markdown inside a raw HTML block (set by renderMarkdown.ts to avoid an import cycle). */
+export function setInnerMarkdownRenderer(render: (markdown: string) => string): void {
+  innerMarkdownRenderer = render;
+}
+
+/**
+ * The HTML an html_block shows: the raw HTML, or, for a block that wraps
+ * markdown (`<details>…</details>`, `<div align="center">…</div>`), its
+ * opening tag, the markdown rendered, and its closing tag, the way the
+ * browser always composed them.
+ */
+export function htmlBlockHtml(attrs: { html: string; open?: string | null; inner?: string | null; close?: string | null }): string {
+  if (attrs.open && attrs.close) return `${attrs.open}${innerMarkdownRenderer(attrs.inner ?? '')}${attrs.close}`;
+  return attrs.html;
+}
+
 const nodes: Record<string, NodeSpec> = {
   doc: { content: 'block+' },
 
@@ -115,7 +133,8 @@ const nodes: Record<string, NodeSpec> = {
   list_item: {
     // checked: null = plain row; false/true = task row with its box (REQ-TEXT-063)
     attrs: { checked: { default: null } },
-    content: 'paragraph block*',
+    // Any block may come first (a code fence can open a row, REQ-TEXT-064).
+    content: 'block+',
     defining: true,
     parseDOM: [{
       tag: 'li',
@@ -196,8 +215,10 @@ const nodes: Record<string, NodeSpec> = {
   html_block: {
     group: 'block',
     atom: true,
-    attrs: { html: {} },
-    toDOM: (node) => rawHtmlElement('div', node.attrs.html, true),
+    // `html` is the whole raw source; open/inner/close are set when the block
+    // wraps markdown between an opening and its closing tag.
+    attrs: { html: {}, open: { default: null }, inner: { default: null }, close: { default: null } },
+    toDOM: (node) => rawHtmlElement('div', htmlBlockHtml(node.attrs as { html: string; open?: string; inner?: string; close?: string }), true),
   },
 
   ...tableNodes({

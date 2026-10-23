@@ -309,3 +309,8 @@ button:disabled {
 .powernote-text-editor .powernote-math--editing {
   display: inline-block;
 }
+/* Tight list rows carry a paragraph in the engine's DOM; it must not add the paragraph gap (REQ-TEXT-064). */
+.powernote-markdown [data-tight] > li > p,
+.powernote-markdown [data-tight] > li > .task-list-body > p {
+  margin: 0;
+}
