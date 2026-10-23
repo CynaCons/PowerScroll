@@ -1740,7 +1740,7 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Formatting that ends next to punctuation never shows stray markers [agent: claude]
 - [x] Old and agent-written markdown renders and saves as before [agent: claude]
 
-### v0.90.0 — Board checklists - nested items, agents edit them (current) (ACTIVE)
+### v0.90.0 — Board checklists - nested items, agents edit them
 **Goal:** Owner: checklists nest like PowerPlan, and agents can add, edit, tick, move and remove items.
 - [ ] Owner request: nested checklist items, edited by agents over MCP
 - [x] Requirements and failing tests for nesting and agent edits [agent: claude]
@@ -1749,6 +1749,15 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Card overlay and card face show and edit nesting [agent: claude]
 - [x] Run the checks and smoke test [agent: claude]
 - [x] Release v0.90.0 [agent: claude]
+
+### v0.91.0 — Board swim lanes by label (current) (ACTIVE)
+**Goal:** Owner: swim lanes per label; a card shows in each of its labels' lanes; always on.
+- [ ] Owner request: swim lanes on boards by label
+- [x] Requirements and failing tests for lanes [agent: claude]
+- [x] Lanes as rows across the columns, collapsible [agent: claude]
+- [x] Drag into another lane swaps the card's label [agent: claude]
+- [x] Run the checks and smoke test [agent: claude]
+- [ ] Release v0.91.0
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.

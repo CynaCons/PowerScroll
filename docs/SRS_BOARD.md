@@ -56,6 +56,9 @@ canvas undo history.
 | REQ-BOARD-040 | Checklist items shall nest up to four levels (depth 0 to 3), like PowerPlan's indented tasks: an item is at most one level deeper than the item above it, and the first item is at the top level. Rows show their level as indentation in the card and on the card face. Notebooks saved before nesting open with every item at the top level. Owner request 2026-10-23 | Must | T237 |
 | REQ-BOARD-041 | In the card, each item shall have Indent and Outdent buttons, and Alt+Right / Alt+Left on a focused item or Tab / Shift+Tab while editing its text shall indent or outdent it; its sub-items move with it. Removing an item keeps its sub-items, one level up. Owner request 2026-10-23 | Must | T237 |
 | REQ-BOARD-042 | Agents shall create, read, update and delete checklist items over MCP: `card_checklist_add` (text, optional `under` an item or `position` and `depth`), `card_checklist_update` (text, done, depth), `card_checklist_remove`, `card_checklist_move` (to a 1-based position) and `card_checklist_set` (the whole list from items or `- [ ]` Markdown lines, two spaces per level; items whose text is unchanged keep their id). Items are named by id or 1-based position; `card_get` returns each item's id, position, text, done and depth. Every change records the agent as the actor. Owner request 2026-10-23 | Must | T237, T211 |
+| REQ-BOARD-043 | A board with labels shall show swim lanes: one lane per label, in the order the labels were first used on its live cards, then a "No label" lane; each lane is a row across the four columns, lined up between columns, titled in the first column with the label and its card count. A card with several labels shows in each of their lanes; column headers count each card once. Lanes with no shown cards are left out; with a label filter on only the chosen labels' lanes show. A board without labels looks as before, with no lane titles. Lanes are always on. Owner request 2026-10-23 | Must | T238 |
+| REQ-BOARD-044 | Each lane shall collapse and expand from its title; a collapsed lane hides its cards in every column and keeps its title and count. Collapsed lanes are per board for the session and not saved in the notebook. Owner request 2026-10-23 | Should | T238 |
+| REQ-BOARD-045 | Dragging a card into another lane shall swap the label of the lane it came from for the target lane's label (into "No label": remove its labels), in the same drop as its column move. Owner request 2026-10-23 | Must | T238 |
 
 ## Traceability
 
@@ -72,3 +75,4 @@ canvas undo history.
 - T224 — `tests/board/224-card-drag.spec.ts`
 - T225 — `tests/board/225-card-properties-label-filter.spec.ts`
 - T237 — `tests/board/237-checklist-nesting.spec.ts`
+- T238 — `tests/board/238-swim-lanes.spec.ts`

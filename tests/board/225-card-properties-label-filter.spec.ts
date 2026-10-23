@@ -143,12 +143,13 @@ test('the label filter shows only cards with the chosen labels and clears with x
 
 test('a label has the same colour on every card and in the filter', async ({ page }) => {
   await openBoard(page);
-  const colours = await page.locator('.board-card .board-label', { hasText: 'Bug' }).evaluateAll(
+  // Lanes show a card once per label (REQ-BOARD-043): count the cards in the Bug lane.
+  const colours = await page.locator('[data-board-lane="Bug"] .board-card .board-label', { hasText: 'Bug' }).evaluateAll(
     (nodes) => nodes.map((node) => getComputedStyle(node).backgroundColor),
   );
   expect(colours).toHaveLength(2);
   expect(colours[0]).toBe(colours[1]);
-  const feature = await page.locator('.board-card .board-label', { hasText: 'Feature' })
+  const feature = await page.locator('.board-card .board-label', { hasText: 'Feature' }).first()
     .evaluate((node) => getComputedStyle(node).backgroundColor);
   expect(feature).not.toBe(colours[0]);
 

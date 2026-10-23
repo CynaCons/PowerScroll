@@ -8,6 +8,7 @@ import {
   liveCards,
   moveCard,
   restoreCard,
+  updateCard,
 } from '../../board/boardOps';
 import { boardLabelColors, displayName, relativeTime } from './boardUi';
 import { LabelColorsContext } from './labelColors';
@@ -25,6 +26,7 @@ import { CardOverlay } from './CardOverlay';
 import { boardLabels } from './CardProperties';
 import { LabelFilter } from './LabelFilter';
 import { QuestionPrompt } from './QuestionPrompt';
+import { boardLanes, inLane, relabel } from './lanes';
 import './BoardView.css';
 
 const ACTOR = 'you';
@@ -41,15 +43,22 @@ interface DragState {
   grabY: number;
   width: number;
   height: number;
+  /** The lane the card was picked up in (REQ-BOARD-045). */
+  lane: string;
 }
 
 interface DropState {
   column: BoardColumnId;
+  lane: string;
   index: number;
 }
 
-interface QuestionDrop extends DropState {
+interface QuestionDrop {
   cardId: string;
+  column: BoardColumnId;
+  index: number;
+  /** New labels when the card also changed lane. */
+  labels?: string[];
 }
 
 function cardsIn(cards: BoardCard[], column: BoardColumnId): BoardCard[] {
@@ -69,6 +78,8 @@ export function BoardView() {
   const [needsMe, setNeedsMe] = useState(false);
   // Label filter per board page, for this session only (not saved in the notebook).
   const [labelFilters, setLabelFilters] = useState<Record<string, string[]>>({});
+  // Collapsed lanes per board page, for this session only (REQ-BOARD-044).
+  const [collapsedLanes, setCollapsedLanes] = useState<Record<string, string[]>>({});
   const [spotlight, setSpotlight] = useState<string | null>(null);
   const [activityCollapsed, setActivityCollapsed] = useState(readActivityCollapsed);
   const [showArchived, setShowArchived] = useState(false);
@@ -211,6 +222,12 @@ export function BoardView() {
     .filter((card) => !needsMe || card.column === 'waiting')
     .filter((card) => !labelFilter.length || card.labels.some((label) => labelFilter.includes(label)));
   const filtered = needsMe || labelFilter.length > 0;
+  const lanes = boardLanes(live, visibleCards, labelFilter);
+  const collapsed = collapsedLanes[page.id] ?? [];
+  const toggleLane = (key: string) => setCollapsedLanes((current) => {
+    const list = current[page.id] ?? [];
+    return { ...current, [page.id]: list.includes(key) ? list.filter((item) => item !== key) : [...list, key] };
+  });
   const waitingCount = live.filter((card) => card.column === 'waiting').length;
   const spotlightActive = spotlight && chips.some((chip) => chip.name === spotlight)
     ? spotlight
@@ -232,7 +249,15 @@ export function BoardView() {
     if (!columnElement) return;
 
     const column = columnElement.dataset.boardColumn as BoardColumnId;
-    const cardElements = [...columnElement.querySelectorAll<HTMLElement>('[data-board-card]')]
+    // Over a lane, that lane; over the column header or its add button, the lane the card came from.
+    const laneElements = [...columnElement.querySelectorAll<HTMLElement>('[data-board-lane]')];
+    const laneElement = (document.elementFromPoint(event.clientX, event.clientY) as HTMLElement | null)
+      ?.closest<HTMLElement>('[data-board-lane]')
+      ?? laneElements.find((element) => element.dataset.boardLane === current.lane)
+      ?? laneElements[laneElements.length - 1];
+    if (!laneElement) return;
+    const lane = laneElement.dataset.boardLane as string;
+    const cardElements = [...laneElement.querySelectorAll<HTMLElement>('[data-board-card]')]
       .filter((element) => element.dataset.boardCard !== current.cardId);
     let index = cardElements.findIndex((element) => {
       const rectangle = element.getBoundingClientRect();
@@ -240,14 +265,14 @@ export function BoardView() {
     });
 
     if (index < 0) index = cardElements.length;
-    setDrop({ column, index });
+    setDrop({ column, lane, index });
   };
 
-  // A drop slot counts only the cards on screen; with a filter on, translate it
-  // to a place among all the column's cards so hidden cards keep their order.
-  const fullColumnIndex = (column: BoardColumnId, visibleIndex: number, cardId: string) => {
+  // A drop slot counts only the lane's cards on screen; translate it to a place
+  // among all the column's cards so cards hidden by a filter or in other lanes keep their order.
+  const fullColumnIndex = (column: BoardColumnId, lane: string, visibleIndex: number, cardId: string) => {
     const all = cardsIn(live, column).filter((card) => card.id !== cardId);
-    const shown = cardsIn(visibleCards, column).filter((card) => card.id !== cardId);
+    const shown = cardsIn(visibleCards, column).filter((card) => card.id !== cardId && inLane(card, lane));
     if (shown.length === all.length) return visibleIndex;
     const before = shown[visibleIndex];
     if (before) return all.indexOf(before);
@@ -265,6 +290,10 @@ export function BoardView() {
     setLanding({ cardId: drag.cardId, left: drag.x - drag.grabX, top: drag.y - drag.grabY });
 
     const currentCard = board.cards.find((card) => card.id === drag.cardId);
+    const labels = currentCard && drop.lane !== drag.lane
+      ? relabel(currentCard.labels, drag.lane, drop.lane)
+      : undefined;
+    const index = fullColumnIndex(drop.column, drop.lane, drop.index, drag.cardId);
 
     if (
       currentCard
@@ -272,18 +301,12 @@ export function BoardView() {
       && currentCard.column !== 'waiting'
       && !currentCard.question
     ) {
-      setQuestionDrop({
-        cardId: currentCard.id,
-        column: drop.column,
-        index: fullColumnIndex(drop.column, drop.index, currentCard.id),
-      });
+      setQuestionDrop({ cardId: currentCard.id, column: drop.column, index, labels });
     } else {
-      const index = fullColumnIndex(drop.column, drop.index, drag.cardId);
-      edit((current) => moveCard(current, {
-        cardId: drag.cardId,
-        to: drop.column,
-        index,
-      }, ACTOR, Date.now()));
+      edit((current) => {
+        const moved = moveCard(current, { cardId: drag.cardId, to: drop.column, index }, ACTOR, Date.now());
+        return labels ? updateCard(moved, { cardId: drag.cardId, labels }, ACTOR, Date.now()) : moved;
+      });
     }
 
     setDrag(null);
@@ -445,17 +468,29 @@ export function BoardView() {
             activityCollapsed ? ' board-view__content--activity-collapsed' : ''
           }`}
         >
-          <div className="board-view__columns">
-            {BOARD_COLUMNS.map((column) => {
-              const cards = cardsIn(visibleCards, column.id);
+          <div
+            className="board-view__columns"
+            style={{ gridTemplateRows: `auto repeat(${lanes.length}, auto) 1fr` }}
+          >
+            {BOARD_COLUMNS.map((column, columnIndex) => {
               const isDropColumn = drop?.column === column.id;
 
               return (
                 <BoardColumn
                   key={column.id}
                   column={column}
-                  cards={cards}
+                  count={cardsIn(visibleCards, column.id).length}
+                  lanes={lanes.map((lane) => ({
+                    ...lane,
+                    cards: cardsIn(lane.cards, column.id),
+                    total: lane.cards.length,
+                    collapsed: collapsed.includes(lane.key),
+                  }))}
+                  showLaneTitles={labels.length > 0}
+                  titleColumn={columnIndex === 0}
+                  onToggleLane={toggleLane}
                   draggingCardId={drag?.active ? drag.cardId : undefined}
+                  dropLane={isDropColumn ? drop.lane : undefined}
                   dropIndex={isDropColumn ? drop.index : undefined}
                   dropHeight={drag?.active ? drag.height : undefined}
                   animate={Boolean(drag?.active || landing)}
@@ -472,7 +507,7 @@ export function BoardView() {
                     if (!suppressOpen.current) setOpened(card);
                     suppressOpen.current = false;
                   }}
-                  onCardPointerDown={(card, event) => {
+                  onCardPointerDown={(card, event, lane) => {
                     if ((event.target as HTMLElement).closest('input, button[data-no-drag]')) return;
                     event.currentTarget.setPointerCapture(event.pointerId);
                     const rect = event.currentTarget.getBoundingClientRect();
@@ -487,6 +522,7 @@ export function BoardView() {
                       width: rect.width,
                       height: rect.height,
                       active: false,
+                      lane,
                     });
                   }}
                   onCardPointerUp={() => undefined}
@@ -529,12 +565,17 @@ export function BoardView() {
           <QuestionPrompt
             onCancel={() => setQuestionDrop(null)}
             onSubmit={(question) => {
-              edit((current) => moveCard(current, {
-                cardId: questionDrop.cardId,
-                to: questionDrop.column,
-                index: questionDrop.index,
-                question,
-              }, ACTOR, Date.now()));
+              edit((current) => {
+                const moved = moveCard(current, {
+                  cardId: questionDrop.cardId,
+                  to: questionDrop.column,
+                  index: questionDrop.index,
+                  question,
+                }, ACTOR, Date.now());
+                return questionDrop.labels
+                  ? updateCard(moved, { cardId: questionDrop.cardId, labels: questionDrop.labels }, ACTOR, Date.now())
+                  : moved;
+              });
               setQuestionDrop(null);
             }}
           />
