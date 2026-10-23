@@ -44,6 +44,10 @@ function escapeInline(text: string): string {
       case '&':
         out += /^(#x[0-9a-f]+|#\d+|[a-z]+);/i.test(text.slice(i + 1)) ? '\\&' : c;
         break;
+      case '@':
+        // A typed e-mail address stays text; GFM would autolink it.
+        out += /[\w.+-]/.test(prev) && /[\w-]/.test(next) ? '\\@' : c;
+        break;
       default:
         out += c;
     }
@@ -76,7 +80,10 @@ function markIO(mark: Mark, runText: string): MarkIO {
     case 'code': {
       const longest = (runText.match(/`+/g) ?? []).reduce((a, b) => Math.max(a, b.length), 0);
       const fence = '`'.repeat(longest + 1);
-      const pad = runText.startsWith('`') || runText.endsWith('`') ? ' ' : '';
+      // CommonMark strips one space from both ends of a code span when both
+      // ends are spaces (and for a backtick at an edge a space is needed).
+      const spaced = runText.startsWith(' ') && runText.endsWith(' ') && /[^ ]/.test(runText);
+      const pad = spaced || runText.startsWith('`') || runText.endsWith('`') ? ' ' : '';
       return { open: fence + pad, close: pad + fence };
     }
     case 'link': {
@@ -90,6 +97,16 @@ function markIO(mark: Mark, runText: string): MarkIO {
 }
 
 interface InlineOptions { tableCell?: boolean }
+
+/** Inline HTML form of the marks whose markdown delimiters depend on flanking. */
+const HTML_FORM: Record<string, string> = { strong: 'strong', em: 'em', strike: 'del' };
+
+// CommonMark delimiter-run flanking, as marked reads it: '' stands for the
+// start or end of the line, which counts as whitespace.
+const isWs = (c: string) => c === '' || /\s/.test(c);
+const isPunct = (c: string) => /[\p{P}\p{S}]/u.test(c);
+const leftFlanking = (prev: string, next: string) => !isWs(next) && (!isPunct(next) || isWs(prev) || isPunct(prev));
+const rightFlanking = (prev: string, next: string) => !isWs(prev) && (!isPunct(prev) || isWs(next) || isPunct(next));
 
 /** Serialize the inline content of a textblock (or table cell). */
 export function serializeInline(parent: PMNode, options: InlineOptions = {}): string {
@@ -127,6 +144,30 @@ export function serializeInline(parent: PMNode, options: InlineOptions = {}): st
     return s;
   };
 
+  const leafMarkdown = (leaf: PMNode): string => {
+    if (leaf.type === n.hard_break) return options.tableCell ? '<br>' : '\n';
+    if (leaf.type === n.math) return leaf.attrs.display ? `$$${leaf.attrs.src}$$` : `$${leaf.attrs.src}$`;
+    if (leaf.type === n.image) {
+      const title = leaf.attrs.title ? ` "${String(leaf.attrs.title).replace(/"/g, '\\"')}"` : '';
+      return `![${(leaf.attrs.alt ?? '').replace(/[[\]]/g, '\\$&')}](${leaf.attrs.src}${title})`;
+    }
+    if (leaf.type === n.html_inline) return leaf.attrs.html;
+    return leaf.textContent;
+  };
+  /** What each piece writes (without line-start escapes), for flanking decisions. */
+  const raw = expelled.map((p) =>
+    p.leaf ? leafMarkdown(p.leaf) : p.marks.some((mk) => mk.type.name === 'code') ? p.text.replace(/\n/g, ' ') : escapeInline(p.text),
+  );
+  /** How many marks piece j shares with piece j-1 (in schema order); marks above that close before j. */
+  const keepAt = (j: number): number => {
+    if (j <= 0 || j >= expelled.length) return 0;
+    const a = expelled[j - 1].marks;
+    const b = expelled[j].marks;
+    let k = 0;
+    while (k < a.length && k < b.length && a[k].eq(b[k])) k++;
+    return k;
+  };
+
   let out = '';
   let atLineStart = true;
   const active: { mark: Mark; io: MarkIO }[] = [];
@@ -143,6 +184,25 @@ export function serializeInline(parent: PMNode, options: InlineOptions = {}): st
     write([first, ...rest].join('\n'));
   };
 
+  /**
+   * Markdown delimiters for a run opening at piece i at level k, unless
+   * CommonMark would not read them (not left-/right-flanking next to
+   * punctuation or inside a word); then the inline HTML form (REQ-TEXT-075).
+   */
+  const chooseIO = (mark: Mark, i: number, k: number, marks: readonly Mark[]): MarkIO => {
+    const io = markIO(mark, runText(i, mark));
+    const tag = HTML_FORM[mark.type.name];
+    if (!tag) return io;
+    let j = i + 1;
+    while (j < expelled.length && keepAt(j) > k) j++;
+    const openPrev = out.slice(-1);
+    const openNext = marks.length > k + 1 ? '*' : raw[i][0] ?? '';
+    const closePrev = expelled[j - 1].marks.length > k + 1 ? '*' : raw[j - 1].slice(-1);
+    const closeNext = keepAt(j) < k ? '*' : j < expelled.length ? raw[j][0] ?? '' : '';
+    if (leftFlanking(openPrev, openNext) && rightFlanking(closePrev, closeNext)) return io;
+    return { open: `<${tag}>`, close: `</${tag}>` };
+  };
+
   expelled.forEach((p, i) => {
     const marks = p.marks;
     // Close marks that end here (innermost first), open the new ones in schema order.
@@ -150,19 +210,12 @@ export function serializeInline(parent: PMNode, options: InlineOptions = {}): st
     while (keep < active.length && keep < marks.length && active[keep].mark.eq(marks[keep])) keep++;
     while (active.length > keep) write(active.pop()!.io.close);
     for (let k = keep; k < marks.length; k++) {
-      const io = markIO(marks[k], runText(i, marks[k]));
+      const io = chooseIO(marks[k], i, k, marks);
       active.push({ mark: marks[k], io });
       write(io.open);
     }
     if (p.leaf) {
-      const leaf = p.leaf;
-      if (leaf.type === n.hard_break) write(options.tableCell ? '<br>' : '\n');
-      else if (leaf.type === n.math) write(leaf.attrs.display ? `$$${leaf.attrs.src}$$` : `$${leaf.attrs.src}$`);
-      else if (leaf.type === n.image) {
-        const title = leaf.attrs.title ? ` "${String(leaf.attrs.title).replace(/"/g, '\\"')}"` : '';
-        write(`![${(leaf.attrs.alt ?? '').replace(/[[\]]/g, '\\$&')}](${leaf.attrs.src}${title})`);
-      } else if (leaf.type === n.html_inline) write(leaf.attrs.html);
-      else write(leaf.textContent);
+      write(leafMarkdown(p.leaf));
     } else if (p.marks.some((mk) => mk.type.name === 'code')) {
       write(p.text.replace(/\n/g, ' '));
     } else {

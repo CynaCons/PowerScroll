@@ -66,6 +66,10 @@ function decodeEntities(s: string): string {
 
 type InlineToken = Token & { tokens?: Token[]; text?: string; raw?: string };
 
+const HTML_MARKS: Record<string, string> = {
+  u: 'underline', strong: 'strong', b: 'strong', em: 'em', i: 'em', del: 'strike', s: 'strike', strike: 'strike',
+};
+
 function inline(tokens: Token[], marks: Mark[], pieces: MathPiece[]): PMNode[] {
   const out: PMNode[] = [];
   const text = (t: string, ms: Mark[]) => {
@@ -97,6 +101,9 @@ function inline(tokens: Token[], marks: Mark[], pieces: MathPiece[]): PMNode[] {
       case 'escape':
         text(decodeEntities(t.text ?? ''), marks);
         break;
+      case 'checkbox':
+        // A task row's box in a loose list arrives as an inline token; the box is the row's state (REQ-TEXT-063).
+        break;
       case 'strong':
         out.push(...inline(t.tokens ?? [], [...marks, m.strong.create()], pieces));
         break;
@@ -126,18 +133,24 @@ function inline(tokens: Token[], marks: Mark[], pieces: MathPiece[]): PMNode[] {
       }
       case 'html': {
         const html = restoreRaw(t.text ?? '', pieces);
-        if (/^<u>$/i.test(html)) {
-          // <u>…</u> is how the app writes underline: find the closing tag.
+        // <u>, and the inline HTML forms the serializer falls back to when
+        // markdown delimiters would not flank (REQ-TEXT-075), become marks.
+        const open = html.match(/^<(u|strong|b|em|i|del|s|strike)>$/i);
+        const markName = open && HTML_MARKS[open[1].toLowerCase()];
+        if (open && markName) {
+          const tag = open[1].toLowerCase();
+          const opens = new RegExp(`^<${tag}>$`, 'i');
+          const closes = new RegExp(`^</${tag}>$`, 'i');
           let depth = 1;
           let j = i;
           for (; j < tokens.length; j++) {
             const tj = tokens[j] as InlineToken;
             if (tj.type !== 'html') continue;
-            if (/^<u>$/i.test(tj.text ?? '')) depth++;
-            else if (/^<\/u>$/i.test(tj.text ?? '') && --depth === 0) break;
+            if (opens.test(tj.text ?? '')) depth++;
+            else if (closes.test(tj.text ?? '') && --depth === 0) break;
           }
           if (j < tokens.length) {
-            out.push(...inline(tokens.slice(i, j), [...marks, m.underline.create()], pieces));
+            out.push(...inline(tokens.slice(i, j), [...marks, m[markName].create()], pieces));
             i = j + 1;
             break;
           }
