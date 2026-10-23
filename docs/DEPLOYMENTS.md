@@ -4,17 +4,17 @@ This file records externally observed deployment state. Update it after every
 release or distribution change. It is a ledger, not a substitute for querying
 the live services before a new release.
 
-**Last verified:** 2026-10-23 (Europe/Berlin)
+**Last verified:** 2026-10-23 (Europe/Berlin), after v0.90.0
 
 ## Current public state
 
 | Surface | Deployed state | Verification |
 |---|---|---|
-| Source repository | `CynaCons/PowerScroll`; app release source is tag `v0.89.0` at `d9a075d` | [Repository](https://github.com/CynaCons/PowerScroll) |
-| Application release | `v0.89.0`, published 2026-10-23 06:10 UTC, non-draft, `Latest`; app reports `0.89.0` | [GitHub release](https://github.com/CynaCons/PowerScroll/releases/tag/v0.89.0) |
-| GitHub Pages | Public, HTTPS, workflow-deployed from `main` at `d9a075d` (run succeeded 2026-10-23); live app reports `0.89.0` | [Storefront](https://cynacons.github.io/PowerScroll/) · [Live app](https://cynacons.github.io/PowerScroll/app/) · [deployments](https://github.com/CynaCons/PowerScroll/actions/workflows/pages.yml) |
-| npm | `powerscroll-mcp@0.67.1`; `latest` = `0.67.1`. **0.70.0 (board tools; every board tool requires the agent's own `me`) is committed at `817bbd5` but NOT published**: npm was not signed in on the release machine (`npm whoami` 401). 0.68.0 and 0.69.0 were never published and are skipped | [npm package](https://www.npmjs.com/package/powerscroll-mcp) |
-| Official MCP Registry | `io.github.CynaCons/powerscroll@0.67.1`, active. 0.70.0 waits for npm (Registry validation queries npm) | [Registry search](https://registry.modelcontextprotocol.io/?q=powerscroll) |
+| Source repository | `CynaCons/PowerScroll`; app release source is tag `v0.90.0` at `da3a031` | [Repository](https://github.com/CynaCons/PowerScroll) |
+| Application release | `v0.90.0`, published 2026-10-23, non-draft, `Latest`; app reports `0.90.0` | [GitHub release](https://github.com/CynaCons/PowerScroll/releases/tag/v0.90.0) |
+| GitHub Pages | Public, HTTPS, workflow-deployed from `main` at `da3a031` (run succeeded 2026-10-23); live app reports `0.90.0` | [Storefront](https://cynacons.github.io/PowerScroll/) · [Live app](https://cynacons.github.io/PowerScroll/app/) · [deployments](https://github.com/CynaCons/PowerScroll/actions/workflows/pages.yml) |
+| npm | `powerscroll-mcp@0.67.1`; `latest` = `0.67.1`. **0.70.0 and 0.71.0 (0.71.0 adds the checklist tools: `card_checklist_update/_remove/_move/_set`, nested items) are committed but NOT published**: npm is not signed in on the release machine (`npm whoami` 401 again on 2026-10-23). Local checkouts (`node powernote-mcp/server.js`) have them | [npm package](https://www.npmjs.com/package/powerscroll-mcp) |
+| Official MCP Registry | `io.github.CynaCons/powerscroll@0.67.1`, active. 0.71.0 waits for npm (Registry validation queries npm) | [Registry search](https://registry.modelcontextprotocol.io/?q=powerscroll) |
 
 The surfaces diverge on purpose at this snapshot: the app ships the board UI
 and its bridge commands, but agents only get the board tools once
@@ -24,14 +24,37 @@ them, and the release carries the 0.70.0 tarball as an asset.
 
 ## GitHub release assets
 
-The `v0.89.0` release contains (digests reported by the GitHub API; the HTML
-size matches the committed `dist-template/index.html`):
+The `v0.90.0` release contains (digests reported by the GitHub API; the HTML
+digest equals the committed and locally tested `dist-template/index.html`):
 
 | Asset | Size | SHA-256 | Meaning |
 |---|---:|---|---|
-| `PowerScroll.html` | 3,018,465 bytes | `8ac8536f43a50b8c878d70dff2e415ce6cca163184a9f02329f9665fedcfe904` | Primary self-contained notebook application |
-| `PowerNote.html` | 3,018,465 bytes | `8ac8536f43a50b8c878d70dff2e415ce6cca163184a9f02329f9665fedcfe904` | Byte-identical compatibility alias for legacy updates |
-| `powerscroll-mcp.tgz` | 33,355 bytes | `27c1030a70bc51fd66cc0a9e9e285002b689ad083ed871d2260b083c8f7e2e5b` | MCP package snapshot at the app tag (package version `0.70.0`, not yet on npm) |
+| `PowerScroll.html` | 3,023,781 bytes | `7339f41b9aa0915bc610a072fe5cda0de1165df99e518bbffb54c56a1affc96a` | Primary self-contained notebook application |
+| `PowerNote.html` | 3,023,781 bytes | `7339f41b9aa0915bc610a072fe5cda0de1165df99e518bbffb54c56a1affc96a` | Byte-identical compatibility alias for legacy updates |
+| `powerscroll-mcp.tgz` | 34,200 bytes | `1f04ed044ead26ee9f36c208e72c67d89e0a232c1c6a4b88a0d6f26e98868240` | MCP package snapshot at the app tag (package version `0.71.0`, not on npm) |
+
+## Verified for v0.90.0
+
+- App + MCP source release: nested board checklists (depth 0-3) and agent
+  checklist tools (`card_checklist_add` with under/position/depth,
+  `card_checklist_update`, `_remove`, `_move`, `_set`). Owner request
+  2026-10-23, short path. Pre-tag evidence: typecheck clean; lint 0 errors
+  (40 warnings); MCP package tests 13/13; bridge multi-agent tests all
+  passed; Playwright `tests/board` + `tests/agent` 161/161 with no retries
+  (T237 new, red first). **The full 964-test campaign was not run** for this
+  board-only change. The built template opened from disk (sha256
+  `7339f41b...`) reported 0.90.0 with zero console errors.
+- Post-tag: `Build & Release` succeeded; CI and `Deploy GitHub Pages`
+  succeeded for `da3a031`; the live app page contains `0.90.0`.
+- Updater paths: `releases/latest` returns `v0.90.0`; the raw `main`
+  `package.json` fallback returns `0.90.0`; the tag-pinned
+  `dist-template/index.html` returns 3,023,781 bytes.
+- Data: checklist items gain an optional `depth`; notebooks without it open
+  with every item at the top level. Older apps ignore the field and show the
+  items flat.
+- npm / Registry: not published (npm not signed in). Agents that run the MCP
+  server from this checkout get the new tools after their MCP connection
+  restarts.
 
 ## Verified for v0.89.0
 

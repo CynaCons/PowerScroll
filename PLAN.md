@@ -1748,7 +1748,7 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Bridge and MCP tools: add, update, remove, move, set the checklist [agent: claude]
 - [x] Card overlay and card face show and edit nesting [agent: claude]
 - [x] Run the checks and smoke test [agent: claude]
-- [ ] Release v0.90.0
+- [x] Release v0.90.0 [agent: claude]
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.
