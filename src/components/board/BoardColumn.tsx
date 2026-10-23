@@ -1,10 +1,9 @@
-import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Plus } from 'lucide-react';
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { BoardCard, BoardColumnId } from '../../types/data';
 import { BoardCardFace } from './BoardCardFace';
 import { avatarColor, prefersReducedMotion } from './boardUi';
 import type { Lane } from './lanes';
-import { useLabelColor } from './labelColors';
 
 /** Where the dragged copy was when it was let go, so the card can glide from there. */
 export interface CardLanding {
@@ -28,11 +27,8 @@ interface BoardColumnProps {
   /** Cards in this column, each once, for the header count. */
   count: number;
   column: { id: BoardColumnId; title: string };
-  /** Lane titles show when the board has labels (REQ-BOARD-043). */
+  /** Lanes have header bars when the board has labels; each column keeps the row under them (REQ-BOARD-043). */
   showLaneTitles?: boolean;
-  /** The column that carries the lane titles and their collapse buttons; the others keep the space. */
-  titleColumn?: boolean;
-  onToggleLane?: (key: string) => void;
   draggingCardId?: string;
   dropLane?: string;
   dropIndex?: number;
@@ -59,8 +55,6 @@ export function BoardColumn({
   count,
   column,
   showLaneTitles = false,
-  titleColumn = false,
-  onToggleLane,
   draggingCardId,
   dropLane,
   dropIndex,
@@ -83,7 +77,6 @@ export function BoardColumn({
   const [draft, setDraft] = useState('');
   const [confirmingClear, setConfirmingClear] = useState(false);
   const input = useRef<HTMLInputElement>(null);
-  const labelColor = useLabelColor();
 
   useEffect(() => {
     if (adding) input.current?.focus();
@@ -145,7 +138,7 @@ export function BoardColumn({
 
   return (
     <section
-      className="board-column"
+      className={`board-column${showLaneTitles ? ' board-column--lanes' : ''}`}
       data-testid={`board-column-${column.id}`}
       data-board-column={column.id}
     >
@@ -195,34 +188,10 @@ export function BoardColumn({
             lane.cards.filter((card) => card.id !== draggingCardId).map((card, index) => [card.id, index]),
           );
           const laneDrop = dropLane === lane.key ? dropIndex : undefined;
-          const name = lane.label ?? 'No label';
           return (
-            <div
-              key={lane.key}
-              className={`board-lane${showLaneTitles ? ' board-lane--titled' : ''}`}
-              data-board-lane={lane.key}
-            >
-              {showLaneTitles && (titleColumn ? (
-                <div className="board-lane__title" data-testid="board-lane-title">
-                  <button
-                    type="button"
-                    className="board-lane__toggle"
-                    aria-label={`${lane.collapsed ? 'Expand' : 'Collapse'} ${name} lane`}
-                    aria-expanded={!lane.collapsed}
-                    onClick={() => onToggleLane?.(lane.key)}
-                  >
-                    {lane.collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
-                  </button>
-                  {lane.label ? (
-                    <span className="board-label" style={labelColor(lane.label)}>{lane.label}</span>
-                  ) : (
-                    <span className="board-lane__none">{name}</span>
-                  )}
-                  <span className="board-lane__count">{lane.total}</span>
-                </div>
-              ) : (
-                <div className="board-lane__title board-lane__title--spacer" aria-hidden="true" />
-              ))}
+            <Fragment key={lane.key}>
+              {showLaneTitles && <div className="board-lane__gap" aria-hidden="true" />}
+              <div className="board-lane" data-board-lane={lane.key}>
               {!lane.collapsed && lane.cards.flatMap((card) => [
                 ...(card.id !== draggingCardId && laneDrop === slotIndex.get(card.id)
                   ? [<Placeholder key="drop-slot" height={dropHeight} />]
@@ -255,7 +224,8 @@ export function BoardColumn({
               ])}
               {(lane.collapsed ? laneDrop !== undefined : laneDrop === slotIndex.size)
                 && <Placeholder key="drop-slot" height={dropHeight} />}
-            </div>
+              </div>
+            </Fragment>
           );
         })}
       </div>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
 import type { BoardCard, BoardColumnId, BoardData } from '../../types/data';
 import {
   BOARD_COLUMNS,
@@ -10,7 +10,7 @@ import {
   restoreCard,
   updateCard,
 } from '../../board/boardOps';
-import { boardLabelColors, displayName, relativeTime } from './boardUi';
+import { boardLabelColors, displayName, labelColor, relativeTime } from './boardUi';
 import { LabelColorsContext } from './labelColors';
 import {
   AGENT_ACTIVE_MS,
@@ -224,6 +224,8 @@ export function BoardView() {
   const filtered = needsMe || labelFilter.length > 0;
   const lanes = boardLanes(live, visibleCards, labelFilter);
   const collapsed = collapsedLanes[page.id] ?? [];
+  const collapsedNow = (key: string) => collapsed.includes(key);
+  const labelColors = boardLabelColors(board.cards);
   const toggleLane = (key: string) => setCollapsedLanes((current) => {
     const list = current[page.id] ?? [];
     return { ...current, [page.id]: list.includes(key) ? list.filter((item) => item !== key) : [...list, key] };
@@ -350,7 +352,7 @@ export function BoardView() {
   };
 
   return (
-    <LabelColorsContext.Provider value={boardLabelColors(board.cards)}>
+    <LabelColorsContext.Provider value={labelColors}>
       <main
         className="board-view"
         data-testid="board-view"
@@ -470,9 +472,9 @@ export function BoardView() {
         >
           <div
             className="board-view__columns"
-            style={{ gridTemplateRows: `auto repeat(${lanes.length}, auto) 1fr` }}
+            style={{ gridTemplateRows: `auto repeat(${lanes.length}, ${labels.length > 0 ? 'auto auto' : 'auto'}) 1fr` }}
           >
-            {BOARD_COLUMNS.map((column, columnIndex) => {
+            {BOARD_COLUMNS.map((column) => {
               const isDropColumn = drop?.column === column.id;
 
               return (
@@ -487,8 +489,6 @@ export function BoardView() {
                     collapsed: collapsed.includes(lane.key),
                   }))}
                   showLaneTitles={labels.length > 0}
-                  titleColumn={columnIndex === 0}
-                  onToggleLane={toggleLane}
                   draggingCardId={drag?.active ? drag.cardId : undefined}
                   dropLane={isDropColumn ? drop.lane : undefined}
                   dropIndex={isDropColumn ? drop.index : undefined}
@@ -534,6 +534,28 @@ export function BoardView() {
                 />
               );
             })}
+            {labels.length > 0 && lanes.map((lane, index) => (
+              <div
+                key={`lane-${lane.key}`}
+                className={`board-lane-header${index === 0 ? ' board-lane-header--first' : ''}`}
+                data-testid="board-lane-title"
+                style={{ gridRow: 2 + index * 2, borderLeftColor: lane.label ? labelColor(lane.label, labelColors).color : undefined }}
+              >
+                <button
+                  type="button"
+                  className="board-lane-header__toggle"
+                  aria-label={`${collapsedNow(lane.key) ? 'Expand' : 'Collapse'} ${lane.label ?? 'No label'} lane`}
+                  aria-expanded={!collapsedNow(lane.key)}
+                  onClick={() => toggleLane(lane.key)}
+                >
+                  {collapsedNow(lane.key) ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+                </button>
+                {lane.label ? <span className="board-label" style={labelColor(lane.label, labelColors)}>{lane.label}</span> : <span className="board-lane-header__none">No label</span>}
+                <span className="board-lane-header__count">
+                  {lane.cards.length} card{lane.cards.length === 1 ? '' : 's'}
+                </span>
+              </div>
+            ))}
           </div>
           <ActivityPanel
             board={board}

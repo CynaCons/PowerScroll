@@ -1750,7 +1750,7 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Run the checks and smoke test [agent: claude]
 - [x] Release v0.90.0 [agent: claude]
 
-### v0.91.0 — Board swim lanes by label (current) (ACTIVE)
+### v0.91.0 — Board swim lanes by label
 **Goal:** Owner: swim lanes per label; a card shows in each of its labels' lanes; always on.
 - [ ] Owner request: swim lanes on boards by label
 - [x] Requirements and failing tests for lanes [agent: claude]
@@ -1758,6 +1758,14 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Drag into another lane swaps the card's label [agent: claude]
 - [x] Run the checks and smoke test [agent: claude]
 - [x] Release v0.91.0 [agent: claude]
+
+### v0.91.1 — Board swim lanes - stronger separation (current) (ACTIVE)
+**Goal:** Owner: lanes stand apart like Jira's, with a bar across the columns per lane.
+- [ ] Owner request: stronger separation between swim lanes, closer to Jira
+- [x] Lane header bar across the four columns [agent: claude]
+- [x] Each lane boxed per column, board shows between lanes [agent: claude]
+- [x] Run the checks and smoke test [agent: claude]
+- [x] Release v0.91.1 [agent: claude]
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.
