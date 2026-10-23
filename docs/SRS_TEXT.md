@@ -93,3 +93,4 @@ Owner, 2026-10-22: "This text block needs a redesign ... think from the user per
 | REQ-TEXT-072 | After changing size or colour from the toolbar while editing, the next key typed shall go into the text as if the toolbar had not been used | Must | T234 |
 | REQ-TEXT-073 | Ctrl+Shift+0 (or the Text choice) on a heading shall make it an ordinary paragraph and never pull it into a neighbouring list | Should | T234 |
 | REQ-TEXT-074 | Checklist rows shall line up with bullet and numbered rows: the checkbox sits where the bullet sits and the text starts at the same x | Should | T234 |
+| REQ-TEXT-075 | Any mix of formatting the editor can produce shall be stored so that it renders exactly as edited: a format that starts or ends next to punctuation or inside a word (e.g. unbolding "Friday" in a bold "ship on Friday.") shall never show stray `*`, `_` or `~` and never change which characters are formatted, after leaving and reopening the block | Must | T235 |

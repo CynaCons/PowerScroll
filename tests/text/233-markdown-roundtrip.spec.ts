@@ -80,6 +80,11 @@ const CORPUS: [string, string][] = [
   ['entity', 'fish &amp; chips'],
   ['html-block', '<details open>x</details>\n\npara'],
   ['two-lists', '- a\n- b\n\n1. one\n2. two'],
+  ['loose-tasks-after-bullets', '- apples\n- pears\n\n- [ ] book hotel\n- [x] renew passport'],
+  ['loose-ordered-tasks', '1. [ ] x\n\n2. [x] y'],
+  ['task-two-paragraphs', '- [ ] a\n\n  second para\n- [x] b'],
+  ['loose-task-nested', '- [ ] task\n\n  - [x] sub'],
+  ['bold-edge-punctuation', 'ship on **Friday**. Done **(now)**!'],
 ];
 
 interface Report { label: string; same: boolean; renderSame: boolean; out: string; error: string | null }
