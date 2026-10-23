@@ -4,15 +4,15 @@ This file records externally observed deployment state. Update it after every
 release or distribution change. It is a ledger, not a substitute for querying
 the live services before a new release.
 
-**Last verified:** 2026-10-23 (Europe/Berlin), after v0.90.0
+**Last verified:** 2026-10-23 (Europe/Berlin), after v0.91.0
 
 ## Current public state
 
 | Surface | Deployed state | Verification |
 |---|---|---|
-| Source repository | `CynaCons/PowerScroll`; app release source is tag `v0.90.0` at `da3a031` | [Repository](https://github.com/CynaCons/PowerScroll) |
-| Application release | `v0.90.0`, published 2026-10-23, non-draft, `Latest`; app reports `0.90.0` | [GitHub release](https://github.com/CynaCons/PowerScroll/releases/tag/v0.90.0) |
-| GitHub Pages | Public, HTTPS, workflow-deployed from `main` at `da3a031` (run succeeded 2026-10-23); live app reports `0.90.0` | [Storefront](https://cynacons.github.io/PowerScroll/) · [Live app](https://cynacons.github.io/PowerScroll/app/) · [deployments](https://github.com/CynaCons/PowerScroll/actions/workflows/pages.yml) |
+| Source repository | `CynaCons/PowerScroll`; app release source is tag `v0.91.0` at `b3785c4` | [Repository](https://github.com/CynaCons/PowerScroll) |
+| Application release | `v0.91.0`, published 2026-10-23, non-draft, `Latest`; app reports `0.91.0` | [GitHub release](https://github.com/CynaCons/PowerScroll/releases/tag/v0.91.0) |
+| GitHub Pages | Public, HTTPS, workflow-deployed from `main` at `b3785c4` (run succeeded 2026-10-23); live app reports `0.91.0` | [Storefront](https://cynacons.github.io/PowerScroll/) · [Live app](https://cynacons.github.io/PowerScroll/app/) · [deployments](https://github.com/CynaCons/PowerScroll/actions/workflows/pages.yml) |
 | npm | `powerscroll-mcp@0.67.1`; `latest` = `0.67.1`. **0.70.0 and 0.71.0 (0.71.0 adds the checklist tools: `card_checklist_update/_remove/_move/_set`, nested items) are committed but NOT published**: npm is not signed in on the release machine (`npm whoami` 401 again on 2026-10-23). Local checkouts (`node powernote-mcp/server.js`) have them | [npm package](https://www.npmjs.com/package/powerscroll-mcp) |
 | Official MCP Registry | `io.github.CynaCons/powerscroll@0.67.1`, active. 0.71.0 waits for npm (Registry validation queries npm) | [Registry search](https://registry.modelcontextprotocol.io/?q=powerscroll) |
 
@@ -24,14 +24,31 @@ them, and the release carries the 0.70.0 tarball as an asset.
 
 ## GitHub release assets
 
-The `v0.90.0` release contains (digests reported by the GitHub API; the HTML
+The `v0.91.0` release contains (digests reported by the GitHub API; the HTML
 digest equals the committed and locally tested `dist-template/index.html`):
 
 | Asset | Size | SHA-256 | Meaning |
 |---|---:|---|---|
-| `PowerScroll.html` | 3,023,781 bytes | `7339f41b9aa0915bc610a072fe5cda0de1165df99e518bbffb54c56a1affc96a` | Primary self-contained notebook application |
-| `PowerNote.html` | 3,023,781 bytes | `7339f41b9aa0915bc610a072fe5cda0de1165df99e518bbffb54c56a1affc96a` | Byte-identical compatibility alias for legacy updates |
-| `powerscroll-mcp.tgz` | 34,200 bytes | `1f04ed044ead26ee9f36c208e72c67d89e0a232c1c6a4b88a0d6f26e98868240` | MCP package snapshot at the app tag (package version `0.71.0`, not on npm) |
+| `PowerScroll.html` | 3,026,882 bytes | `efb83a2ac51cfb49b8cf63c2d30021803243173d97ce5189a4f4c9b02c167f7f` | Primary self-contained notebook application |
+| `PowerNote.html` | 3,026,882 bytes | `efb83a2ac51cfb49b8cf63c2d30021803243173d97ce5189a4f4c9b02c167f7f` | Byte-identical compatibility alias for legacy updates |
+| `powerscroll-mcp.tgz` | 34,200 bytes | `1f04ed044ead26ee9f36c208e72c67d89e0a232c1c6a4b88a0d6f26e98868240` | MCP package snapshot (version `0.71.0`, unchanged since v0.90.0, not on npm) |
+
+## Verified for v0.91.0
+
+- App-only release (MCP package unchanged at 0.71.0; tarball digest equals
+  v0.90.0's): board swim lanes by label (REQ-BOARD-043..045). Owner request
+  2026-10-23, short path. Pre-tag evidence: typecheck clean; lint 0 errors
+  (40 warnings); Playwright `tests/board` + `tests/agent` 164/164 with no
+  retries after updating T225's colour test for lanes (T238 new, red
+  first). **The full campaign was not run** (board-only change). The built
+  template opened from disk (sha256 `efb83a2a...`) reported 0.91.0 with
+  zero console errors.
+- Post-tag: `Build & Release`, CI and `Deploy GitHub Pages` succeeded for
+  `b3785c4`; the live app page contains `0.91.0`.
+- Updater paths: `releases/latest` returns `v0.91.0`; the raw `main`
+  `package.json` fallback returns `0.91.0`; the tag-pinned
+  `dist-template/index.html` returns 3,026,882 bytes.
+- Data: no format change; lanes and their collapsed state are view state.
 
 ## Verified for v0.90.0
 

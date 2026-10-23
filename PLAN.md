@@ -1757,7 +1757,7 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Lanes as rows across the columns, collapsible [agent: claude]
 - [x] Drag into another lane swaps the card's label [agent: claude]
 - [x] Run the checks and smoke test [agent: claude]
-- [ ] Release v0.91.0
+- [x] Release v0.91.0 [agent: claude]
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.
