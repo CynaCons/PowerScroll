@@ -4,15 +4,15 @@ This file records externally observed deployment state. Update it after every
 release or distribution change. It is a ledger, not a substitute for querying
 the live services before a new release.
 
-**Last verified:** 2026-10-23 (Europe/Berlin), after v0.91.0
+**Last verified:** 2026-10-23 (Europe/Berlin), after v0.91.2
 
 ## Current public state
 
 | Surface | Deployed state | Verification |
 |---|---|---|
-| Source repository | `CynaCons/PowerScroll`; app release source is tag `v0.91.0` at `b3785c4` | [Repository](https://github.com/CynaCons/PowerScroll) |
-| Application release | `v0.91.0`, published 2026-10-23, non-draft, `Latest`; app reports `0.91.0` | [GitHub release](https://github.com/CynaCons/PowerScroll/releases/tag/v0.91.0) |
-| GitHub Pages | Public, HTTPS, workflow-deployed from `main` at `b3785c4` (run succeeded 2026-10-23); live app reports `0.91.0` | [Storefront](https://cynacons.github.io/PowerScroll/) · [Live app](https://cynacons.github.io/PowerScroll/app/) · [deployments](https://github.com/CynaCons/PowerScroll/actions/workflows/pages.yml) |
+| Source repository | `CynaCons/PowerScroll`; app release source is tag `v0.91.2` at `2fced8b` | [Repository](https://github.com/CynaCons/PowerScroll) |
+| Application release | `v0.91.2`, published 2026-10-23, non-draft, `Latest`; app reports `0.91.2` | [GitHub release](https://github.com/CynaCons/PowerScroll/releases/tag/v0.91.2) |
+| GitHub Pages | Public, HTTPS, workflow-deployed from `main` at `2fced8b` (run succeeded 2026-10-23); live app reports `0.91.2` | [Storefront](https://cynacons.github.io/PowerScroll/) · [Live app](https://cynacons.github.io/PowerScroll/app/) · [deployments](https://github.com/CynaCons/PowerScroll/actions/workflows/pages.yml) |
 | npm | `powerscroll-mcp@0.67.1`; `latest` = `0.67.1`. **0.70.0 and 0.71.0 (0.71.0 adds the checklist tools: `card_checklist_update/_remove/_move/_set`, nested items) are committed but NOT published**: npm is not signed in on the release machine (`npm whoami` 401 again on 2026-10-23). Local checkouts (`node powernote-mcp/server.js`) have them | [npm package](https://www.npmjs.com/package/powerscroll-mcp) |
 | Official MCP Registry | `io.github.CynaCons/powerscroll@0.67.1`, active. 0.71.0 waits for npm (Registry validation queries npm) | [Registry search](https://registry.modelcontextprotocol.io/?q=powerscroll) |
 
@@ -24,14 +24,30 @@ them, and the release carries the 0.70.0 tarball as an asset.
 
 ## GitHub release assets
 
-The `v0.91.0` release contains (digests reported by the GitHub API; the HTML
+The `v0.91.2` release contains (digests reported by the GitHub API; the HTML
 digest equals the committed and locally tested `dist-template/index.html`):
 
 | Asset | Size | SHA-256 | Meaning |
 |---|---:|---|---|
-| `PowerScroll.html` | 3,026,882 bytes | `efb83a2ac51cfb49b8cf63c2d30021803243173d97ce5189a4f4c9b02c167f7f` | Primary self-contained notebook application |
-| `PowerNote.html` | 3,026,882 bytes | `efb83a2ac51cfb49b8cf63c2d30021803243173d97ce5189a4f4c9b02c167f7f` | Byte-identical compatibility alias for legacy updates |
-| `powerscroll-mcp.tgz` | 34,200 bytes | `1f04ed044ead26ee9f36c208e72c67d89e0a232c1c6a4b88a0d6f26e98868240` | MCP package snapshot (version `0.71.0`, unchanged since v0.90.0, not on npm) |
+| `PowerScroll.html` | 3,028,054 bytes | `ccb49e58500e0eadd3e1708a3de6d4a5ffec05a058f1004eff973c18e0e10526` | Primary self-contained notebook application |
+| `PowerNote.html` | 3,028,054 bytes | `ccb49e58500e0eadd3e1708a3de6d4a5ffec05a058f1004eff973c18e0e10526` | Byte-identical compatibility alias for legacy updates |
+| `powerscroll-mcp.tgz` | 34,200 bytes | `1f04ed044ead26ee9f36c208e72c67d89e0a232c1c6a4b88a0d6f26e98868240` | MCP package snapshot (version `0.71.0`, unchanged since v0.90.0, not on npm; not re-checked for v0.91.1/v0.91.2) |
+
+## Verified for v0.91.1 and v0.91.2
+
+- App-only releases. v0.91.1 (owner: "a stronger separation for the swim
+  lanes ... closer to Jira"): a header bar per lane across the columns and
+  one box per lane per column. v0.91.2: a collapsed lane is only its bar.
+  Pre-tag evidence: typecheck clean; lint 0 errors (40 warnings);
+  Playwright `tests/board` + `tests/agent` 164/164 (v0.91.1) and
+  `tests/board` 48/48 (v0.91.2), no retries. Full campaign not run. Built
+  templates opened from disk reported their versions with zero console
+  errors.
+- Post-tag: both `Build & Release` runs succeeded; Pages deployed `main`;
+  the live app reports `0.91.2`; `releases/latest` returns `v0.91.2`; the
+  raw `main` package.json returns `0.91.2`. Release HTML digests equal the
+  tested files: v0.91.1 `7c2e0081...` (3,027,918 bytes), v0.91.2
+  `ccb49e58...` (3,028,054 bytes).
 
 ## Verified for v0.91.0
 
