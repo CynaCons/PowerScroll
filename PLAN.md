@@ -1773,21 +1773,21 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 
 ### v0.92.0 — Search - a visible search that finds everything (current) (ACTIVE)
 **Goal:** Owner (2026-10-28): "we don't have a search functionality in PowerScroll" - make search obvious and complete.
-- [ ] Owner report 2026-10-28: "we don't have a search functionality in PowerScroll"
+- [ ] Owner report 2026-10-28: "we don't have a search functionality in PowerScroll" - fixed, awaiting owner check
 - [x] Agree the search scope with the owner [agent: claude]
-- [ ] Write search requirements from the user's point of view
-- [ ] Failing tests for the button, scope, findings and jumping
-- [ ] Search button in the nav rail and a scope switch
-- [ ] Ctrl+Shift+F opens notebook search with the real key
-- [ ] Search opens and works on board pages
-- [ ] Find titles, board cards, shape labels and image captions
-- [ ] Match the text as read, ignoring case, accents and markdown
-- [ ] Results grouped by page, kind shown, every match marked
-- [ ] Choosing a result moves the view to the block or opens the card
-- [ ] Arrow keys and Enter move through and open results
-- [ ] Run all checks and publish the showcase
+- [x] Write search requirements from the user's point of view [agent: claude]
+- [x] Failing tests for the button, scope, findings and jumping [agent: claude]
+- [x] Search button in the nav rail and a scope switch [agent: claude]
+- [x] Ctrl+Shift+F opens notebook search with the real key [agent: claude]
+- [x] Search opens and works on board pages [agent: claude]
+- [x] Find titles, board cards, shape labels and image captions [agent: claude]
+- [x] Match the text as read, ignoring case, accents and markdown [agent: claude]
+- [x] Results grouped by page, kind shown, every match marked [agent: claude]
+- [x] Choosing a result moves the view to the block or opens the card [agent: claude]
+- [x] Arrow keys and Enter move through and open results [agent: claude]
+- [x] Run all checks and publish the showcase [agent: claude]
 - [ ] Release v0.92.0
-- [ ] Smoke test: npm run dev launches with zero console errors
+- [x] Smoke test: npm run dev launches with zero console errors [agent: claude]
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.
