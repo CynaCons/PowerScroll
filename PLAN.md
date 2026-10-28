@@ -1759,7 +1759,7 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Run the checks and smoke test [agent: claude]
 - [x] Release v0.91.0 [agent: claude]
 
-### v0.91.1 — Board swim lanes - stronger separation (current) (ACTIVE)
+### v0.91.1 — Board swim lanes - stronger separation
 **Goal:** Owner: lanes stand apart like Jira's, with a bar across the columns per lane.
 - [ ] Owner request: stronger separation between swim lanes, closer to Jira
 - [x] Lane header bar across the four columns [agent: claude]
@@ -1768,6 +1768,26 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Release v0.91.1 [agent: claude]
 - [x] A collapsed lane shows only its header bar (v0.91.2) [agent: claude]
 - [x] Update the board showcase [agent: claude]
+
+## v0.92 — Search - easy to find, finds everything
+
+### v0.92.0 — Search - a visible search that finds everything (current) (ACTIVE)
+**Goal:** Owner (2026-10-28): "we don't have a search functionality in PowerScroll" - make search obvious and complete.
+- [ ] Owner report 2026-10-28: "we don't have a search functionality in PowerScroll"
+- [x] Agree the search scope with the owner [agent: claude]
+- [ ] Write search requirements from the user's point of view
+- [ ] Failing tests for the button, scope, findings and jumping
+- [ ] Search button in the nav rail and a scope switch
+- [ ] Ctrl+Shift+F opens notebook search with the real key
+- [ ] Search opens and works on board pages
+- [ ] Find titles, board cards, shape labels and image captions
+- [ ] Match the text as read, ignoring case, accents and markdown
+- [ ] Results grouped by page, kind shown, every match marked
+- [ ] Choosing a result moves the view to the block or opens the card
+- [ ] Arrow keys and Enter move through and open results
+- [ ] Run all checks and publish the showcase
+- [ ] Release v0.92.0
+- [ ] Smoke test: npm run dev launches with zero console errors
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.
