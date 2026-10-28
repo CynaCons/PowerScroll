@@ -1786,7 +1786,7 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Choosing a result moves the view to the block or opens the card [agent: claude]
 - [x] Arrow keys and Enter move through and open results [agent: claude]
 - [x] Run all checks and publish the showcase [agent: claude]
-- [ ] Release v0.92.0
+- [x] Release v0.92.0 [agent: claude]
 - [x] Smoke test: npm run dev launches with zero console errors [agent: claude]
 
 ## Future (Backlog)
