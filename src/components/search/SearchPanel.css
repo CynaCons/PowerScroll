@@ -3,7 +3,7 @@
   top: 8px;
   left: 50%;
   transform: translateX(-50%);
-  width: 400px;
+  width: 480px;
   max-width: calc(100% - 32px);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -55,7 +55,7 @@
 }
 
 .search-panel__results {
-  max-height: 300px;
+  max-height: min(420px, 55vh);
   overflow-y: auto;
 }
 
@@ -68,8 +68,8 @@
 
 .search-panel__result {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: baseline;
+  gap: 8px;
   width: 100%;
   padding: 8px 12px;
   text-align: left;
@@ -80,24 +80,81 @@
   border-bottom: 1px solid var(--color-border);
 }
 
-.search-panel__result:last-child {
-  border-bottom: none;
-}
-
 .search-panel__result:hover {
   background: var(--color-hover);
 }
 
+.search-panel__result--active,
+.search-panel__result--active:hover {
+  background: var(--color-active);
+  box-shadow: inset 2px 0 0 var(--color-primary);
+}
+
+/* One heading per page in notebook results (REQ-SEARCH-018). */
 .search-panel__result-path {
+  padding: 8px 12px 4px;
   font-size: 11px;
   color: var(--color-text-muted);
-  font-weight: 500;
+  font-weight: 600;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.search-panel__result-kind {
+  flex: none;
+  min-width: 72px;
+  font-size: 11px;
+  color: var(--color-text-muted);
 }
 
 .search-panel__result-snippet {
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* The usual find highlight; the app's accent colour is kept for faults. */
+.search-panel__result-snippet mark {
+  background: #fde68a;
+  color: inherit;
+  border-radius: 2px;
+}
+
+.search-panel__more {
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.search-panel__scopes {
+  display: flex;
+  gap: 4px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.search-panel__scope {
+  font-size: 12px;
+  padding: 3px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.search-panel__scope:hover {
+  background: var(--color-hover);
+  color: var(--color-text);
+}
+
+.search-panel__scope--active,
+.search-panel__scope--active:hover {
+  background: var(--color-active);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 .search-panel__toggle {

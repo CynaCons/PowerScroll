@@ -1,5 +1,6 @@
-import { Scroll, Library, MousePointer2, Hand, Type, Pen, ImageIcon, Shapes, Settings, GanttChartSquare, Workflow } from 'lucide-react';
+import { Scroll, Library, Search, MousePointer2, Hand, Type, Pen, ImageIcon, Shapes, Settings, GanttChartSquare, Workflow } from 'lucide-react';
 import { useToolStore } from '../../stores/useToolStore';
+import { useSearchStore } from '../../stores/useSearchStore';
 import './NavRail.css';
 
 interface NavRailProps {
@@ -18,6 +19,7 @@ export function NavRail({
 }: NavRailProps) {
   const activeTool = useToolStore((s) => s.activeTool);
   const setTool = useToolStore((s) => s.setTool);
+  const searchOpen = useSearchStore((s) => s.open);
 
   return (
     <nav className="nav-rail" data-testid="nav-rail">
@@ -39,6 +41,20 @@ export function NavRail({
           onClick={onToggleLibrary}
         >
           <Library size={20} />
+        </button>
+        <button
+          className={`nav-rail__btn ${searchOpen ? 'nav-rail__btn--active' : ''}`}
+          title="Search (Ctrl+F this page, Ctrl+Shift+F notebook)"
+          aria-label="Search"
+          aria-pressed={searchOpen}
+          data-testid="nav-search"
+          onClick={() => {
+            const search = useSearchStore.getState();
+            if (search.open) search.close();
+            else search.openSearch('notebook');
+          }}
+        >
+          <Search size={20} />
         </button>
       </div>
 

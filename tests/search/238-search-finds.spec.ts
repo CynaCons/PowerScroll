@@ -94,13 +94,22 @@ test.describe('238 - What search finds (REQ-SEARCH-014..018, 023)', () => {
   test('2,000 text blocks: each keystroke updates the results within 100 ms', async ({ page }) => {
     const big = JSON.parse(JSON.stringify(NOTEBOOK));
     const words = ['alpha', 'harbour', 'gamma', 'delta', 'omega'];
-    big.sections[0].pages[0].nodes = Array.from({ length: 2000 }, (_, i) => ({
-      id: `b${i}`, type: 'text', x: 100, y: 100 + i * 50, width: 400, height: 40, layer: 3,
-      data: {
-        text: `Block ${i} with **${words[i % 5]}** and [a link](https://x.y/${i}) - ${'filler text '.repeat(8)}`,
-        fontSize: 16, fontFamily: 'Inter', fontStyle: 'normal', fill: '#1a1a1a',
-      },
-    }));
+    // Twenty pages of 100 blocks, none of them open, as in a large notebook.
+    for (let p = 0; p < 20; p++) {
+      big.sections[0].pages.push({
+        id: `big${p}`, title: `Bulk ${p}`,
+        nodes: Array.from({ length: 100 }, (_, k) => {
+          const i = p * 100 + k;
+          return {
+            id: `b${i}`, type: 'text', x: 100, y: 100 + k * 50, width: 400, height: 40, layer: 3,
+            data: {
+              text: `Block ${i} with **${words[i % 5]}** and [a link](https://x.y/${i}) - ${'filler text '.repeat(8)}`,
+              fontSize: 16, fontFamily: 'Inter', fontStyle: 'normal', fill: '#1a1a1a',
+            },
+          };
+        }),
+      });
+    }
     await openFixture(page, 's1', 'p1', big);
     await page.getByTestId('nav-search').click();
     const times = await page.evaluate(async () => {
@@ -119,7 +128,7 @@ test.describe('238 - What search finds (REQ-SEARCH-014..018, 023)', () => {
       return out;
     });
     console.log('keystroke ms:', times.map((t) => t.toFixed(1)).join(' '));
-    await expect(page.getByTestId('search-count')).toHaveText(/40\d results/);
+    await expect(page.getByTestId('search-count')).toHaveText('405 results');
     for (const t of times) expect(t).toBeLessThan(100);
   });
 });

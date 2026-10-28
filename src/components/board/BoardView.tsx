@@ -23,6 +23,7 @@ import { agentChips, AgentsStrip } from './AgentsStrip';
 import { BoardColumn, type CardLanding } from './BoardColumn';
 import { BoardCardFace } from './BoardCardFace';
 import { CardOverlay } from './CardOverlay';
+import { useSearchStore } from '../../stores/useSearchStore';
 import { boardLabels } from './CardProperties';
 import { LabelFilter } from './LabelFilter';
 import { QuestionPrompt } from './QuestionPrompt';
@@ -101,6 +102,15 @@ export function BoardView() {
     useAgentPresenceStore.getState().tick();
     return () => window.clearInterval(id);
   }, []);
+
+  // A card chosen in search opens here once its board shows (REQ-SEARCH-020).
+  const searchReveal = useSearchStore((s) => s.reveal);
+  useEffect(() => {
+    if (!searchReveal || searchReveal.kind !== 'card' || !board || searchReveal.pageId !== page?.id) return;
+    useSearchStore.getState().setReveal(null);
+    const card = board.cards.find((c) => c.id === searchReveal.id && !c.archivedAt);
+    if (card) setOpened(card);
+  }, [searchReveal, board, page?.id]);
 
   useEffect(() => {
     if (!board) return;

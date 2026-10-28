@@ -5,13 +5,12 @@ import { InfiniteCanvas } from '../canvas/InfiniteCanvas';
 import { HierarchyPanel } from '../sidebar/HierarchyPanel';
 import { BottomToolbar } from '../toolbar/BottomToolbar';
 import { SearchPanel } from '../search/SearchPanel';
+import { useSearchStore } from '../../stores/useSearchStore';
 import { SettingsPanel } from '../settings/SettingsPanel';
 import { NotebookLibraryPanel } from './NotebookLibraryPanel';
 import { ZoomBar } from '../canvas/ZoomBar';
 import { BoardView } from '../board/BoardView';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
-import { useCanvasStore } from '../../stores/useCanvasStore';
-import { useDrawStore } from '../../stores/useDrawStore';
 import { notebookSettings, resolvePageSettings } from '../../utils/pageSettings';
 import { saveNotebook } from '../../utils/saveNotebook';
 import './AppShell.css';
@@ -22,8 +21,6 @@ export function AppShell() {
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   // Stable, so the overlay's Escape listener is not re-registered every render.
   const closeSettings = useCallback(() => setIsSettingsOpen(false), []);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchNotebookWide, setSearchNotebookWide] = useState(false);
 
   // Subscribed to the whole workspace and the active page id, so the canvas
   // repaints both when the notebook default changes and when you move to a page
@@ -51,11 +48,11 @@ export function AppShell() {
         saveNotebook(false);
       }
 
-      // Ctrl+F / Ctrl+Shift+F: search
-      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+      // Ctrl+F / Ctrl+Shift+F: search the page / the notebook (REQ-SEARCH-011).
+      // Shift makes the browser report "F", so compare the physical key too (REQ-SEARCH-012).
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.code === 'KeyF' || e.key.toLowerCase() === 'f')) {
         e.preventDefault();
-        setSearchNotebookWide(e.shiftKey);
-        setSearchOpen(true);
+        useSearchStore.getState().openSearch(e.shiftKey ? 'notebook' : 'page');
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -79,22 +76,6 @@ export function AppShell() {
     return () => window.removeEventListener('keydown', handleDrawerEscape, true);
   }, [isHierarchyOpen]);
 
-  const handleNavigateToResult = useCallback((sectionId: string, pageId: string, nodeId: string) => {
-    const ws = useWorkspaceStore.getState();
-    const canvas = useCanvasStore.getState();
-
-    ws.savePageNodes(canvas.nodes);
-    ws.savePageStrokes(useDrawStore.getState().strokes);
-    ws.setActivePage(sectionId, pageId);
-
-    const section = ws.workspace.sections.find((s) => s.id === sectionId);
-    const page = section?.pages.find((p) => p.id === pageId);
-    canvas.loadPageNodes(page?.nodes ?? []);
-    useDrawStore.getState().loadPageStrokes(page?.strokes ?? []);
-    canvas.selectNode(nodeId, false);
-
-    setSearchOpen(false);
-  }, []);
 
   return (
     <div className="app-shell" data-testid="app-shell">
@@ -125,13 +106,8 @@ export function AppShell() {
         <div className="canvas-area__content">
           {activePage?.kind === 'board' ? <BoardView /> : <><InfiniteCanvas backgroundMode={backgroundMode} bgColor={bgColor} />
           <BottomToolbar />
-          <SearchPanel
-            isOpen={searchOpen}
-            isNotebookWide={searchNotebookWide}
-            onClose={() => setSearchOpen(false)}
-            onNavigateToResult={handleNavigateToResult}
-          />
           <ZoomBar /></>}
+          <SearchPanel />
         </div>
       </div>
       {isSettingsOpen && (

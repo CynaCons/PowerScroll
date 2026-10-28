@@ -3,6 +3,7 @@ import { Stage, Layer, Group as KonvaGroup } from 'react-konva';
 import type Konva from 'konva';
 import { useCanvasStore, MIN_SCALE, MAX_SCALE } from '../../stores/useCanvasStore';
 import { useToolStore } from '../../stores/useToolStore';
+import { useSearchStore } from '../../stores/useSearchStore';
 import { getToolConfig } from '../../utils/toolConfig';
 import { createPenCursor } from '../../utils/penCursor';
 import { sortNodesForPaint } from '../../utils/zOrder';
@@ -123,6 +124,34 @@ export function InfiniteCanvas({ backgroundMode = 'pages', bgColor = '#ffffff' }
       useCanvasStore.getState().setStageRef(stageRef.current);
     }
   }, [dimensions]);
+
+  // ── Search reveal (REQ-SEARCH-019) ─────────────────────────
+  // A chosen result selects its block and brings it into view at the current
+  // zoom: centred when it fits, top-aligned when taller than the view, and
+  // left alone when it is already fully visible.
+  const searchReveal = useSearchStore((s) => s.reveal);
+  useEffect(() => {
+    if (!searchReveal || searchReveal.kind !== 'node' || searchReveal.pageId !== activePageId) return;
+    const stage = stageRef.current;
+    const width = stage?.width() ?? 0;
+    const height = stage?.height() ?? 0;
+    if (!stage || width === 0 || height === 0) return;
+    useSearchStore.getState().setReveal(null);
+    const canvas = useCanvasStore.getState();
+    const node = canvas.nodes.find((n) => n.id === searchReveal.id);
+    if (!node) return;
+    canvas.selectNode(node.id, false);
+    const { x, y, scale } = canvas.viewport;
+    const left = node.x * scale + x;
+    const top = node.y * scale + y;
+    const w = node.width * scale;
+    const h = node.height * scale;
+    if (left >= 0 && top >= 0 && left + w <= width && top + h <= height) return;
+    const margin = 48;
+    const nx = w <= width - 2 * margin ? width / 2 - (node.x + node.width / 2) * scale : margin - node.x * scale;
+    const ny = h <= height - 2 * margin ? height / 2 - (node.y + node.height / 2) * scale : margin - node.y * scale;
+    canvas.setViewport({ x: nx, y: ny });
+  }, [searchReveal, activePageId, dimensions]);
 
   // ── Resize observer ────────────────────────────────────────
   useEffect(() => {
