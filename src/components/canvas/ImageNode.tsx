@@ -25,8 +25,8 @@ export function ImageNode({ node, isSelected, onSelect, stageScale, onSnapChange
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [hovered, setHovered] = useState(false);
   const [editingNote, setEditingNote] = useState(false);
-  const activeTool = useToolStore((s) => s.activeTool);
-  const isInteractive = isNodeInteractive(activeTool);
+  // The derived flag, not the tool: a tool switch must not repaint every block.
+  const isInteractive = useToolStore((s) => isNodeInteractive(s.activeTool));
 
   useEffect(() => {
     const img = new window.Image();

@@ -162,6 +162,10 @@
   cursor: crosshair !important;
 }
 
+.infinite-canvas--pen canvas {
+  cursor: var(--pen-cursor) !important;
+}
+
 .infinite-canvas--none canvas {
   cursor: none !important;
 }

@@ -1,7 +1,7 @@
 /**
  * Editor commands beyond what prosemirror-commands gives: headings and list
  * kinds over the touched rows (REQ-TEXT-041..044), task boxes, moving rows,
- * the list-aware Enter/Backspace/Tab (REQ-TEXT-058) and links.
+ * the list-aware Enter/Backspace/Tab (REQ-TEXT-058, REQ-TEXT-076) and links.
  *
  * Block commands walk the touched textblocks from last to first so the
  * positions read from the original document stay valid while it changes.
@@ -321,6 +321,41 @@ export const backspaceMarker: Command = (state, dispatch) => {
     return true;
   }
   return liftListItem(n.list_item)(state, dispatch);
+};
+
+/**
+ * Backspace at the start of a line right under a list joins it onto the end of
+ * the list's last row; an empty line just goes, caret at that row's end
+ * (REQ-TEXT-076). The default join would wrap the line into a new bullet.
+ */
+export const backspaceAfterList: Command = (state, dispatch) => {
+  const { $from, empty } = state.selection;
+  if (!empty || $from.parentOffset !== 0 || $from.depth < 1) return false;
+  const line = $from.parent;
+  if (line.type !== n.paragraph) return false;
+  const index = $from.index($from.depth - 1);
+  if (index === 0) return false;
+  const list = $from.node($from.depth - 1).child(index - 1);
+  if (!isListNode(list)) return false;
+  // The last textblock of the list, however deeply nested, and where it starts.
+  const lineStart = $from.before();
+  let last: PMNode = list;
+  let pos = lineStart - list.nodeSize;
+  while (!last.isTextblock) {
+    const child = last.lastChild;
+    if (!child) return false;
+    pos += 1 + last.content.size - child.nodeSize;
+    last = child;
+  }
+  if (last.type.spec.code || !last.type.validContent(last.content.append(line.content))) return false;
+  if (dispatch) {
+    const target = pos + 1 + last.content.size;
+    const tr = state.tr.delete(lineStart, $from.after());
+    if (line.content.size) tr.insert(target, line.content);
+    tr.setSelection(TextSelection.create(tr.doc, target));
+    dispatch(tr.scrollIntoView());
+  }
+  return true;
 };
 
 /** Tab in a table moves to the next cell, adding a row after the last one (REQ-TEXT-068). */

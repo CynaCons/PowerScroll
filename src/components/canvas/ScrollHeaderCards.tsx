@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollText } from 'lucide-react';
 import type { BackgroundMode, CanvasBgColor, ScrollRecord } from '../../types/data';
 import {
@@ -38,24 +38,27 @@ const BODY_GAP = 6;
 const PIN_TOP = 8;
 const REST_CLEARANCE = CEILING_HEADROOM - PIN_TOP - CARD_HEIGHT - BODY_GAP;
 
-function bandContentBottom(
-  scroll: ScrollRecord,
+/**
+ * The lowest content y of every band, in one pass over the page. Per frame of a
+ * pan this used to be one pass per scroll, which on a page with 40 scrolls was
+ * 40 walks over every block and stroke point on each wheel tick.
+ */
+function bandContentBottoms(
   nodes: Array<{ x: number; y: number; height?: number }>,
   strokes: Array<{ points: readonly number[] }>,
   scrolls: ScrollRecord[],
-): number | null {
-  let bottom: number | null = null;
-  for (const node of nodes) {
-    if (columnAt(node.x, scrolls) !== scroll.column) continue;
-    bottom = Math.max(bottom ?? -Infinity, node.y + (node.height || 30));
-  }
+): Map<number, number> {
+  const bottoms = new Map<number, number>();
+  const lower = (column: number, y: number) => {
+    const current = bottoms.get(column);
+    if (current === undefined || y > current) bottoms.set(column, y);
+  };
+  for (const node of nodes) lower(columnAt(node.x, scrolls), node.y + (node.height || 30));
   for (const stroke of strokes) {
-    if (columnAt(stroke.points[0] ?? 0, scrolls) !== scroll.column) continue;
-    for (let i = 1; i < stroke.points.length; i += 2) {
-      bottom = Math.max(bottom ?? -Infinity, stroke.points[i]);
-    }
+    const column = columnAt(stroke.points[0] ?? 0, scrolls);
+    for (let i = 1; i < stroke.points.length; i += 2) lower(column, stroke.points[i]);
   }
-  return bottom;
+  return bottoms;
 }
 
 /** Screen-space title cards deliberately sit above every page-content canvas/HTML layer. */
@@ -88,7 +91,7 @@ export function ScrollHeaderCards({
   const viewport = useCanvasStore((s) => s.viewport);
   const nodes = useCanvasStore((s) => s.nodes);
   const strokes = useDrawStore((s) => s.strokes);
-  const ceiling = pageCeiling(nodes, strokes, scrolls);
+  const ceiling = useMemo(() => pageCeiling(nodes, strokes, scrolls), [nodes, strokes, scrolls]);
 
   const setLiveResizePreview = (next: { scrollId: string; width: number } | null) => {
     setResizePreview(next);
@@ -153,14 +156,20 @@ export function ScrollHeaderCards({
     };
   }, [menu]);
 
-  if (mode !== 'scroll' && mode !== 'pages') return null;
-  const displayScrolls = resizePreview
+  const displayScrolls = useMemo(() => (resizePreview
     ? scrolls.map((scroll) =>
         scroll.id === resizePreview.scrollId
           ? { ...scroll, width: resizePreview.width }
           : scroll,
       )
-    : scrolls;
+    : scrolls), [scrolls, resizePreview]);
+  const contentBottoms = useMemo(
+    () => bandContentBottoms(nodes, strokes, displayScrolls),
+    [nodes, strokes, displayScrolls],
+  );
+  const pageRange = useMemo(() => scrollPageRange(nodes, displayScrolls), [nodes, displayScrolls]);
+
+  if (mode !== 'scroll' && mode !== 'pages') return null;
   const orderedScrolls = [...displayScrolls].sort((a, b) => a.column - b.column);
   // The card rests on the page's top row: the derived ceiling, or the legacy
   // 12-unit inset on pages without one. (scrollTitleY would report its pinned
@@ -172,7 +181,6 @@ export function ScrollHeaderCards({
     globalThis as { Konva?: { stages?: Array<{ height: () => number }> } }
   ).Konva?.stages?.[0]?.height() ?? 800;
   const viewportHeight = stageHeight / scale;
-  const pageRange = scrollPageRange(nodes, displayScrolls);
   const pageCount = pageRange.lastRow - pageRange.firstRow + 1;
   const pageAtTop = Math.max(
     1,
@@ -214,12 +222,7 @@ export function ScrollHeaderCards({
         const isActive =
           (activeScrollId ??
             orderedScrolls.find((candidate) => candidate.title)?.id) === scroll.id;
-        const contentBottom = bandContentBottom(
-          scroll,
-          nodes,
-          strokes,
-          displayScrolls,
-        );
+        const contentBottom = contentBottoms.get(scroll.column) ?? null;
         const progress =
           contentBottom == null
             ? 0

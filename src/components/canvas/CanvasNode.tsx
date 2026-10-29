@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { CanvasNode as CanvasNodeType } from '../../types/data';
 import type { SnapGuide } from './SnapGuides';
 import { TextNode } from './TextNode';
@@ -15,7 +16,13 @@ interface CanvasNodeProps {
   onSnapChange: (lines: SnapGuide[]) => void;
 }
 
-export function CanvasNode({ node, isSelected, onSelect, stageScale, autoEdit, onSnapChange }: CanvasNodeProps) {
+/**
+ * Memoised: a page re-renders on every selection, drag frame and store write,
+ * and without this each one repaints every block on the page (and rebuilds its
+ * HTML overlay), which is what made pages with many scrolls slow (REQ-CANVAS-046).
+ * Every prop is stable unless that block itself changed.
+ */
+export const CanvasNode = memo(function CanvasNode({ node, isSelected, onSelect, stageScale, autoEdit, onSnapChange }: CanvasNodeProps) {
   switch (node.type) {
     case 'text':
       return (
@@ -71,4 +78,4 @@ export function CanvasNode({ node, isSelected, onSelect, stageScale, autoEdit, o
     default:
       return null;
   }
-}
+});

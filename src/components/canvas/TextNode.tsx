@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useLayoutEffect, useMemo } from 'react';
 import { Group, Rect } from 'react-konva';
-import { Html } from 'react-konva-utils';
+import { CanvasHtml } from './CanvasHtml';
 import type Konva from 'konva';
 import type { CanvasNode, TextNodeData } from '../../types/data';
 import { undoBatchEnd, undoBatchStart } from '../../stores/useCanvasStore';
@@ -66,8 +66,8 @@ export function TextNode({ node, isSelected, onSelect, stageScale, autoEdit, onS
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 
   // Only allow drag/hover in interactive modes (not draw or lasso)
-  const activeTool = useToolStore((s) => s.activeTool);
-  const isInteractive = isNodeInteractive(activeTool);
+  // The derived flag, not the tool: a tool switch must not repaint every block.
+  const isInteractive = useToolStore((s) => isNodeInteractive(s.activeTool));
 
   // Parse markdown to HTML (with math pre-processing and clickable checkboxes)
   const renderedHtml = useMemo(() => markdownToHtml(data.text), [data.text]);
@@ -290,8 +290,7 @@ export function TextNode({ node, isSelected, onSelect, stageScale, autoEdit, onS
       />
 
       {/* Markdown-rendered HTML overlay — selection highlight applied via CSS */}
-      <Html
-        groupProps={{ x: 0, y: 0 }}
+      <CanvasHtml
         divProps={{
           style: { pointerEvents: 'none', zIndex: 1 },
           className: 'powernote-html-overlay',
@@ -351,7 +350,7 @@ export function TextNode({ node, isSelected, onSelect, stageScale, autoEdit, onS
             onClose={() => setContextMenu(null)}
           />
         )}
-      </Html>
+      </CanvasHtml>
 
       {/* Width-only resize handles (height stays content-driven) */}
       {showWidthHandles &&

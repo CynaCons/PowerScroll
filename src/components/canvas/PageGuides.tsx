@@ -1,4 +1,6 @@
+import { memo, useMemo } from 'react';
 import { Rect, Line, Group, Text } from 'react-konva';
+import { useCanvasStore } from '../../stores/useCanvasStore';
 import type { BackgroundMode, CanvasNode, ScrollRecord } from '../../types/data';
 import {
   A4_WIDTH,
@@ -26,6 +28,38 @@ interface PageGuidesProps {
   nodes: CanvasNode[];
   scrolls?: ScrollRecord[];
   viewportScale?: number;
+  /** Width of the visible canvas in screen pixels; columns outside it are not drawn. */
+  viewWidth?: number;
+}
+
+/** Canvas-space x range; columns outside it are skipped. */
+export interface ViewRect { left: number; right: number }
+
+const ALL: ViewRect = { left: -Infinity, right: Infinity };
+
+/** Quantum (canvas units) the visible range snaps out to, so a pan repaints the guides only when it crosses one. */
+const VIEW_QUANTUM = 512;
+
+/**
+ * The visible width plus one screen either side, snapped out to VIEW_QUANTUM.
+ * On a page with dozens of scrolls almost every sheet is off screen, and Konva
+ * redraws every shadowed sheet on every pan frame unless it is left out of the
+ * tree (REQ-CANVAS-046). Only columns are skipped: a column's length follows
+ * its content, the number of columns follows the scrolls.
+ */
+function useViewRect(viewWidth?: number): ViewRect {
+  const key = useCanvasStore((s) => {
+    if (!viewWidth) return '';
+    const scale = Math.max(s.viewport.scale || 1, 0.05);
+    const w = viewWidth / scale;
+    const left = -s.viewport.x / scale - w;
+    return `${Math.floor(left / VIEW_QUANTUM) * VIEW_QUANTUM},${Math.ceil((left + 3 * w) / VIEW_QUANTUM) * VIEW_QUANTUM}`;
+  });
+  return useMemo(() => {
+    if (!key) return ALL;
+    const [left, right] = key.split(',').map(Number);
+    return { left, right };
+  }, [key]);
 }
 
 /**
@@ -64,7 +98,7 @@ function getOccupiedPages(nodes: CanvasNode[]): Set<string> {
   return withAdjacent;
 }
 
-function renderPages(nodes: CanvasNode[], scrolls?: ScrollRecord[]) {
+function renderPages(nodes: CanvasNode[], scrolls?: ScrollRecord[], view: ViewRect = ALL) {
   const occupied = getOccupiedPages(nodes);
   const elements: JSX.Element[] = [];
 
@@ -73,6 +107,7 @@ function renderPages(nodes: CanvasNode[], scrolls?: ScrollRecord[]) {
     const x = columnLeft(col, scrolls);
     const w = columnWidth(col, scrolls);
     const y = row * (A4_HEIGHT + PAGE_GAP);
+    if (x >= view.right || x + w <= view.left) continue;
 
     elements.push(
       <Rect
@@ -143,13 +178,14 @@ export function scrollPageRange(nodes: CanvasNode[], scrolls?: ScrollRecord[]) {
   };
 }
 
-function renderScroll(nodes: CanvasNode[], scrolls?: ScrollRecord[], viewportScale = 1) {
+function renderScroll(nodes: CanvasNode[], scrolls?: ScrollRecord[], viewportScale = 1, view: ViewRect = ALL) {
   const { columns, firstRow, lastRow } = scrollPageRange(nodes, scrolls);
   const elements: JSX.Element[] = [];
 
   for (const col of columns) {
     const x = columnLeft(col, scrolls);
     const w = columnWidth(col, scrolls);
+    if (x >= view.right || x + w <= view.left) continue;
     for (let row = firstRow; row <= lastRow; row++) {
       const topInset = row === firstRow ? 0 : 8;
       const bottomInset = row === lastRow ? 0 : 8;
@@ -235,9 +271,14 @@ function renderGrid() {
   return elements;
 }
 
-export function PageGuides({ mode, nodes, scrolls, viewportScale }: PageGuidesProps) {
-  if (mode === 'none') return null;
-  if (mode === 'grid') return <Group listening={false}>{renderGrid()}</Group>;
-  if (mode === 'scroll') return <Group listening={false}>{renderScroll(nodes, scrolls, viewportScale)}</Group>;
-  return <Group listening={false}>{renderPages(nodes, scrolls)}</Group>;
-}
+export const PageGuides = memo(function PageGuides({ mode, nodes, scrolls, viewportScale, viewWidth }: PageGuidesProps) {
+  const view = useViewRect(viewWidth);
+  const elements = useMemo(() => {
+    if (mode === 'none') return null;
+    if (mode === 'grid') return renderGrid();
+    if (mode === 'scroll') return renderScroll(nodes, scrolls, viewportScale, view);
+    return renderPages(nodes, scrolls, view);
+  }, [mode, nodes, scrolls, viewportScale, view]);
+  if (!elements) return null;
+  return <Group listening={false}>{elements}</Group>;
+});

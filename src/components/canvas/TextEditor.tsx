@@ -19,7 +19,7 @@ import { activeFormats, offsetFromPos, posFromOffset } from '../../text/doc';
 import { docWithLegacyStyle } from '../../text/blockFormat';
 import { textInputRules } from '../../text/inputRules';
 import {
-  applyLink, backspaceMarker, enterKey, isUrl, linkRangeAt, moveRow, normalizeHref, setHeading, setTaskChecked, shiftTabKey,
+  applyLink, backspaceAfterList, backspaceMarker, enterKey, isUrl, linkRangeAt, moveRow, normalizeHref, setHeading, setTaskChecked, shiftTabKey,
   tabKey, toggleList, toggleTaskChecked,
 } from '../../text/commands';
 import { htmlToMarkdown } from '../../utils/htmlToMarkdown';
@@ -237,7 +237,7 @@ function MarkdownEditor({ node, caretAt, onFinish }: Omit<TextEditorProps, 'stag
         dispatch?.(state.tr.replaceSelectionWith(schema.nodes.hard_break.create()).scrollIntoView());
         return true;
       },
-      Backspace: chainCommands(undoInputRule, backspaceMarker, baseKeymap.Backspace),
+      Backspace: chainCommands(undoInputRule, backspaceMarker, backspaceAfterList, baseKeymap.Backspace),
       Tab: tabKey,
       'Shift-Tab': shiftTabKey,
       'Mod-z': chainCommands(undoInputRule, undo),

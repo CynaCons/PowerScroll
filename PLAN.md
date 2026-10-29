@@ -1771,7 +1771,7 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 
 ## v0.92 — Search - easy to find, finds everything
 
-### v0.92.0 — Search - a visible search that finds everything (current) (ACTIVE)
+### v0.92.0 — Search - a visible search that finds everything (COMPLETE)
 **Goal:** Owner (2026-10-28): "we don't have a search functionality in PowerScroll" - make search obvious and complete.
 - [ ] Owner report 2026-10-28: "we don't have a search functionality in PowerScroll" - fixed, awaiting owner check
 - [x] Agree the search scope with the owner [agent: claude]
@@ -1788,6 +1788,23 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Run all checks and publish the showcase [agent: claude]
 - [x] Release v0.92.0 [agent: claude]
 - [x] Smoke test: npm run dev launches with zero console errors [agent: claude]
+
+## v0.93 — Fast pages with many scrolls, lists and pen that behave
+
+### v0.93.0 — Many scrolls stay fast; Backspace under a list; a visible pen cursor (current) (ACTIVE)
+**Goal:** Owner (2026-10-29): pages with 30-40 scrolls get slow; the second Backspace after Enter in a list brings the bullet back; in pen mode the cursor is the normal pointer.
+- [ ] Owner report 2026-10-29: pages with 30-40 scrolls get slow - fixed, awaiting owner check
+- [ ] Owner report 2026-10-29: Enter, Backspace, Backspace in a list brings the bullet back - fixed, awaiting owner check
+- [ ] Owner report 2026-10-29: pen mode shows the normal pointer, want Excalidraw's cursor - fixed, awaiting owner check
+- [x] Profile a page with 40 scrolls (5 and 20 blocks each) and find what scales with them [agent: claude]
+- [x] Blocks repaint only when they change (memoised node and wrapper; tool switch no longer repaints every block) [agent: claude]
+- [x] Block HTML sits in one shared layer that pans; blocks no longer reposition per frame [agent: claude]
+- [x] Blocks and page sheets far outside the view are not drawn; scroll header maths in one pass [agent: claude]
+- [x] Backspace at the start of a line under a list joins it onto the last row (REQ-TEXT-076, T240) [agent: claude]
+- [x] Pen cursor: Excalidraw-style crosshair, never hidden by a block hover (REQ-DRAW-029, T241) [agent: claude]
+- [x] Requirements and tests: REQ-CANVAS-046 (T242), REQ-TEXT-076 (T240), REQ-DRAW-029 (T241) [agent: claude]
+- [x] Run all checks, smoke test, publish the showcase [agent: claude]
+- [ ] Release v0.93.0
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.

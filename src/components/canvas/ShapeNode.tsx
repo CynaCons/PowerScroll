@@ -178,8 +178,8 @@ export function ShapeNode({ node, isSelected, onSelect, stageScale, onSnapChange
   const hitPad = isLinear ? Math.max(10, strokeWidth * 3) : 0;
 
   // Only allow drag/hover in interactive modes (not draw or lasso)
-  const activeTool = useToolStore((s) => s.activeTool);
-  const isInteractive = isNodeInteractive(activeTool);
+  // The derived flag, not the tool: a tool switch must not repaint every block.
+  const isInteractive = useToolStore((s) => isNodeInteractive(s.activeTool));
 
   return (
     <Group

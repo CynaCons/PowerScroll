@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useEffect, useMemo } from 'react';
+import { memo, useRef, useState, useCallback, useEffect, useMemo } from 'react';
 import { Stage, Layer, Group as KonvaGroup } from 'react-konva';
 import type Konva from 'konva';
 import { useCanvasStore, MIN_SCALE, MAX_SCALE } from '../../stores/useCanvasStore';
@@ -34,6 +34,21 @@ const ZOOM_FACTOR = 1.05;
 
 /** Stable empty array — a fresh [] each render would loop the store subscription. */
 const EMPTY_SCROLLS: ScrollRecord[] = [];
+
+type PaintedNodeProps = React.ComponentProps<typeof CanvasNode> & { dimmed: boolean };
+
+/**
+ * One block with its isolation dimming. Memoised with its wrapper so a click,
+ * a tool switch or one block's drag leaves every other block untouched
+ * (REQ-CANVAS-046).
+ */
+const PaintedNode = memo(function PaintedNode({ dimmed, ...props }: PaintedNodeProps) {
+  return (
+    <KonvaGroup opacity={dimmed ? 0.35 : 1} listening={!dimmed} cullId={props.node.id}>
+      <CanvasNode {...props} />
+    </KonvaGroup>
+  );
+});
 
 export type { CanvasBgColor };
 
@@ -83,6 +98,56 @@ export function InfiniteCanvas({ backgroundMode = 'pages', bgColor = '#ffffff' }
     : activeScrolls;
 
   useEffect(() => setScrollResizePreview(null), [activePageId]);
+
+  // ── Viewport culling (REQ-CANVAS-046) ───────────────────────
+  // Konva redraws every shape on every pan frame, visible or not. On a page
+  // with dozens of scrolls nearly every block is off screen, so text and image
+  // blocks further than one screen away are hidden from the canvas. Their HTML
+  // stays mounted, so heights, search and agents see them as before.
+  const nodesLayerRef = useRef<Konva.Layer>(null);
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const cull = () => {
+      const layer = nodesLayerRef.current;
+      if (!layer) return;
+      const scale = stage.scaleX() || 1;
+      const w = stage.width() / scale;
+      const h = stage.height() / scale;
+      const left = -stage.x() / scale - w;
+      const top = -stage.y() / scale - h;
+      const right = left + 3 * w;
+      const bottom = top + 3 * h;
+      const { nodes, selectedNodeIds } = useCanvasStore.getState();
+      const byId = new Map(nodes.map((n) => [n.id, n]));
+      for (const wrapper of layer.getChildren()) {
+        const id = wrapper.attrs.cullId as string | undefined;
+        const node = id ? byId.get(id) : undefined;
+        const cullable = !!node
+          && (node.type === 'text' || node.type === 'image')
+          && !(node.data as { rotation?: number }).rotation
+          && !selectedNodeIds.includes(node.id);
+        const visible = !cullable
+          || (node.x < right && node.x + (node.width || 0) > left
+            && node.y < bottom && node.y + (node.height || 0) > top);
+        if (wrapper.visible() !== visible) wrapper.visible(visible);
+      }
+    };
+    // One pass per burst: a pan moves x and y and writes the store in one go.
+    let queued = false;
+    const schedule = () => {
+      if (queued) return;
+      queued = true;
+      queueMicrotask(() => { queued = false; cull(); });
+    };
+    cull();
+    stage.on('xChange.cull yChange.cull scaleXChange.cull widthChange.cull heightChange.cull', schedule);
+    const unsubscribe = useCanvasStore.subscribe(schedule);
+    return () => {
+      stage.off('.cull');
+      unsubscribe();
+    };
+  }, [dimensions]);
 
   // ── Extracted hooks ─────────────────────────────────────────
   const {
@@ -388,8 +453,14 @@ export function InfiniteCanvas({ backgroundMode = 'pages', bgColor = '#ffffff' }
   return (
     <div
       ref={containerRef}
-      className={`infinite-canvas ${cursorClass} ${bgColor === 'paper' ? 'infinite-canvas--paper' : ''}`}
-      style={{ backgroundColor: bgColor === 'paper' ? '#f5f0e8' : bgColor, cursor }}
+      className={`infinite-canvas ${cursorClass} ${cursor ? 'infinite-canvas--pen' : ''} ${bgColor === 'paper' ? 'infinite-canvas--paper' : ''}`}
+      // The canvas reads the pen cursor through --pen-cursor: blocks write an
+      // inline cursor on the stage's own div on hover, which would hide it.
+      style={{
+        backgroundColor: bgColor === 'paper' ? '#f5f0e8' : bgColor,
+        cursor,
+        ...(cursor ? { '--pen-cursor': cursor } as React.CSSProperties : {}),
+      }}
       data-testid="canvas-container"
       // Capture-phase native cancel: Konva's Stage onPointerCancel never
       // sees the event (it remaps cancel → pointerup on a hit, swallows a
@@ -434,9 +505,9 @@ export function InfiniteCanvas({ backgroundMode = 'pages', bgColor = '#ffffff' }
           onTouchEnd={handleTouchEnd}
         >
           <Layer>
-            <PageGuides mode={backgroundMode} nodes={nodes} scrolls={previewScrolls} viewportScale={viewportScale} />
+            <PageGuides mode={backgroundMode} nodes={nodes} scrolls={previewScrolls} viewportScale={viewportScale} viewWidth={dimensions.width} />
           </Layer>
-          <Layer>
+          <Layer ref={nodesLayerRef}>
             {/* Paint order. Group-aware: a diagram's members sort inside its
                 band, so the frame's layer moves the whole drawing at once. */}
             {sortNodesForPaint(nodes).map((node) => {
@@ -444,16 +515,16 @@ export function InfiniteCanvas({ backgroundMode = 'pages', bgColor = '#ffffff' }
               const dimmed =
                 !!editingGroupId && node.groupId !== editingGroupId;
               return (
-                <KonvaGroup key={node.id} opacity={dimmed ? 0.35 : 1} listening={!dimmed}>
-                  <CanvasNode
-                    node={node}
-                    isSelected={selectedNodeIds.includes(node.id)}
-                    onSelect={handleNodeSelect}
-                    stageScale={currentScale}
-                    autoEdit={isAutoEdit}
-                    onSnapChange={setSnapLines}
-                  />
-                </KonvaGroup>
+                <PaintedNode
+                  key={node.id}
+                  node={node}
+                  dimmed={dimmed}
+                  isSelected={selectedNodeIds.includes(node.id)}
+                  onSelect={handleNodeSelect}
+                  stageScale={currentScale}
+                  autoEdit={isAutoEdit}
+                  onSnapChange={setSnapLines}
+                />
               );
             })}
             <SnapGuides lines={snapLines} />
