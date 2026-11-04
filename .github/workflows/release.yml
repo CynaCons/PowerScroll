@@ -4,6 +4,14 @@ on:
   push:
     tags:
       - "v*"
+  # Release from GitHub when the tag cannot be pushed (e.g. a cloud session
+  # whose git connection refuses tag pushes): the release step creates the tag
+  # on the commit this run builds.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to create and release, e.g. v0.93.0"
+        required: true
 
 permissions:
   contents: write
@@ -42,13 +50,15 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ inputs.tag || github.ref_name }}
+          target_commitish: ${{ github.sha }}
           files: |
             PowerScroll.html
             PowerNote.html
             powerscroll-mcp.tgz
           generate_release_notes: true
           body: |
-            ## PowerScroll ${{ github.ref_name }}
+            ## PowerScroll ${{ inputs.tag || github.ref_name }}
 
             **Download `PowerScroll.html`** below — open it in a browser to start taking notes.
 
