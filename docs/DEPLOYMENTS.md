@@ -4,7 +4,7 @@ This file records externally observed deployment state. Update it after every
 release or distribution change. It is a ledger, not a substitute for querying
 the live services before a new release.
 
-**Last verified:** 2026-10-28 (Europe/Berlin), after v0.92.0
+**Last verified:** 2026-11-04, after v0.93.0 reached `main` (tag not yet pushed)
 
 ## Current public state
 
@@ -32,6 +32,24 @@ digest equals the committed and locally tested `dist-template/index.html`):
 | `PowerScroll.html` | 3,036,343 bytes | `5da197b62a8d495f5811db933b2076fc72a5c1287646156c0a7f83679028a471` | Primary self-contained notebook application |
 | `PowerNote.html` | 3,036,343 bytes | `5da197b62a8d495f5811db933b2076fc72a5c1287646156c0a7f83679028a471` | Byte-identical compatibility alias for legacy updates |
 | `powerscroll-mcp.tgz` | 34,200 bytes | `1f04ed044ead26ee9f36c208e72c67d89e0a232c1c6a4b88a0d6f26e98868240` | MCP package snapshot (version `0.71.0`, digest unchanged since v0.90.0, not on npm) |
+
+## Verified for v0.93.0 (partial)
+
+- App-only release (owner reports 2026-10-29): pages with 30-40 scrolls stay
+  fast (REQ-CANVAS-046), Backspace under a list returns to the row
+  (REQ-TEXT-076), visible pen cursor (REQ-DRAW-029). Release commit `4508083`
+  pushed to `main`.
+- Pages run `41864818304` deployed `main`; the live app HTML contains `0.93.0`
+  (observed 2026-11-04).
+- **Tag `v0.93.0` NOT pushed**: the cloud session's git connection refused tag
+  pushes (remote hung up, 4 attempts). No GitHub release exists for 0.93.0 yet;
+  `releases/latest` is still `v0.92.0` and the in-app updater still offers it.
+  Pushing the tag at `4508083` from a local clone creates the release.
+- Pre-tag evidence: typecheck clean; lint 0 errors (35 warnings); MCP 13/13;
+  bridge all passed; built template (3,040,270 bytes, sha256 `d350f405...`)
+  opened from disk reports 0.93.0 with 0 console errors. Full campaign 993
+  passed / 3 failed (T191 rotation, T204 x2 autosave), all three failing
+  identically on the previous commit `9ff1f2a`.
 
 ## Verified for v0.92.0
 
