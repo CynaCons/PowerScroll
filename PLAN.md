@@ -1804,7 +1804,7 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Pen cursor: Excalidraw-style crosshair, never hidden by a block hover (REQ-DRAW-029, T241) [agent: claude]
 - [x] Requirements and tests: REQ-CANVAS-046 (T242), REQ-TEXT-076 (T240), REQ-DRAW-029 (T241) [agent: claude]
 - [x] Run all checks, smoke test, publish the showcase [agent: claude]
-- [ ] Release v0.93.0
+- [x] Release v0.93.0 [agent: claude]
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.
