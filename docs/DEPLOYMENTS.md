@@ -4,15 +4,15 @@ This file records externally observed deployment state. Update it after every
 release or distribution change. It is a ledger, not a substitute for querying
 the live services before a new release.
 
-**Last verified:** 2026-11-14, after v0.94.1
+**Last verified:** 2026-11-14, after v0.94.2
 
 ## Current public state
 
 | Surface | Deployed state | Verification |
 |---|---|---|
-| Source repository | `CynaCons/PowerScroll`; app release source is tag `v0.94.1` at `39fc181` | [Repository](https://github.com/CynaCons/PowerScroll) |
-| Application release | `v0.94.1`, published 2026-11-14, non-draft, latest; app reports `0.94.1` | [GitHub release](https://github.com/CynaCons/PowerScroll/releases/tag/v0.94.1) |
-| GitHub Pages | Public, HTTPS, workflow-deployed from `main` at `39fc181` (run 43629761165 succeeded 2026-11-14); live app HTML contains `0.94.1` | [Storefront](https://cynacons.github.io/PowerScroll/) · [App](https://cynacons.github.io/PowerScroll/app/) |
+| Source repository | `CynaCons/PowerScroll`; app release source is tag `v0.94.2` at `cb48fea` | [Repository](https://github.com/CynaCons/PowerScroll) |
+| Application release | `v0.94.2`, published 2026-11-14, non-draft, latest; app reports `0.94.2` | [GitHub release](https://github.com/CynaCons/PowerScroll/releases/tag/v0.94.2) |
+| GitHub Pages | Public, HTTPS, workflow-deployed from `main` at `cb48fea` (run 43635968255 succeeded 2026-11-14); live app HTML contains `0.94.2` | [Storefront](https://cynacons.github.io/PowerScroll/) · [App](https://cynacons.github.io/PowerScroll/app/) |
 | npm | `powerscroll-mcp@0.67.1`; `latest` = `0.67.1`. **0.70.0 and 0.71.0 (0.71.0 adds the checklist tools: `card_checklist_update/_remove/_move/_set`, nested items) are committed but NOT published**: npm is not signed in on the release machine (`npm whoami` 401 on 2026-10-23; `npm view` still `0.67.1` on 2026-10-28). Local checkouts (`node powernote-mcp/server.js`) have them | [npm package](https://www.npmjs.com/package/powerscroll-mcp) |
 | Official MCP Registry | `io.github.CynaCons/powerscroll@0.67.1`, active (re-checked 2026-10-28). 0.71.0 waits for npm (Registry validation queries npm) | [Registry search](https://registry.modelcontextprotocol.io/?q=powerscroll) |
 
@@ -24,14 +24,32 @@ them, and the release carries the 0.70.0 tarball as an asset.
 
 ## GitHub release assets
 
-The `v0.94.1` release contains (digests reported by the GitHub API; the HTML
+The `v0.94.2` release contains (digests reported by the GitHub API; the HTML
 digest equals the committed and locally tested `dist-template/index.html`):
 
 | Asset | Size | SHA-256 | Meaning |
 |---|---:|---|---|
-| `PowerScroll.html` | 3,076,219 bytes | `3a7a9b9ea39914d17a868cac8ebf38a08a5f35d3fd20d78bae14147b2376efa6` | Primary self-contained notebook application |
-| `PowerNote.html` | 3,076,219 bytes | `3a7a9b9ea39914d17a868cac8ebf38a08a5f35d3fd20d78bae14147b2376efa6` | Byte-identical compatibility alias for legacy updates |
+| `PowerScroll.html` | 3,076,348 bytes | `8bf17171da1fdeaf69dda33a1c14dc294379fb5da9479d6da48a7d987f8cb9ce` | Primary self-contained notebook application |
+| `PowerNote.html` | 3,076,348 bytes | `8bf17171da1fdeaf69dda33a1c14dc294379fb5da9479d6da48a7d987f8cb9ce` | Byte-identical compatibility alias for legacy updates |
 | `powerscroll-mcp.tgz` | 34,200 bytes | `1f04ed044ead26ee9f36c208e72c67d89e0a232c1c6a4b88a0d6f26e98868240` | MCP package snapshot (version `0.71.0`, digest unchanged since v0.90.0, not on npm) |
+
+## Verified for v0.94.2
+
+- App-only patch (owner, 2026-11-14: tree zoom steps too coarse): one wheel
+  notch zooms the board tree by 5%, a single wheel event is capped at about
+  6%, and the + and - keys step by 10% (REQ-BOARD-060). No MCP change.
+- Tag `v0.94.2` pushed at release commit `cb48fea`. `Build & Release` run
+  `43635969779` succeeded; release non-draft and reported as latest by the
+  GitHub API. `PowerScroll.html` and `PowerNote.html` both 3,076,348 bytes,
+  sha256 `8bf17171...7f8cb9ce`, equal to the committed
+  `dist-template/index.html`; MCP tarball digest unchanged (`1f04ed04...`).
+- Pages run `43635968255` deployed `main` at `cb48fea`; the live app HTML
+  contains `0.94.2`. CI run `43635968234` succeeded.
+- Pre-tag evidence: typecheck clean; lint 0 errors (35 warnings); MCP 13/13;
+  bridge all passed; dev app smoke test 0 console errors; full campaign
+  1,027 passed / 1 failed of 1,028: T238's 100 ms keystroke budget measured
+  119 ms once under campaign load and passed 8/8 alone. The built
+  single-file template was not opened by hand.
 
 ## Verified for v0.94.1
 
