@@ -73,6 +73,9 @@ const MONO = 'ui-monospace, "JetBrains Mono", Consolas, monospace';
 
 const ease = (t: number) => 1 - Math.pow(1 - t, 3);
 const clampK = (k: number) => Math.max(K_MIN, Math.min(K_MAX, k));
+/** exp(100 * this) = 1.05: a 100 px wheel notch zooms by 5%. */
+const WHEEL_ZOOM_PER_PIXEL = Math.log(1.05) / 100;
+const KEY_ZOOM_STEP = 1.1;
 
 /** White or ink text, whichever reads better on a `#rrggbb` fill. */
 function textOn(fill: string, light: string, dark: string): string {
@@ -474,7 +477,15 @@ export class BoardTreeRenderer {
   private readonly onWheel = (event: WheelEvent) => {
     event.preventDefault();
     const point = this.local(event);
-    this.zoomAt(point.x, point.y, Math.exp(-event.deltaY * (event.ctrlKey ? 0.01 : 0.0016)));
+    // One wheel notch is 5%, the same step as the canvas (it was 17%, which
+    // jumped past the zoom you wanted). Line-mode wheels report notches, not
+    // pixels; a free-spinning wheel is capped so one event is never a leap.
+    // A trackpad pinch arrives as ctrl+wheel with small deltas of its own.
+    const pixels = event.deltaMode === 1 ? event.deltaY * 33 : event.deltaY;
+    const factor = event.ctrlKey
+      ? Math.exp(-Math.max(-25, Math.min(25, pixels)) * 0.01)
+      : Math.exp(-Math.max(-120, Math.min(120, pixels)) * WHEEL_ZOOM_PER_PIXEL);
+    this.zoomAt(point.x, point.y, factor);
     this.setHover(-1, 0, 0);
   };
 
@@ -547,8 +558,8 @@ export class BoardTreeRenderer {
   private readonly onKeyDown = (event: KeyboardEvent) => {
     if (event.ctrlKey || event.metaKey || event.altKey) return;
     if (event.key === '0' || event.key === 'f') this.fit();
-    else if (event.key === '+' || event.key === '=') this.zoomAt(this.W / 2, this.H / 2, 1.25);
-    else if (event.key === '-') this.zoomAt(this.W / 2, this.H / 2, 0.8);
+    else if (event.key === '+' || event.key === '=') this.zoomAt(this.W / 2, this.H / 2, KEY_ZOOM_STEP);
+    else if (event.key === '-') this.zoomAt(this.W / 2, this.H / 2, 1 / KEY_ZOOM_STEP);
     else return;
     event.preventDefault();
   };

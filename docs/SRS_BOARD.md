@@ -73,6 +73,7 @@ canvas undo history.
 | REQ-BOARD-057 | A task held by an agent shall never be folded into a "+N" node: it takes one of the shown places of its branch (6 done, 8 queued). Owner request 2026-11-14 | Must | T246 |
 | REQ-BOARD-058 | A task waiting for the owner, or in progress and quiet for 10 minutes, keeps the fault colour and does not animate; if an agent holds it, its name tag is in the fault colour instead of the agent's. Hovering a held task shows "#12 Title" and a second line with the agent's name and "working now", "holding" or "quiet N min". Owner request 2026-11-14 | Must | T246 |
 | REQ-BOARD-059 | Agent presence shall not redraw the tree needlessly: a note or other action by an agent that holds no task on the board leaves the layout alone, and an agent taking a task changes the picture once. Owner request 2026-11-14 | Must | T246 |
+| REQ-BOARD-060 | Zooming the tree shall be fine-grained: one mouse-wheel notch changes the zoom by 5%, the same step as the canvas, a single wheel event never changes it by more than about 6%, and the + and - keys step by 10% | Must | T244 |
 
 ## Traceability
 

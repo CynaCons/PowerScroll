@@ -1,7 +1,7 @@
 /**
  * Test 244: the board as a tree.
  * Covers: REQ-BOARD-046, REQ-BOARD-047, REQ-BOARD-048, REQ-BOARD-049, REQ-BOARD-050,
- * REQ-BOARD-051, REQ-BOARD-052, REQ-BOARD-053
+ * REQ-BOARD-051, REQ-BOARD-052, REQ-BOARD-053, REQ-BOARD-060
  *
  * Owner request 2026-11-14: an overview of the board where topics ring the centre
  * and each topic's cards grow outward in time order, so what is done, in progress,
@@ -337,6 +337,58 @@ test('a topic click zooms to its branch; zooming by the user pins the view again
   await page.keyboard.press('0');
   await settle(page);
   expect((await view(page)).k).toBeLessThan(zoomed.k);
+});
+
+test('zoom is fine: a wheel notch is 5%, one event is capped, the keys step 10%', async ({ page }) => {
+  const boardId = await openBoard(page);
+  await seed(page, boardId, [
+    { title: 'Parser', labels: ['engine'] },
+    { title: 'Screens', labels: ['ui'] },
+    { title: 'Loose' },
+  ]);
+  await showTree(page);
+  await settle(page);
+
+  /** Reads k once the view tween is over: two consecutive reads agree. */
+  const steadyK = async () => {
+    let previous = -1;
+    for (let attempt = 0; attempt < 40; attempt++) {
+      const { k } = await view(page);
+      if (k === previous) return k;
+      previous = k;
+      await page.waitForTimeout(200);
+    }
+    throw new Error('the zoom never came to rest');
+  };
+
+  const canvas = (await page.getByTestId('board-tree-canvas').boundingBox())!;
+  await page.mouse.move(canvas.x + canvas.width / 2, canvas.y + canvas.height / 2);
+
+  const start = await steadyK();
+  await page.mouse.wheel(0, -100);
+  const notchIn = (await steadyK()) / start;
+  expect(notchIn).toBeGreaterThan(1.04);
+  expect(notchIn).toBeLessThan(1.06);
+
+  await page.mouse.wheel(0, 100);
+  const back = await steadyK();
+  expect(Math.abs(back / start - 1)).toBeLessThan(0.01);
+
+  await page.mouse.wheel(0, -1000);
+  const burst = (await steadyK()) / back;
+  expect(burst).toBeGreaterThan(1);
+  expect(burst).toBeLessThan(1.07);
+
+  // Reset to the fitted view, then the keys.
+  await page.getByTestId('board-tree-fit').click();
+  const keyStart = await steadyK();
+  await page.getByTestId('board-tree-canvas').focus();
+  await page.keyboard.press('+');
+  const plus = (await steadyK()) / keyStart;
+  expect(plus).toBeGreaterThan(1.09);
+  expect(plus).toBeLessThan(1.11);
+  await page.keyboard.press('-');
+  expect(Math.abs((await steadyK()) / keyStart - 1)).toBeLessThan(0.01);
 });
 
 test('the tree draws nothing at rest', async ({ page }) => {

@@ -1840,6 +1840,7 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Update the showcase [agent: claude]
 - [x] Release v0.94.1 [agent: claude]
 - [x] Built and checked: text bars, agents in tree, measures, campaign, showcase [agent: sonnet]
+- [x] Owner report 2026-11-14: tree zoom steps are too coarse [agent: claude]
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.
