@@ -23,6 +23,7 @@ import { calculateObjectSnap, calculateScrollSnap, type SnapGuide } from './Snap
 import { markdownToHtml, markdownBoxStyle } from '../../utils/renderMarkdown';
 import { toggleTaskAt } from '../../text/doc';
 import { reflowAfterHeightChange } from '../../utils/columnReflow';
+import { markTextMeasured, pinNode, unpinNode } from '../../utils/viewCulling';
 
 // Handle powernote:// internal links
 function handleInternalLink(href: string) {
@@ -89,9 +90,23 @@ export function TextNode({ node, isSelected, onSelect, stageScale, autoEdit, onS
       }
     };
     measure();
-    const timer = setTimeout(measure, 60);
+    const timer = setTimeout(() => {
+      measure();
+      // Height is now known for this text and width, so the block may be left
+      // unmounted while out of view (REQ-CANVAS-047). A measure that changed
+      // the height re-runs this effect and lands here again.
+      if (htmlRef.current) markTextMeasured(node);
+    }, 60);
     return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [renderedHtml, node.id, node.width, node.height, updateNodeSilent]);
+
+  // An open editor must survive the view moving away from it.
+  useEffect(() => {
+    if (!isEditing) return;
+    pinNode(node.id);
+    return () => unpinNode(node.id);
+  }, [isEditing, node.id]);
 
   // Enter / F2 on the selected block opens it with the caret at the end (REQ-TEXT-059).
   useEffect(() => {

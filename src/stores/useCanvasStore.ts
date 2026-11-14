@@ -1,3 +1,4 @@
+import { trustLoadedHeights } from '../utils/viewCulling';
 import { create } from 'zustand';
 import type { ArrowBinding, CanvasNode, ShapeNodeData, Stroke, Viewport } from '../types/data';
 import { generateId } from '../utils/ids';
@@ -240,7 +241,9 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   loadPageNodes: (nodes) => {
     // Reset shared history on page switch.
     useHistoryStore.getState().clear();
-    set({ nodes: reconcileArrowReferences(nodes), selectedNodeIds: [], lightboxNodeId: null });
+    const loaded = reconcileArrowReferences(nodes);
+    trustLoadedHeights(loaded);
+    set({ nodes: loaded, selectedNodeIds: [], lightboxNodeId: null });
   },
 
   getNodesSnapshot: () => get().nodes,

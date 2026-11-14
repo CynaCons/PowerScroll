@@ -1,4 +1,4 @@
-import { memo, useRef, useState, useCallback, useEffect, useMemo } from 'react';
+import { memo, useRef, useState, useCallback, useEffect, useMemo, useReducer } from 'react';
 import { Stage, Layer, Group as KonvaGroup } from 'react-konva';
 import type Konva from 'konva';
 import { useCanvasStore, MIN_SCALE, MAX_SCALE } from '../../stores/useCanvasStore';
@@ -27,6 +27,15 @@ import { useCanvasDragDrop } from '../../hooks/useCanvasDragDrop';
 import { useGroupStore } from '../../stores/useGroupStore';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { clampStageY, liveCeiling } from '../../utils/scrollCeiling';
+import {
+  canSkip,
+  nextCullRect,
+  nodeInRect,
+  onTextMeasured,
+  strokeInRect,
+  viewRect,
+  type CullRect,
+} from '../../utils/viewCulling';
 import type { BackgroundMode, CanvasBgColor, ScrollRecord } from '../../types/data';
 import './InfiniteCanvas.css';
 
@@ -51,6 +60,27 @@ const PaintedNode = memo(function PaintedNode({ dimmed, ...props }: PaintedNodeP
 });
 
 export type { CanvasBgColor };
+
+/**
+ * The part of the canvas worth mounting: the view plus a margin (REQ-CANVAS-047).
+ * Re-renders the canvas only when the view nears the edge of what is mounted,
+ * not on every wheel tick.
+ */
+function useCullRect(width: number, height: number): CullRect {
+  const [, redraw] = useReducer((n: number) => n + 1, 0);
+  const rect = useRef<CullRect | null>(null);
+  rect.current = nextCullRect(rect.current, viewRect(useCanvasStore.getState().viewport, width, height));
+  useEffect(
+    () =>
+      useCanvasStore.subscribe((state, prev) => {
+        if (state.viewport === prev.viewport) return;
+        const view = viewRect(state.viewport, width, height);
+        if (nextCullRect(rect.current, view) !== rect.current) redraw();
+      }),
+    [width, height],
+  );
+  return rect.current;
+}
 
 interface InfiniteCanvasProps {
   backgroundMode?: BackgroundMode;
@@ -98,6 +128,26 @@ export function InfiniteCanvas({ backgroundMode = 'pages', bgColor = '#ffffff' }
     : activeScrolls;
 
   useEffect(() => setScrollResizePreview(null), [activePageId]);
+
+  // ── What is near the view is mounted at all (REQ-CANVAS-047) ─
+  // The pass below hides far blocks from the canvas but keeps them mounted.
+  // This one decides what is mounted in the first place: a page keeps every
+  // scroll ever written on it, and the screen shows a few blocks of one or two.
+  const cullRect = useCullRect(dimensions.width, dimensions.height);
+  const [measuredTick, bumpMeasured] = useReducer((n: number) => n + 1, 0);
+  useEffect(() => onTextMeasured(bumpMeasured), []);
+  const paintOrder = useMemo(() => sortNodesForPaint(nodes), [nodes]);
+  const selectedNodeSet = useMemo(() => new Set(selectedNodeIds), [selectedNodeIds]);
+  const shownNodes = useMemo(
+    () => paintOrder.filter((node) => selectedNodeSet.has(node.id) || !canSkip(node) || nodeInRect(node, cullRect)),
+    // measuredTick: a block that has just measured itself may now be skipped.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [paintOrder, selectedNodeSet, cullRect, measuredTick],
+  );
+  const shownStrokes = useMemo(() => {
+    const keep = new Set([...selectedStrokeIds, ...pendingEraseIds]);
+    return drawStrokes.filter((stroke) => keep.has(stroke.id) || strokeInRect(stroke, cullRect));
+  }, [drawStrokes, selectedStrokeIds, pendingEraseIds, cullRect]);
 
   // ── Viewport culling (REQ-CANVAS-046) ───────────────────────
   // Konva redraws every shape on every pan frame, visible or not. On a page
@@ -504,13 +554,13 @@ export function InfiniteCanvas({ backgroundMode = 'pages', bgColor = '#ffffff' }
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          <Layer>
-            <PageGuides mode={backgroundMode} nodes={nodes} scrolls={previewScrolls} viewportScale={viewportScale} viewWidth={dimensions.width} />
+          <Layer listening={false}>
+            <PageGuides mode={backgroundMode} nodes={nodes} scrolls={previewScrolls} viewportScale={viewportScale} viewWidth={dimensions.width} cullRect={cullRect} />
           </Layer>
           <Layer ref={nodesLayerRef}>
             {/* Paint order. Group-aware: a diagram's members sort inside its
                 band, so the frame's layer moves the whole drawing at once. */}
-            {sortNodesForPaint(nodes).map((node) => {
+            {shownNodes.map((node) => {
               const isAutoEdit = consumeAutoEditNodeId(node.id);
               const dimmed =
                 !!editingGroupId && node.groupId !== editingGroupId;
@@ -519,9 +569,11 @@ export function InfiniteCanvas({ backgroundMode = 'pages', bgColor = '#ffffff' }
                   key={node.id}
                   node={node}
                   dimmed={dimmed}
-                  isSelected={selectedNodeIds.includes(node.id)}
+                  isSelected={selectedNodeSet.has(node.id)}
                   onSelect={handleNodeSelect}
-                  stageScale={currentScale}
+                  // Text blocks draw nothing that depends on zoom, so a zoom step
+                  // must not re-render every one of them (REQ-CANVAS-050).
+                  stageScale={node.type === 'text' ? 1 : currentScale}
                   autoEdit={isAutoEdit}
                   onSnapChange={setSnapLines}
                 />
@@ -534,7 +586,7 @@ export function InfiniteCanvas({ backgroundMode = 'pages', bgColor = '#ffffff' }
               node clicks/drags working through the stroke layer. */}
           <Layer listening={false} name="draw-layer">
             <DrawingLayer
-              strokes={drawStrokes}
+              strokes={shownStrokes}
               selectedStrokeIds={selectedStrokeIds}
               pendingEraseIds={pendingEraseIds}
               inProgressPoints={inProgressPoints}

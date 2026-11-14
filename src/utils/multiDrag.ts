@@ -6,6 +6,7 @@ import type Konva from 'konva';
 import { useCanvasStore, undoBatchStart, undoBatchEnd } from '../stores/useCanvasStore';
 import { useDrawStore, pushStrokeUndo } from '../stores/useDrawStore';
 import type { SnapNodeBounds } from '../components/canvas/SnapGuides';
+import { pinNode, unpinNode } from './viewCulling';
 
 interface DragSession {
   draggedId: string;
@@ -65,6 +66,11 @@ export function multiDragStart(draggedId: string, x: number, y: number): void {
     const s = draw.strokes.find((ss) => ss.id === id);
     if (s) strokeStarts.set(id, [...s.points]);
   }
+
+  // A block being dragged holds a live Konva drag; keep it mounted even if the
+  // view scrolls away under it.
+  if (session) for (const id of session.nodeStarts.keys()) unpinNode(id);
+  for (const id of nodeStarts.keys()) pinNode(id);
 
   session = {
     draggedId,
@@ -153,6 +159,7 @@ export function multiDragBounds(
 }
 
 export function multiDragEnd(draggedId: string, x: number, y: number): void {
+  if (session) for (const id of session.nodeStarts.keys()) unpinNode(id);
   if (!session || session.draggedId !== draggedId) {
     useCanvasStore.getState().updateNode(draggedId, { x, y });
     session = null;

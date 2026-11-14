@@ -1,7 +1,8 @@
 import { memo, useMemo } from 'react';
-import { Rect, Line, Group, Text } from 'react-konva';
+import { Rect, Line, Group, Text, Shape } from 'react-konva';
 import { useCanvasStore } from '../../stores/useCanvasStore';
 import type { BackgroundMode, CanvasNode, ScrollRecord } from '../../types/data';
+import type { CullRect } from '../../utils/viewCulling';
 import {
   A4_WIDTH,
   A4_HEIGHT,
@@ -23,6 +24,34 @@ const GRID_EXTENT = 5000; // how far grid lines extend
 // continuous sheet and a page boundary is just a rule across it. Geometry lives
 // in pageLayout so the guides and the bridge measure from the same numbers.
 
+/**
+ * The soft shadow under a sheet, drawn as a few stacked translucent rects.
+ *
+ * A canvas shadowBlur is a Gaussian blur over the whole sheet, recomputed on
+ * every redraw, and panning redraws every frame. It was half the cost of a
+ * scroll frame. A few flat fills give the same faint falloff for almost nothing.
+ */
+const SHADOW_STEPS = [9, 7, 5.5, 4, 3, 2, 1];
+
+function SheetShadow({ x, y, width, height }: { x: number; y: number; width: number; height: number }) {
+  return (
+    <Shape
+      name="sheet-shadow"
+      x={x}
+      y={y}
+      listening={false}
+      perfectDrawEnabled={false}
+      sceneFunc={(context) => {
+        const ctx = context._context;
+        ctx.fillStyle = 'rgba(0,0,0,0.007)';
+        for (const grow of SHADOW_STEPS) {
+          ctx.fillRect(-grow, 2 - grow, width + grow * 2, height + grow * 2);
+        }
+      }}
+    />
+  );
+}
+
 interface PageGuidesProps {
   mode: BackgroundMode;
   nodes: CanvasNode[];
@@ -30,6 +59,8 @@ interface PageGuidesProps {
   viewportScale?: number;
   /** Width of the visible canvas in screen pixels; columns outside it are not drawn. */
   viewWidth?: number;
+  /** Sheets wholly above or below this rect are not drawn either (REQ-CANVAS-047). */
+  cullRect?: CullRect;
 }
 
 /** Canvas-space x range; columns outside it are skipped. */
@@ -98,7 +129,7 @@ function getOccupiedPages(nodes: CanvasNode[]): Set<string> {
   return withAdjacent;
 }
 
-function renderPages(nodes: CanvasNode[], scrolls?: ScrollRecord[], view: ViewRect = ALL) {
+function renderPages(nodes: CanvasNode[], scrolls?: ScrollRecord[], view: ViewRect = ALL, cull?: CullRect) {
   const occupied = getOccupiedPages(nodes);
   const elements: JSX.Element[] = [];
 
@@ -109,7 +140,10 @@ function renderPages(nodes: CanvasNode[], scrolls?: ScrollRecord[], view: ViewRe
     const y = row * (A4_HEIGHT + PAGE_GAP);
     if (x >= view.right || x + w <= view.left) continue;
 
+    if (cull && (y + A4_HEIGHT < cull.y0 || y > cull.y1)) continue;
+
     elements.push(
+      <SheetShadow key={`page-shadow-${key}`} x={x} y={y} width={w} height={A4_HEIGHT} />,
       <Rect
         key={`page-bg-${key}`}
         name="page-sheet"
@@ -118,9 +152,6 @@ function renderPages(nodes: CanvasNode[], scrolls?: ScrollRecord[], view: ViewRe
         width={w}
         height={A4_HEIGHT}
         fill="#ffffff"
-        shadowColor="rgba(0,0,0,0.08)"
-        shadowBlur={8}
-        shadowOffsetY={2}
         cornerRadius={2}
         listening={false}
       />,
@@ -178,7 +209,7 @@ export function scrollPageRange(nodes: CanvasNode[], scrolls?: ScrollRecord[]) {
   };
 }
 
-function renderScroll(nodes: CanvasNode[], scrolls?: ScrollRecord[], viewportScale = 1, view: ViewRect = ALL) {
+function renderScroll(nodes: CanvasNode[], scrolls?: ScrollRecord[], viewportScale = 1, view: ViewRect = ALL, cull?: CullRect) {
   const { columns, firstRow, lastRow } = scrollPageRange(nodes, scrolls);
   const elements: JSX.Element[] = [];
 
@@ -187,11 +218,13 @@ function renderScroll(nodes: CanvasNode[], scrolls?: ScrollRecord[], viewportSca
     const w = columnWidth(col, scrolls);
     if (x >= view.right || x + w <= view.left) continue;
     for (let row = firstRow; row <= lastRow; row++) {
+      if (cull && ((row + 1) * A4_HEIGHT < cull.y0 || row * A4_HEIGHT > cull.y1)) continue;
       const topInset = row === firstRow ? 0 : 8;
       const bottomInset = row === lastRow ? 0 : 8;
       const y = row * A4_HEIGHT + topInset;
       const h = A4_HEIGHT - topInset - bottomInset;
       elements.push(
+        <SheetShadow key={`scroll-shadow-${col}-${row}`} x={x} y={y} width={w} height={h} />,
         <Rect
           key={`scroll-sheet-${col}-${row}`}
           name="scroll-sheet"
@@ -200,9 +233,6 @@ function renderScroll(nodes: CanvasNode[], scrolls?: ScrollRecord[], viewportSca
           width={w}
           height={h}
           fill="#ffffff"
-          shadowColor="rgba(0,0,0,0.08)"
-          shadowBlur={8}
-          shadowOffsetY={2}
           cornerRadius={[topInset ? 6 : 2, topInset ? 6 : 2, bottomInset ? 6 : 2, bottomInset ? 6 : 2]}
           listening={false}
         />,
@@ -271,14 +301,14 @@ function renderGrid() {
   return elements;
 }
 
-export const PageGuides = memo(function PageGuides({ mode, nodes, scrolls, viewportScale, viewWidth }: PageGuidesProps) {
+export const PageGuides = memo(function PageGuides({ mode, nodes, scrolls, viewportScale, viewWidth, cullRect }: PageGuidesProps) {
   const view = useViewRect(viewWidth);
   const elements = useMemo(() => {
     if (mode === 'none') return null;
     if (mode === 'grid') return renderGrid();
-    if (mode === 'scroll') return renderScroll(nodes, scrolls, viewportScale, view);
-    return renderPages(nodes, scrolls, view);
-  }, [mode, nodes, scrolls, viewportScale, view]);
+    if (mode === 'scroll') return renderScroll(nodes, scrolls, viewportScale, view, cullRect);
+    return renderPages(nodes, scrolls, view, cullRect);
+  }, [mode, nodes, scrolls, viewportScale, view, cullRect]);
   if (!elements) return null;
   return <Group listening={false}>{elements}</Group>;
 });

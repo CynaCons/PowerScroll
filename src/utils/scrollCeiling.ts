@@ -36,6 +36,22 @@ export function pageCeiling(
   // wall — v0.50's gate was found wrong by T01/T71 the first full-suite run.
   if (!scrolls || !scrolls.some((s) => (s.title ?? '') !== '')) return null;
 
+  // Every camera move asks for the ceiling, several times per wheel tick, and
+  // the answer only changes when the content does. The stores replace these
+  // arrays on every change, so identity is a sound cache key.
+  if (lastCeiling && lastCeiling.nodes === nodes && lastCeiling.strokes === strokes) return lastCeiling.value;
+  const value = computeCeiling(nodes, strokes);
+  lastCeiling = { nodes, strokes, value };
+  return value;
+}
+
+let lastCeiling: { nodes: unknown; strokes: unknown; value: number } | null = null;
+
+function computeCeiling(
+  nodes: ReadonlyArray<{ y: number }>,
+  strokes: ReadonlyArray<{ points: readonly number[] }>,
+): number {
+
   let top = Infinity;
   for (const n of nodes) {
     if (n.y < top) top = n.y;

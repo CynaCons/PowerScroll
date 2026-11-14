@@ -87,6 +87,9 @@ test.describe('101 - Scroll guide style (REQ-SETTINGS-005)', () => {
 
     const before = await countShapes(page, 'scroll-sheet-gap');
     await seedTallBlock(page);
+    // Sheets away from the view are not drawn (REQ-CANVAS-047): look at the
+    // whole scroll to see how far it now reaches.
+    await page.evaluate(() => (window as any).__POWERNOTE_STORES__.canvas.getState().setViewport({ x: 0, y: 0, scale: 0.3 }));
 
     await expect.poll(() => countShapes(page, 'scroll-sheet-gap')).toBeGreaterThan(before);
     expect(await countShapes(page, 'scroll-page-number')).toBeGreaterThan(0);
