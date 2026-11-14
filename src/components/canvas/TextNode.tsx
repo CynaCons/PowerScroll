@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useLayoutEffect, useMemo } from 'react';
-import { Group, Rect } from 'react-konva';
+import { Group, Rect, Shape } from 'react-konva';
 import { CanvasHtml } from './CanvasHtml';
 import type Konva from 'konva';
 import type { CanvasNode, TextNodeData } from '../../types/data';
@@ -23,6 +23,7 @@ import { calculateObjectSnap, calculateScrollSnap, type SnapGuide } from './Snap
 import { markdownToHtml, markdownBoxStyle } from '../../utils/renderMarkdown';
 import { toggleTaskAt } from '../../text/doc';
 import { reflowAfterHeightChange } from '../../utils/columnReflow';
+import { greekBars, greekSceneFunc, isLightFill } from '../../utils/greekText';
 import { markTextMeasured, pinNode, unpinNode } from '../../utils/viewCulling';
 
 // Handle powernote:// internal links
@@ -51,10 +52,11 @@ interface TextNodeProps {
   onSelect: (id: string, additive: boolean) => void;
   stageScale: number;
   autoEdit?: boolean;
+  greek?: boolean;
   onSnapChange: (lines: SnapGuide[]) => void;
 }
 
-export function TextNode({ node, isSelected, onSelect, stageScale, autoEdit, onSnapChange }: TextNodeProps) {
+export function TextNode({ node, isSelected, onSelect, stageScale, autoEdit, greek, onSnapChange }: TextNodeProps) {
   const data = node.data as TextNodeData;
   const groupRef = useRef<Konva.Group>(null);
   const htmlRef = useRef<HTMLDivElement>(null);
@@ -70,6 +72,9 @@ export function TextNode({ node, isSelected, onSelect, stageScale, autoEdit, onS
   // The derived flag, not the tool: a tool switch must not repaint every block.
   const isInteractive = useToolStore((s) => isNodeInteractive(s.activeTool));
 
+  // Very low zoom: bars instead of HTML. A selected or edited block keeps its text.
+  const asBars = !!greek && !isSelected && !isEditing;
+
   // Parse markdown to HTML (with math pre-processing and clickable checkboxes)
   const renderedHtml = useMemo(() => markdownToHtml(data.text), [data.text]);
 
@@ -78,6 +83,8 @@ export function TextNode({ node, isSelected, onSelect, stageScale, autoEdit, onS
   // Measured right after the paint so the click area is never stale, and
   // again a moment later once fonts and math have settled.
   useLayoutEffect(() => {
+    // No HTML in bars mode, so nothing to measure.
+    if (asBars) return;
     const measure = () => {
       if (!htmlRef.current) return;
       const h = Math.max(MIN_TEXT_HEIGHT, htmlRef.current.offsetHeight);
@@ -99,7 +106,7 @@ export function TextNode({ node, isSelected, onSelect, stageScale, autoEdit, onS
     }, 60);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [renderedHtml, node.id, node.width, node.height, updateNodeSilent]);
+  }, [renderedHtml, node.id, node.width, node.height, updateNodeSilent, asBars]);
 
   // An open editor must survive the view moving away from it.
   useEffect(() => {
@@ -246,6 +253,10 @@ export function TextNode({ node, isSelected, onSelect, stageScale, autoEdit, onS
     setIsEditing(false);
   };
 
+  const bars = useMemo(
+    () => (asBars ? greekBars(data.text ?? '', data.fontSize || 16, Math.max(node.width, MIN_TEXT_WIDTH), Math.max(node.height || MIN_TEXT_HEIGHT, MIN_TEXT_HEIGHT)) : null),
+    [asBars, data.text, data.fontSize, node.width, node.height],
+  );
   if (isEditing) {
     return (
       <TextEditor
@@ -305,7 +316,18 @@ export function TextNode({ node, isSelected, onSelect, stageScale, autoEdit, onS
       />
 
       {/* Markdown-rendered HTML overlay — selection highlight applied via CSS */}
-      <CanvasHtml
+      {bars && (
+        <Shape
+          name="text-greek"
+          listening={false}
+          perfectDrawEnabled={false}
+          sceneFunc={greekSceneFunc}
+          bars={bars}
+          light={isLightFill(data.fill)}
+        />
+      )}
+
+      {!bars && (<CanvasHtml
         divProps={{
           style: { pointerEvents: 'none', zIndex: 1 },
           className: 'powernote-html-overlay',
@@ -365,7 +387,7 @@ export function TextNode({ node, isSelected, onSelect, stageScale, autoEdit, onS
             onClose={() => setContextMenu(null)}
           />
         )}
-      </CanvasHtml>
+      </CanvasHtml>)}
 
       {/* Width-only resize handles (height stays content-driven) */}
       {showWidthHandles &&

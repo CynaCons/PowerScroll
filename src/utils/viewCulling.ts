@@ -185,3 +185,16 @@ export function canSkip(node: CanvasNode): boolean {
   const entry = measured.get(node.id);
   return !!entry && entry.data === node.data && entry.width === node.width;
 }
+
+// ── Text as bars at very low zoom (REQ-CANVAS-051) ──────────────────────────
+// Below this zoom a line of text is a couple of pixels tall and unreadable;
+// the block is drawn as placeholder bars and its HTML is not mounted. The two
+// thresholds differ so a zoom that hovers near the edge does not flicker.
+
+export const GREEK_BELOW = 0.2;
+export const GREEK_ABOVE = 0.22;
+
+export function nextGreek(current: boolean, scale: number): boolean {
+  if (current) return !(scale > GREEK_ABOVE);
+  return scale < GREEK_BELOW;
+}

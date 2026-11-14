@@ -30,6 +30,7 @@ import { clampStageY, liveCeiling } from '../../utils/scrollCeiling';
 import {
   canSkip,
   nextCullRect,
+  nextGreek,
   nodeInRect,
   onTextMeasured,
   strokeInRect,
@@ -136,6 +137,10 @@ export function InfiniteCanvas({ backgroundMode = 'pages', bgColor = '#ffffff' }
   const cullRect = useCullRect(dimensions.width, dimensions.height);
   const [measuredTick, bumpMeasured] = useReducer((n: number) => n + 1, 0);
   useEffect(() => onTextMeasured(bumpMeasured), []);
+  // Far zoomed out, text is drawn as bars with hysteresis (REQ-CANVAS-051).
+  const greekRef = useRef(false);
+  greekRef.current = nextGreek(greekRef.current, viewportScale);
+  const greek = greekRef.current;
   const paintOrder = useMemo(() => sortNodesForPaint(nodes), [nodes]);
   const selectedNodeSet = useMemo(() => new Set(selectedNodeIds), [selectedNodeIds]);
   const shownNodes = useMemo(
@@ -575,6 +580,7 @@ export function InfiniteCanvas({ backgroundMode = 'pages', bgColor = '#ffffff' }
                   // must not re-render every one of them (REQ-CANVAS-050).
                   stageScale={node.type === 'text' ? 1 : currentScale}
                   autoEdit={isAutoEdit}
+                  greek={greek && node.type === 'text' && canSkip(node)}
                   onSnapChange={setSnapLines}
                 />
               );

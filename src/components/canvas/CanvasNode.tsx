@@ -13,6 +13,8 @@ interface CanvasNodeProps {
   onSelect: (id: string, additive: boolean) => void;
   stageScale: number;
   autoEdit?: boolean;
+  /** Draw text as placeholder bars (very low zoom, REQ-CANVAS-051). */
+  greek?: boolean;
   onSnapChange: (lines: SnapGuide[]) => void;
 }
 
@@ -22,7 +24,7 @@ interface CanvasNodeProps {
  * HTML overlay), which is what made pages with many scrolls slow (REQ-CANVAS-046).
  * Every prop is stable unless that block itself changed.
  */
-export const CanvasNode = memo(function CanvasNode({ node, isSelected, onSelect, stageScale, autoEdit, onSnapChange }: CanvasNodeProps) {
+export const CanvasNode = memo(function CanvasNode({ node, isSelected, onSelect, stageScale, autoEdit, greek, onSnapChange }: CanvasNodeProps) {
   switch (node.type) {
     case 'text':
       return (
@@ -32,6 +34,7 @@ export const CanvasNode = memo(function CanvasNode({ node, isSelected, onSelect,
           onSelect={onSelect}
           stageScale={stageScale}
           autoEdit={autoEdit}
+          greek={greek}
           onSnapChange={onSnapChange}
         />
       );
