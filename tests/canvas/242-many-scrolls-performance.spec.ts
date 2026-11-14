@@ -32,7 +32,9 @@ test.beforeEach(async ({ page }) => {
     }
     S.canvas.getState().setViewport({ x: 0, y: 0, scale: 1 });
   }, { SCROLLS, PER });
-  await expect(page.locator('.powernote-markdown')).toHaveCount(SCROLLS * PER);
+  // Every block measures itself once, wherever it is; far ones are then let go
+  // (REQ-CANVAS-047), so count measured heights rather than mounted blocks.
+  await expect.poll(() => page.evaluate(() => (window as any).__POWERNOTE_STORES__.canvas.getState().nodes.filter((n: any) => n.height !== 120).length)).toBe(SCROLLS * PER);
   // Heights auto-size and each band packs; wait until the layout holds still.
   let last = '';
   await expect.poll(async () => {

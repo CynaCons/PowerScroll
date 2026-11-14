@@ -1821,9 +1821,9 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Merge with the v0.93.0 many-scroll fix released meanwhile [agent: claude]
 - [ ] Owner report 2026-11-14: many-scroll page still laggy - fixed, awaiting owner check
 - [ ] Owner request 2026-11-14: tree view in the board - built, awaiting owner check
-- [ ] Measure v0.92.0, v0.93.0 and this build on one page
-- [ ] Run the release checks and the full campaign
-- [ ] Publish the showcase
+- [x] Measure v0.92.0, v0.93.0 and this build on one page [agent: sonnet]
+- [x] Run the release checks and the full campaign [agent: sonnet]
+- [x] Publish the showcase [agent: claude]
 - [ ] Release v0.94.0
 
 ## Future (Backlog)
