@@ -1806,7 +1806,7 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Run all checks, smoke test, publish the showcase [agent: claude]
 - [x] Release v0.93.0 [agent: claude]
 
-### v0.94.0 — Board tree view, large pages mount only what is in view (current) (ACTIVE)
+### v0.94.0 — Board tree view, large pages mount only what is in view
 **Goal:** Owner (2026-11-14): see a busy board as a live tree; many-scroll pages cost only what is on screen.
 - [x] Measure scrolling on a page with many full scrolls [agent: claude]
 - [x] Write requirements for mounting only what is in view [agent: claude]
@@ -1825,6 +1825,21 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Run the release checks and the full campaign [agent: sonnet]
 - [x] Publish the showcase [agent: claude]
 - [x] Release v0.94.0 [agent: claude]
+
+### v0.94.1 — Zoomed-out pages stay smooth (current) (ACTIVE)
+**Goal:** Owner (2026-11-14): at very low zoom, draw text as plain bars so the whole page stays smooth.
+- [ ] Owner request 2026-11-14: draw text as bars at very low zoom
+- [ ] Owner report 2026-11-14: tree does not show where agents are working
+- [x] Requirements and test for text bars at low zoom [agent: sonnet]
+- [x] Text blocks draw as bars below a zoom threshold [agent: sonnet]
+- [x] Requirements and test for agents shown in the tree [agent: sonnet]
+- [x] Highlight tasks agents are working on in the tree [agent: sonnet]
+- [x] Link each agent to its task by colour and name [agent: sonnet]
+- [x] Measure zoomed-out scrolling before and after [agent: sonnet]
+- [x] Run the checks and the full campaign [agent: sonnet]
+- [x] Update the showcase [agent: claude]
+- [x] Release v0.94.1 [agent: claude]
+- [x] Built and checked: text bars, agents in tree, measures, campaign, showcase [agent: sonnet]
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.
