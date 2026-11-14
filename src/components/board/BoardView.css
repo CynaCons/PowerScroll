@@ -1702,3 +1702,139 @@
     border-left: none;
   }
 }
+
+/* ── Cards | Tree switch ─────────────────────────────────── */
+
+.board-view-switch {
+  display: inline-flex;
+  margin-right: 6px;
+  padding: 2px;
+  border: 1px solid #c3cbc9;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.board-view-switch__option {
+  min-height: 28px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #5c6467;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.board-view-switch__option:hover {
+  background: #eef1f0;
+}
+
+.board-view-switch__option--active,
+.board-view-switch__option--active:hover {
+  background: #14181a;
+  color: #ffffff;
+}
+
+/* ── Tree view ───────────────────────────────────────────── */
+
+/* Colours the canvas reads; the board page itself is light-only, so the dark set
+   applies only when the app sets data-theme="dark". */
+.board-tree {
+  --tree-bg: #eef1f0;
+  --tree-paper: #ffffff;
+  --tree-ink: #14181a;
+  --tree-muted: #5c6467;
+  --tree-faint: #8a9295;
+  --tree-rule: #c3cbc9;
+  --tree-accent: #b4552d;
+  --tree-on-ink: #ffffff;
+  position: relative;
+  min-width: 0;
+  height: max(480px, calc(100vh - 250px));
+  overflow: hidden;
+  border: 1px solid #dbe0de;
+  border-radius: 10px;
+  background: var(--tree-bg);
+  color: var(--tree-ink);
+}
+
+:root[data-theme='dark'] .board-tree {
+  --tree-bg: #111516;
+  --tree-paper: #1a1f21;
+  --tree-ink: #e8eceb;
+  --tree-muted: #9da6a8;
+  --tree-faint: #727b7e;
+  --tree-rule: #3b4649;
+  --tree-accent: #e0845b;
+  --tree-on-ink: #111516;
+  border-color: #2a3235;
+}
+
+.board-tree__canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+}
+
+.board-tree__canvas:focus-visible {
+  outline: 2px solid var(--tree-ink);
+  outline-offset: -3px;
+}
+
+.board-tree__tip {
+  position: absolute;
+  z-index: 2;
+  max-width: 260px;
+  padding: 4px 8px;
+  border-radius: 5px;
+  background: var(--tree-ink);
+  color: var(--tree-on-ink);
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.board-tree__tip[hidden] {
+  display: none;
+}
+
+.board-tree__buttons {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1;
+  display: flex;
+  gap: 6px;
+}
+
+.board-tree__need,
+.board-tree__fit {
+  min-height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--tree-rule);
+  border-radius: 6px;
+  background: var(--tree-paper);
+  color: var(--tree-ink);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* The accent marks faults only: this button is the count of them. */
+.board-tree__need {
+  border-color: var(--tree-accent);
+  background: var(--tree-accent);
+  color: var(--tree-on-ink);
+  font-weight: 600;
+}
+
+.board-tree__need:focus-visible,
+.board-tree__fit:focus-visible,
+.board-view-switch__option:focus-visible {
+  outline: 2px solid var(--tree-ink, #14181a);
+  outline-offset: 2px;
+}

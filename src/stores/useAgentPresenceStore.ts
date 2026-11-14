@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 
 export const AGENT_ACTIVE_MS = 60_000;
+/** An agent card with no sign of life for this long is marked as a fault in the tree. */
+export const AGENT_QUIET_MS = 10 * 60_000;
 export const AGENT_RECENT_MS = 30 * 60_000;
 export const AGENT_TICK_MS = 5_000;
 

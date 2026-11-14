@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
 import type { BoardCard, BoardColumnId, BoardData } from '../../types/data';
 import {
@@ -14,6 +14,7 @@ import { boardLabelColors, displayName, labelColor, relativeTime } from './board
 import { LabelColorsContext } from './labelColors';
 import {
   AGENT_ACTIVE_MS,
+  AGENT_QUIET_MS,
   AGENT_TICK_MS,
   useAgentPresenceStore,
 } from '../../stores/useAgentPresenceStore';
@@ -22,6 +23,7 @@ import { ActivityPanel, readActivityCollapsed, writeActivityCollapsed } from './
 import { agentChips, AgentsStrip } from './AgentsStrip';
 import { BoardColumn, type CardLanding } from './BoardColumn';
 import { BoardCardFace } from './BoardCardFace';
+import { BoardTree } from './BoardTree';
 import { CardOverlay } from './CardOverlay';
 import { useSearchStore } from '../../stores/useSearchStore';
 import { boardLabels } from './CardProperties';
@@ -31,6 +33,26 @@ import { boardLanes, inLane, relabel } from './lanes';
 import './BoardView.css';
 
 const ACTOR = 'you';
+const VIEW_KEY = 'powerscroll-board-view';
+
+type BoardViewMode = 'cards' | 'tree';
+
+// A device preference, so it lives in localStorage and not in the notebook.
+function readViewMode(): BoardViewMode {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'tree' ? 'tree' : 'cards';
+  } catch {
+    return 'cards';
+  }
+}
+
+function writeViewMode(mode: BoardViewMode) {
+  try {
+    localStorage.setItem(VIEW_KEY, mode);
+  } catch {
+    // private mode: the choice just lasts this session
+  }
+}
 
 interface DragState {
   active: boolean;
@@ -77,6 +99,7 @@ export function BoardView() {
   const left = useAgentPresenceStore((state) => state.left);
   const now = useAgentPresenceStore((state) => state.now);
   const [needsMe, setNeedsMe] = useState(false);
+  const [viewMode, setViewMode] = useState<BoardViewMode>(readViewMode);
   // Label filter per board page, for this session only (not saved in the notebook).
   const [labelFilters, setLabelFilters] = useState<Record<string, string[]>>({});
   // Collapsed lanes per board page, for this session only (REQ-BOARD-044).
@@ -176,6 +199,19 @@ export function BoardView() {
     left,
   );
   const chipNames = chips.map((chip) => chip.name).join(',');
+
+  // Agent cards gone quiet: in progress, an agent's name on them, no sign of life for a while.
+  const quietKey = (board?.cards ?? [])
+    .filter((card) => {
+      if (card.archivedAt || card.column !== 'doing' || !card.assignee || card.assignee === 'you') return false;
+      const actor = actors[card.assignee];
+      const lastSeen = actor && actor.cardId === card.id ? actor.lastActionAt : card.updatedAt;
+      return now - lastSeen > AGENT_QUIET_MS;
+    })
+    .map((card) => card.id)
+    .sort()
+    .join(',');
+  const quietCardIds = useMemo(() => new Set(quietKey ? quietKey.split(',') : []), [quietKey]);
 
   useEffect(() => {
     if (spotlight && !(chipNames ? chipNames.split(',') : []).includes(spotlight)) {
@@ -399,6 +435,23 @@ export function BoardView() {
             </p>
           </div>
           <div className="board-view__controls">
+            <div className="board-view-switch" role="group" aria-label="Board view" data-testid="board-view-switch">
+              {(['cards', 'tree'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  className={viewMode === mode ? 'board-view-switch__option board-view-switch__option--active' : 'board-view-switch__option'}
+                  data-testid={`board-view-${mode}`}
+                  aria-pressed={viewMode === mode}
+                  onClick={() => {
+                    setViewMode(mode);
+                    writeViewMode(mode);
+                  }}
+                >
+                  {mode === 'cards' ? 'Cards' : 'Tree'}
+                </button>
+              ))}
+            </div>
             <button
               type="button"
               className={!needsMe ? 'board-filter board-filter--active' : 'board-filter'}
@@ -480,93 +533,106 @@ export function BoardView() {
             activityCollapsed ? ' board-view__content--activity-collapsed' : ''
           }`}
         >
-          <div
-            className="board-view__columns"
-            style={{ gridTemplateRows: `auto repeat(${lanes.length}, ${labels.length > 0 ? 'auto auto' : 'auto'}) 1fr` }}
-          >
-            {BOARD_COLUMNS.map((column) => {
-              const isDropColumn = drop?.column === column.id;
+          {viewMode === 'tree' ? (
+            <BoardTree
+              cards={visibleCards}
+              events={board.events}
+              quietCardIds={quietCardIds}
+              title={page.title}
+              onOpenCard={(cardId) => {
+                const card = board.cards.find((item) => item.id === cardId);
+                if (card) setOpened(card);
+              }}
+            />
+          ) : (
+            <div
+              className="board-view__columns"
+              style={{ gridTemplateRows: `auto repeat(${lanes.length}, ${labels.length > 0 ? 'auto auto' : 'auto'}) 1fr` }}
+            >
+              {BOARD_COLUMNS.map((column) => {
+                const isDropColumn = drop?.column === column.id;
 
-              return (
-                <BoardColumn
-                  key={column.id}
-                  column={column}
-                  count={cardsIn(visibleCards, column.id).length}
-                  lanes={lanes.map((lane) => ({
-                    ...lane,
-                    cards: cardsIn(lane.cards, column.id),
-                    total: lane.cards.length,
-                    collapsed: collapsed.includes(lane.key),
-                  }))}
-                  showLaneTitles={labels.length > 0}
-                  draggingCardId={drag?.active ? drag.cardId : undefined}
-                  dropLane={isDropColumn ? drop.lane : undefined}
-                  dropIndex={isDropColumn ? drop.index : undefined}
-                  dropHeight={drag?.active ? drag.height : undefined}
-                  animate={Boolean(drag?.active || landing)}
-                  landing={landing}
-                  onLanded={() => setLanding(null)}
-                  activeCardIds={activeCardIds}
-                  fadingCardIds={fading}
-                  flashingCardIds={flashing}
-                  onCreate={(title) => edit((current) => createCard(current, {
-                    title,
-                    column: column.id,
-                  }, ACTOR, Date.now()))}
-                  onOpen={(card) => {
-                    if (!suppressOpen.current) setOpened(card);
-                    suppressOpen.current = false;
-                  }}
-                  onCardPointerDown={(card, event, lane) => {
-                    if ((event.target as HTMLElement).closest('input, button[data-no-drag]')) return;
-                    event.currentTarget.setPointerCapture(event.pointerId);
-                    const rect = event.currentTarget.getBoundingClientRect();
-                    setDrag({
-                      cardId: card.id,
-                      startX: event.clientX,
-                      startY: event.clientY,
-                      x: event.clientX,
-                      y: event.clientY,
-                      grabX: event.clientX - rect.left,
-                      grabY: event.clientY - rect.top,
-                      width: rect.width,
-                      height: rect.height,
-                      active: false,
-                      lane,
-                    });
-                  }}
-                  onCardPointerUp={() => undefined}
-                  onCardKeyDown={moveWithKeyboard}
-                  spotlightName={spotlightActive}
-                  onClearDone={column.id === 'done'
-                    ? () => edit((current) => clearDone(current, ACTOR, Date.now()))
-                    : undefined}
-                />
-              );
-            })}
-            {labels.length > 0 && lanes.map((lane, index) => (
-              <div
-                key={`lane-${lane.key}`}
-                className={`board-lane-header${index === 0 ? ' board-lane-header--first' : ''}`}
-                data-testid="board-lane-title"
-                style={{ gridRow: 2 + index * 2, borderLeftColor: lane.label ? labelColor(lane.label, labelColors).color : undefined }}
-              >
-                <button
-                  type="button"
-                  className="board-lane-header__toggle"
-                  aria-label={`${collapsedNow(lane.key) ? 'Expand' : 'Collapse'} ${lane.label ?? 'No label'} lane`}
-                  aria-expanded={!collapsedNow(lane.key)}
-                  onClick={() => toggleLane(lane.key)}
+                return (
+                  <BoardColumn
+                    key={column.id}
+                    column={column}
+                    count={cardsIn(visibleCards, column.id).length}
+                    lanes={lanes.map((lane) => ({
+                      ...lane,
+                      cards: cardsIn(lane.cards, column.id),
+                      total: lane.cards.length,
+                      collapsed: collapsed.includes(lane.key),
+                    }))}
+                    showLaneTitles={labels.length > 0}
+                    draggingCardId={drag?.active ? drag.cardId : undefined}
+                    dropLane={isDropColumn ? drop.lane : undefined}
+                    dropIndex={isDropColumn ? drop.index : undefined}
+                    dropHeight={drag?.active ? drag.height : undefined}
+                    animate={Boolean(drag?.active || landing)}
+                    landing={landing}
+                    onLanded={() => setLanding(null)}
+                    activeCardIds={activeCardIds}
+                    fadingCardIds={fading}
+                    flashingCardIds={flashing}
+                    onCreate={(title) => edit((current) => createCard(current, {
+                      title,
+                      column: column.id,
+                    }, ACTOR, Date.now()))}
+                    onOpen={(card) => {
+                      if (!suppressOpen.current) setOpened(card);
+                      suppressOpen.current = false;
+                    }}
+                    onCardPointerDown={(card, event, lane) => {
+                      if ((event.target as HTMLElement).closest('input, button[data-no-drag]')) return;
+                      event.currentTarget.setPointerCapture(event.pointerId);
+                      const rect = event.currentTarget.getBoundingClientRect();
+                      setDrag({
+                        cardId: card.id,
+                        startX: event.clientX,
+                        startY: event.clientY,
+                        x: event.clientX,
+                        y: event.clientY,
+                        grabX: event.clientX - rect.left,
+                        grabY: event.clientY - rect.top,
+                        width: rect.width,
+                        height: rect.height,
+                        active: false,
+                        lane,
+                      });
+                    }}
+                    onCardPointerUp={() => undefined}
+                    onCardKeyDown={moveWithKeyboard}
+                    spotlightName={spotlightActive}
+                    onClearDone={column.id === 'done'
+                      ? () => edit((current) => clearDone(current, ACTOR, Date.now()))
+                      : undefined}
+                  />
+                );
+              })}
+              {labels.length > 0 && lanes.map((lane, index) => (
+                <div
+                  key={`lane-${lane.key}`}
+                  className={`board-lane-header${index === 0 ? ' board-lane-header--first' : ''}`}
+                  data-testid="board-lane-title"
+                  style={{ gridRow: 2 + index * 2, borderLeftColor: lane.label ? labelColor(lane.label, labelColors).color : undefined }}
                 >
-                  {collapsedNow(lane.key) ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
-                </button>
-                {lane.label ? <span className="board-label" style={labelColor(lane.label, labelColors)}>{lane.label}</span> : <span className="board-lane-header__none">No label</span>}
-                <span className="board-lane-header__count">
-                  {lane.cards.length} card{lane.cards.length === 1 ? '' : 's'}
-                </span>
-              </div>
-            ))}
-          </div>
+                  <button
+                    type="button"
+                    className="board-lane-header__toggle"
+                    aria-label={`${collapsedNow(lane.key) ? 'Expand' : 'Collapse'} ${lane.label ?? 'No label'} lane`}
+                    aria-expanded={!collapsedNow(lane.key)}
+                    onClick={() => toggleLane(lane.key)}
+                  >
+                    {collapsedNow(lane.key) ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+                  </button>
+                  {lane.label ? <span className="board-label" style={labelColor(lane.label, labelColors)}>{lane.label}</span> : <span className="board-lane-header__none">No label</span>}
+                  <span className="board-lane-header__count">
+                    {lane.cards.length} card{lane.cards.length === 1 ? '' : 's'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
           <ActivityPanel
             board={board}
             collapsed={activityCollapsed}
