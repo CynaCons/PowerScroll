@@ -1,5 +1,6 @@
 import { memo, useMemo } from 'react';
 import { Rect, Line, Group, Text, Shape } from 'react-konva';
+import type Konva from 'konva';
 import { useCanvasStore } from '../../stores/useCanvasStore';
 import type { BackgroundMode, CanvasNode, ScrollRecord } from '../../types/data';
 import type { CullRect } from '../../utils/viewCulling';
@@ -33,21 +34,29 @@ const GRID_EXTENT = 5000; // how far grid lines extend
  */
 const SHADOW_STEPS = [9, 7, 5.5, 4, 3, 2, 1];
 
+// One function for every sheet: a fresh closure per render would read as a
+// changed prop and redraw the whole sheet layer on every store write.
+function drawSheetShadow(context: Konva.Context, shape: Konva.Shape) {
+  const ctx = context._context;
+  const width = shape.width();
+  const height = shape.height();
+  ctx.fillStyle = 'rgba(0,0,0,0.007)';
+  for (const grow of SHADOW_STEPS) {
+    ctx.fillRect(-grow, 2 - grow, width + grow * 2, height + grow * 2);
+  }
+}
+
 function SheetShadow({ x, y, width, height }: { x: number; y: number; width: number; height: number }) {
   return (
     <Shape
       name="sheet-shadow"
       x={x}
       y={y}
+      width={width}
+      height={height}
       listening={false}
       perfectDrawEnabled={false}
-      sceneFunc={(context) => {
-        const ctx = context._context;
-        ctx.fillStyle = 'rgba(0,0,0,0.007)';
-        for (const grow of SHADOW_STEPS) {
-          ctx.fillRect(-grow, 2 - grow, width + grow * 2, height + grow * 2);
-        }
-      }}
+      sceneFunc={drawSheetShadow}
     />
   );
 }

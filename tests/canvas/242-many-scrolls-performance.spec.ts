@@ -50,21 +50,25 @@ test('far-away blocks and sheets are not drawn; their text stays in the page', a
     const wrapper = (id: string) => stage.find((n: any) => n.attrs.cullId === id)[0];
     return {
       near: wrapper('b-0-0').visible(),
-      far: wrapper('b-39-0').visible(),
+      // Since v0.94 a far block is not mounted at all (REQ-CANVAS-047), so it
+      // has no wrapper; a mounted one must at least be hidden.
+      far: wrapper('b-39-0')?.visible() ?? false,
       sheets: stage.find('.scroll-sheet').length,
     };
   });
   expect(drawn.near, 'a block on screen is drawn').toBe(true);
   expect(drawn.far, 'a block 39 scrolls away is not drawn').toBe(false);
   expect(drawn.sheets, 'only the sheets near the view are drawn').toBeLessThan(SCROLLS / 2);
-  // The far block's text is still there for search, agents and its height.
-  await expect(page.locator('.powernote-markdown').filter({ hasText: 'block 39.0' })).toHaveCount(1);
+  // The far block is still in the document, with its measured height, for search and agents.
+  const farNode = await page.evaluate(() => (window as any).__POWERNOTE_STORES__.canvas.getState().nodes.find((n: any) => n.id === 'b-39-0'));
+  expect(farNode.data.text).toBe('block 39.0');
+  expect(farNode.height).toBeGreaterThan(0);
 
   // Pan to it: it is drawn and clickable there.
   await page.evaluate(() => (window as any).__POWERNOTE_STORES__.canvas.getState().setViewport({ x: -39 * 834, y: 0, scale: 1 }));
   await expect.poll(() => page.evaluate(() => {
     const stage = (window as any).Konva.stages[0];
-    return stage.find((n: any) => n.attrs.cullId === 'b-39-0')[0].visible();
+    return stage.find((n: any) => n.attrs.cullId === 'b-39-0')[0]?.visible() ?? false;
   })).toBe(true);
   const box = (await page.locator('.powernote-markdown').filter({ hasText: 'block 39.0' }).boundingBox())!;
   await page.mouse.click(box.x + 20, box.y + box.height / 2);
@@ -78,7 +82,9 @@ test('panning moves one shared layer, not every block', async ({ page }) => {
     return { layer: layer.style.transform, blocks };
   });
   const before = await read();
-  expect(before.blocks).toHaveLength(SCROLLS * PER);
+  // Only the blocks near the view are mounted (REQ-CANVAS-047), and those share the layer.
+  expect(before.blocks.length).toBeGreaterThan(0);
+  expect(before.blocks.length).toBeLessThan(SCROLLS * PER);
   const text = page.locator('.powernote-markdown').filter({ hasText: 'block 0.1' });
   const at = (await text.boundingBox())!;
 
