@@ -1,5 +1,5 @@
 /**
- * Test 241: the board as a tree.
+ * Test 244: the board as a tree.
  * Covers: REQ-BOARD-046, REQ-BOARD-047, REQ-BOARD-048, REQ-BOARD-049, REQ-BOARD-050,
  * REQ-BOARD-051, REQ-BOARD-052, REQ-BOARD-053
  *

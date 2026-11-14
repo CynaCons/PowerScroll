@@ -1791,7 +1791,7 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 
 ## v0.93 — Fast pages with many scrolls, lists and pen that behave
 
-### v0.93.0 — Many scrolls stay fast; Backspace under a list; a visible pen cursor (current) (ACTIVE)
+### v0.93.0 — Many scrolls stay fast; Backspace under a list; a visible pen cursor
 **Goal:** Owner (2026-10-29): pages with 30-40 scrolls get slow; the second Backspace after Enter in a list brings the bullet back; in pen mode the cursor is the normal pointer.
 - [ ] Owner report 2026-10-29: pages with 30-40 scrolls get slow - fixed, awaiting owner check
 - [ ] Owner report 2026-10-29: Enter, Backspace, Backspace in a list brings the bullet back - fixed, awaiting owner check
@@ -1805,6 +1805,26 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Requirements and tests: REQ-CANVAS-046 (T242), REQ-TEXT-076 (T240), REQ-DRAW-029 (T241) [agent: claude]
 - [x] Run all checks, smoke test, publish the showcase [agent: claude]
 - [x] Release v0.93.0 [agent: claude]
+
+### v0.94.0 — Board tree view, large pages mount only what is in view (current) (ACTIVE)
+**Goal:** Owner (2026-11-14): see a busy board as a live tree; many-scroll pages cost only what is on screen.
+- [x] Measure scrolling on a page with many full scrolls [agent: claude]
+- [x] Write requirements for mounting only what is in view [agent: claude]
+- [x] Mount only blocks, ink and sheets near the view [agent: claude]
+- [x] Draw sheet shadows without a per-frame blur [agent: claude]
+- [x] Prototype board overviews until the owner picked the tree [agent: claude]
+- [x] Write requirements for the board tree view [agent: claude]
+- [x] Tree layout from board data, topics at the centre [agent: claude]
+- [x] Canvas renderer that draws only on change [agent: claude]
+- [x] Cards and Tree switch on the board page [agent: claude]
+- [x] Tests for view culling and the tree view [agent: claude]
+- [x] Merge with the v0.93.0 many-scroll fix released meanwhile [agent: claude]
+- [ ] Owner report 2026-11-14: many-scroll page still laggy - fixed, awaiting owner check
+- [ ] Owner request 2026-11-14: tree view in the board - built, awaiting owner check
+- [ ] Measure v0.92.0, v0.93.0 and this build on one page
+- [ ] Run the release checks and the full campaign
+- [ ] Publish the showcase
+- [ ] Release v0.94.0
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.
