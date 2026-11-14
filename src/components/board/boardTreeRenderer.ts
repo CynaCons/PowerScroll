@@ -1,5 +1,7 @@
 import { nodeAt, R_LABEL, R_TOPIC, type TreeLayout } from '../../board/treeLayout';
 
+const DIM_ALPHA = 0.25;
+
 /**
  * Draws the board tree on one 2D canvas, on demand: nothing runs at rest. A
  * frame is only requested by `invalidate()`, and keeps requesting itself only
@@ -21,11 +23,16 @@ export interface TreeDebugNode {
   r: number;
   sx: number;
   sy: number;
+  /** Name of the connected agent holding this card, else null. */
+  agent: string | null;
+  agentColor: string | null;
+  /** The ring is marching: the agent acted in the last minute and the card is not a fault. */
+  live: boolean;
 }
 
 export interface TreeDebug {
   nodes(): TreeDebugNode[];
-  stats(): { frames: number; layouts: number; lastFrameMs: number };
+  stats(): { frames: number; layouts: number; lastFrameMs: number; animating: boolean };
   view(): View;
 }
 
@@ -56,10 +63,38 @@ const INITIALS_PX = 8;
 const CELL = 8;
 const MAX_TITLES = 250;
 const CULL_PAD = 26;
+/** Agent rings, halos and name tags. Tags keep one on-screen size at every zoom. */
+const LIVE_FRAME_MS = 80;
+const TAG_MIN_K = 0.3;
+const TAG_H = 16;
+const TAG_PAD = 6;
+const TAG_MAX_TEXT = 118;
 const MONO = 'ui-monospace, "JetBrains Mono", Consolas, monospace';
 
 const ease = (t: number) => 1 - Math.pow(1 - t, 3);
 const clampK = (k: number) => Math.max(K_MIN, Math.min(K_MAX, k));
+
+/** White or ink text, whichever reads better on a `#rrggbb` fill. */
+function textOn(fill: string, light: string, dark: string): string {
+  const match = /^#([0-9a-f]{6})$/i.exec(fill.trim());
+  if (!match) return light;
+  const value = parseInt(match[1], 16);
+  const luma = (0.299 * (value >> 16) + 0.587 * ((value >> 8) & 255) + 0.114 * (value & 255)) / 255;
+  return luma > 0.62 ? dark : light;
+}
+
+interface Batch {
+  stubs: Path2D; solid: Path2D; dashed: Path2D; grey: Path2D; hollow: Path2D; inked: Path2D;
+  faulty: Path2D; topics: Path2D; topicsFault: Path2D; track: Path2D; ringInk: Path2D;
+  ringFault: Path2D; twigsOff: Path2D; twigsOn: Path2D; leaves: Path2D;
+}
+
+const makeBatch = (): Batch => ({
+  stubs: new Path2D(), solid: new Path2D(), dashed: new Path2D(), grey: new Path2D(), hollow: new Path2D(),
+  inked: new Path2D(), faulty: new Path2D(), topics: new Path2D(), topicsFault: new Path2D(),
+  track: new Path2D(), ringInk: new Path2D(), ringFault: new Path2D(), twigsOff: new Path2D(),
+  twigsOn: new Path2D(), leaves: new Path2D(),
+});
 
 function reducedMotion(): boolean {
   return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -95,6 +130,12 @@ export class BoardTreeRenderer {
   private grow = new Uint8Array(0);
 
   private focus: { key: string; at: number } | null = null;
+  private spotlight: string | null = null;
+  /** Per node: on the path hub -> topic -> ... -> the spotlighted agent's node. Null when no spotlight applies. */
+  private lit: Uint8Array | null = null;
+  private liveNodes: number[] = [];
+  private liveTimer = 0;
+  private agentNotes: Record<string, string> = {};
   private needIndex = -1;
   private hover = -1;
   private pointers = new Map<number, { x: number; y: number }>();
@@ -134,7 +175,7 @@ export class BoardTreeRenderer {
     listen(canvas, 'pointercancel', this.onPointerUp);
     listen(canvas, 'pointerleave', this.onPointerLeave);
     listen(canvas, 'keydown', this.onKeyDown);
-    listen(document, 'visibilitychange', () => this.invalidate());
+    listen(document, 'visibilitychange', () => { this.syncLive(); this.invalidate(); });
 
     const resizer = new ResizeObserver(() => this.measure());
     resizer.observe(container);
@@ -157,9 +198,14 @@ export class BoardTreeRenderer {
           topic: node.topic, count: node.count, x: node.x, y: node.y, r: node.r,
           sx: rect.left + node.x * this.view.k + this.view.x,
           sy: rect.top + node.y * this.view.k + this.view.y,
+          agent: node.agent?.name ?? null,
+          agentColor: node.agent?.color ?? null,
+          live: Boolean(node.agent?.live),
         }));
       },
-      stats: () => ({ frames: this.frames, layouts: this.layouts, lastFrameMs: this.lastFrameMs }),
+      stats: () => ({
+        frames: this.frames, layouts: this.layouts, lastFrameMs: this.lastFrameMs, animating: this.liveTimer !== 0,
+      }),
       view: () => ({ ...this.view }),
     };
     (window as unknown as { __POWERNOTE_BOARD_TREE__?: TreeDebug }).__POWERNOTE_BOARD_TREE__ = this.hook;
@@ -221,8 +267,74 @@ export class BoardTreeRenderer {
       });
     }
 
+    this.liveNodes = [];
+    layout.nodes.forEach((node, index) => { if (node.agent?.live) this.liveNodes.push(index); });
+    this.buildLit();
+
     if (!this.userMoved && this.W && this.H) this.goTo(this.fitTarget(), Boolean(previous));
+    this.syncLive();
     this.invalidate();
+  }
+
+  /** What the tooltip says about each agent ("working now", "holding", "quiet 15 min"). */
+  setAgentNotes(notes: Record<string, string>) {
+    this.agentNotes = notes;
+  }
+
+  /**
+   * Spotlight one agent: the view moves to its card and everything off the path
+   * hub -> topic -> card dims. Clearing it restores the picture without moving the view.
+   */
+  setSpotlight(name: string | null) {
+    if (name === this.spotlight) return;
+    this.spotlight = name;
+    this.buildLit();
+    const layout = this.layout;
+    const node = name && layout ? layout.nodes.find((item) => item.agent?.name === name) : undefined;
+    if (node && this.W && this.H) {
+      const k = clampK(Math.max(this.view.k, 2.4));
+      this.userMoved = true;
+      this.goTo({ k, x: this.W / 2 - k * node.x, y: this.H / 2 - k * node.y }, true);
+    }
+    this.invalidate();
+  }
+
+  private buildLit() {
+    const layout = this.layout;
+    this.lit = null;
+    if (!layout || !this.spotlight) return;
+    const target = layout.nodes.findIndex((node) => node.agent?.name === this.spotlight);
+    if (target < 0) return;
+    const lit = new Uint8Array(layout.nodes.length);
+    for (let at = target; at >= 0 && !lit[at]; at = layout.nodes[at].parent) lit[at] = 1;
+    lit[0] = 1;
+    this.lit = lit;
+  }
+
+  /**
+   * The one place that decides whether the marching rings need frames: only while a
+   * live node is inside the view, the page is visible and motion is allowed.
+   */
+  private syncLive() {
+    let wanted = false;
+    if (!this.destroyed && !document.hidden && !reducedMotion() && this.liveNodes.length && this.layout) {
+      const { k, x, y } = this.view;
+      for (const index of this.liveNodes) {
+        const node = this.layout.nodes[index];
+        const margin = (node.r + 12) * k;
+        const sx = node.x * k + x;
+        const sy = node.y * k + y;
+        if (sx > -margin && sx < this.W + margin && sy > -margin && sy < this.H + margin) {
+          wanted = true;
+          break;
+        }
+      }
+    }
+    if (wanted && !this.liveTimer) this.liveTimer = window.setInterval(() => this.invalidate(), LIVE_FRAME_MS);
+    else if (!wanted && this.liveTimer) {
+      window.clearInterval(this.liveTimer);
+      this.liveTimer = 0;
+    }
   }
 
   /** Back to the whole tree; the view follows layout changes again. */
@@ -257,6 +369,8 @@ export class BoardTreeRenderer {
 
   destroy() {
     this.destroyed = true;
+    if (this.liveTimer) window.clearInterval(this.liveTimer);
+    this.liveTimer = 0;
     if (this.raf) cancelAnimationFrame(this.raf);
     this.raf = 0;
     for (const cleanup of this.cleanups) cleanup();
@@ -450,6 +564,7 @@ export class BoardTreeRenderer {
     }
     if (index !== this.hover) {
       this.hover = index;
+      const note = node.kind === 'card' && node.agent ? this.agentNotes[node.agent.name] : undefined;
       this.tip.textContent = node.kind === 'card'
         ? `#${node.number} ${node.title ?? ''}`
         : node.kind === 'topic'
@@ -457,6 +572,12 @@ export class BoardTreeRenderer {
           : node.kind === 'fold'
             ? `${node.count} earlier finished cards in ${node.topic}`
             : `${node.count} more queued in ${node.topic}`;
+      if (node.kind === 'card' && node.agent) {
+        const line = document.createElement('div');
+        line.textContent = `${node.agent.name} - ${note ?? 'holding'}`;
+        line.style.opacity = '0.8';
+        this.tip.appendChild(line);
+      }
       this.tip.hidden = false;
     }
     const width = this.tip.offsetWidth;
@@ -495,6 +616,7 @@ export class BoardTreeRenderer {
       if (t >= 1) this.tween = null;
     }
     this.draw(now);
+    this.syncLive();
     const focusing = this.focus !== null && now - this.focus.at < FOCUS_MS;
     if (this.tween || now < this.animUntil || focusing) this.invalidate();
   };
@@ -542,30 +664,20 @@ export class BoardTreeRenderer {
     const vx1 = (this.W - view.x) / k + CULL_PAD;
     const vy1 = (this.H - view.y) / k + CULL_PAD;
 
-    const stubs = new Path2D();
-    const solid = new Path2D();
-    const dashed = new Path2D();
-    const grey = new Path2D();
-    const hollow = new Path2D();
-    const inked = new Path2D();
-    const faulty = new Path2D();
-    const topics = new Path2D();
-    const topicsFault = new Path2D();
-    const track = new Path2D();
-    const ringInk = new Path2D();
-    const ringFault = new Path2D();
-    const twigsOff = new Path2D();
-    const twigsOn = new Path2D();
-    const leaves = new Path2D();
+    const spot = this.lit;
+    const main = makeBatch();
+    const dim = spot ? makeBatch() : null;
     const labelled: number[] = [];
     const pulsing: number[] = [];
     const seen: number[] = [];
+    const held: number[] = [];
 
     for (let i = 0; i < nodes.length; i++) {
       const node = nodes[i];
       let x = node.x;
       let y = node.y;
       let r = node.r;
+      const batch = spot && !spot[i] && dim ? dim : main;
       if (animating && this.bornAt[i]) {
         const e = ease(Math.min(1, Math.max(0, (now - this.bornAt[i]) / GROW_MS)));
         x = this.fromX[i] + (x - this.fromX[i]) * e;
@@ -581,14 +693,14 @@ export class BoardTreeRenderer {
           const sin = Math.sin(node.angle);
           const to = showNames ? R_LABEL - 8 : R_TOPIC;
           if (to > 24) {
-            stubs.moveTo(24 * cos, 24 * sin);
-            stubs.lineTo(to * cos, to * sin);
+            batch.stubs.moveTo(24 * cos, 24 * sin);
+            batch.stubs.lineTo(to * cos, to * sin);
           }
         } else {
           const px = this.rx[node.parent];
           const py = this.ry[node.parent];
           if (!(Math.max(x, px) < vx0 || Math.min(x, px) > vx1 || Math.max(y, py) < vy0 || Math.min(y, py) > vy1)) {
-            const path = node.kind === 'more' || node.state === 'todo' ? dashed : solid;
+            const path = node.kind === 'more' || node.state === 'todo' ? batch.dashed : batch.solid;
             const parentRadius = Math.hypot(px, py);
             const parentAngle = Math.atan2(py, px);
             const radius = Math.hypot(x, y);
@@ -606,18 +718,19 @@ export class BoardTreeRenderer {
       if (x + r < vx0 || x - r > vx1 || y + r < vy0 || y - r > vy1) continue;
       if (node.kind === 'hub') continue;
       seen.push(i);
+      if (node.kind === 'card' && node.agent) held.push(i);
       if (animating && this.pulseAt[i] && now - this.pulseAt[i] < PULSE_MS) pulsing.push(i);
       const screenR = node.r * k;
 
       if (node.kind === 'topic') {
-        const path = node.fault ? topicsFault : topics;
+        const path = node.fault ? batch.topicsFault : batch.topics;
         path.moveTo(x + r, y);
         path.arc(x, y, r, 0, TAU);
         continue;
       }
       if (node.kind === 'fold' || node.kind === 'more') {
-        grey.moveTo(x + r, y);
-        grey.arc(x, y, r, 0, TAU);
+        batch.grey.moveTo(x + r, y);
+        batch.grey.arc(x, y, r, 0, TAU);
         if (screenR >= 6) labelled.push(i);
         continue;
       }
@@ -625,10 +738,10 @@ export class BoardTreeRenderer {
       const big = node.state === 'doing' || node.state === 'waiting';
       if (node.state === 'todo') {
         const inner = Math.max(0.1, r - 0.75);
-        hollow.moveTo(x + inner, y);
-        hollow.arc(x, y, inner, 0, TAU);
+        batch.hollow.moveTo(x + inner, y);
+        batch.hollow.arc(x, y, inner, 0, TAU);
       } else {
-        const path = node.fault ? faulty : inked;
+        const path = node.fault ? batch.faulty : batch.inked;
         path.moveTo(x + r, y);
         path.arc(x, y, r, 0, TAU);
       }
@@ -643,21 +756,21 @@ export class BoardTreeRenderer {
           const a = node.angle + (total === 1 ? 0 : (t / (total - 1) - 0.5) * 2 * spread);
           const cos = Math.cos(a);
           const sin = Math.sin(a);
-          const path = t < ticked ? twigsOn : twigsOff;
+          const path = t < ticked ? batch.twigsOn : batch.twigsOff;
           path.moveTo(x + edge * cos, y + edge * sin);
           path.lineTo(x + (edge + length) * cos, y + (edge + length) * sin);
           if (t < ticked) {
-            leaves.moveTo(x + (edge + length) * cos + 1.3, y + (edge + length) * sin);
-            leaves.arc(x + (edge + length) * cos, y + (edge + length) * sin, 1.3, 0, TAU);
+            batch.leaves.moveTo(x + (edge + length) * cos + 1.3, y + (edge + length) * sin);
+            batch.leaves.arc(x + (edge + length) * cos, y + (edge + length) * sin, 1.3, 0, TAU);
           }
         }
       }
       if (big && screenR >= DETAIL_PX) {
         const ring = r + 2.8;
-        track.moveTo(x + ring, y);
-        track.arc(x, y, ring, 0, TAU);
+        batch.track.moveTo(x + ring, y);
+        batch.track.arc(x, y, ring, 0, TAU);
         if (node.checkTotal > 0 && node.checkDone > 0) {
-          const path = node.fault ? ringFault : ringInk;
+          const path = node.fault ? batch.ringFault : batch.ringInk;
           path.moveTo(x, y - ring);
           path.arc(x, y, ring, -Math.PI / 2, -Math.PI / 2 + (TAU * node.checkDone) / node.checkTotal);
         }
@@ -671,31 +784,11 @@ export class BoardTreeRenderer {
     ctx.lineCap = 'round';
     ctx.setLineDash([]);
 
-    ctx.strokeStyle = P.rule; ctx.lineWidth = 1.2; ctx.stroke(stubs);
-    ctx.strokeStyle = P.muted; ctx.lineWidth = 1.5; ctx.stroke(solid);
-    ctx.strokeStyle = P.rule; ctx.lineWidth = 1; ctx.setLineDash([3, 4]); ctx.stroke(dashed);
-    ctx.setLineDash([]);
-
-    if (showNames) this.drawTopicNames(vx0, vy0, vx1, vy1);
-
-    ctx.strokeStyle = P.rule; ctx.lineWidth = 1; ctx.stroke(twigsOff);
-    ctx.strokeStyle = P.ink; ctx.lineWidth = 1.3; ctx.stroke(twigsOn);
-    ctx.fillStyle = P.ink; ctx.fill(leaves);
-
-    ctx.fillStyle = P.muted; ctx.fill(grey);
-    ctx.fillStyle = P.bg; ctx.fill(hollow);
-    ctx.strokeStyle = P.faint; ctx.lineWidth = 1.5; ctx.stroke(hollow);
-    ctx.fillStyle = P.ink; ctx.fill(inked);
-    ctx.fillStyle = P.accent; ctx.fill(faulty);
-
-    ctx.strokeStyle = P.rule; ctx.lineWidth = 2; ctx.stroke(track);
-    ctx.strokeStyle = P.ink; ctx.stroke(ringInk);
-    ctx.strokeStyle = P.accent; ctx.stroke(ringFault);
-
-    ctx.fillStyle = P.paper; ctx.fill(topics); ctx.fill(topicsFault);
-    ctx.lineWidth = 2.2;
-    ctx.strokeStyle = P.ink; ctx.stroke(topics);
-    ctx.strokeStyle = P.accent; ctx.stroke(topicsFault);
+    this.paintHalos(held, spot);
+    if (dim) this.paintBatch(dim, DIM_ALPHA);
+    this.paintBatch(main, 1);
+    ctx.globalAlpha = 1;
+    if (showNames) this.drawTopicNames(vx0, vy0, vx1, vy1, spot);
 
     // Hub: solid, with the board title cut to fit.
     ctx.fillStyle = P.ink;
@@ -716,6 +809,7 @@ export class BoardTreeRenderer {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       for (const i of labelled) {
+        ctx.globalAlpha = spot && !spot[i] ? DIM_ALPHA : 1;
         const node = nodes[i];
         const x = this.rx[i];
         const y = this.ry[i];
@@ -730,6 +824,9 @@ export class BoardTreeRenderer {
         }
       }
     }
+
+    ctx.globalAlpha = 1;
+    this.paintRings(held, now, spot);
 
     // Pulses and the focus ring are the only per-node strokes, and only while they play.
     if (pulsing.length) {
@@ -759,25 +856,183 @@ export class BoardTreeRenderer {
       } else this.focus = null;
     }
 
-    if (k >= TITLE_K) this.drawTitles(seen);
+    if (k >= TAG_MIN_K) this.drawLabels(seen, held, spot);
 
     this.frames++;
     this.lastFrameMs = performance.now() - started;
   }
 
-  private drawTopicNames(vx0: number, vy0: number, vx1: number, vy1: number) {
+  /** One batch of shared paths: links, then twigs, nodes, progress rings and topic discs. */
+  private paintBatch(batch: Batch, alpha: number) {
+    const { ctx, palette: P } = this;
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = P.rule; ctx.lineWidth = 1.2; ctx.stroke(batch.stubs);
+    ctx.strokeStyle = P.muted; ctx.lineWidth = 1.5; ctx.stroke(batch.solid);
+    ctx.strokeStyle = P.rule; ctx.lineWidth = 1; ctx.setLineDash([3, 4]); ctx.stroke(batch.dashed);
+    ctx.setLineDash([]);
+
+    ctx.strokeStyle = P.rule; ctx.lineWidth = 1; ctx.stroke(batch.twigsOff);
+    ctx.strokeStyle = P.ink; ctx.lineWidth = 1.3; ctx.stroke(batch.twigsOn);
+    ctx.fillStyle = P.ink; ctx.fill(batch.leaves);
+
+    ctx.fillStyle = P.muted; ctx.fill(batch.grey);
+    ctx.fillStyle = P.bg; ctx.fill(batch.hollow);
+    ctx.strokeStyle = P.faint; ctx.lineWidth = 1.5; ctx.stroke(batch.hollow);
+    ctx.fillStyle = P.ink; ctx.fill(batch.inked);
+    ctx.fillStyle = P.accent; ctx.fill(batch.faulty);
+
+    ctx.strokeStyle = P.rule; ctx.lineWidth = 2; ctx.stroke(batch.track);
+    ctx.strokeStyle = P.ink; ctx.stroke(batch.ringInk);
+    ctx.strokeStyle = P.accent; ctx.stroke(batch.ringFault);
+
+    ctx.fillStyle = P.paper; ctx.fill(batch.topics); ctx.fill(batch.topicsFault);
+    ctx.lineWidth = 2.2;
+    ctx.strokeStyle = P.ink; ctx.stroke(batch.topics);
+    ctx.strokeStyle = P.accent; ctx.stroke(batch.topicsFault);
+    ctx.globalAlpha = 1;
+  }
+
+  /** Soft disc in the agent's colour behind each live node. */
+  private paintHalos(held: number[], spot: Uint8Array | null) {
+    const { ctx, layout, view } = this;
+    if (!layout) return;
+    for (const i of held) {
+      const node = layout.nodes[i];
+      if (!node.agent?.live) continue;
+      ctx.globalAlpha = (spot && !spot[i] ? DIM_ALPHA : 1) * 0.18;
+      ctx.fillStyle = node.agent.color;
+      ctx.beginPath();
+      ctx.arc(this.rx[i], this.ry[i], Math.max(node.r * 1.8, 11 / view.k), 0, TAU);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  /** World radius of the agent ring: just outside the progress ring, 3 screen px thick. */
+  private ringRadius(node: { r: number; state?: string }): number {
+    const big = node.state === 'doing' || node.state === 'waiting';
+    return node.r + (big ? 5.4 : 3) + 1.5 / this.view.k;
+  }
+
+  /**
+   * One pill per held node with the agent's name, radially outward of the node. It keeps one
+   * on-screen size at every zoom, and tries other sides before it would run off the canvas
+   * or onto a node, a title or another tag.
+   */
+  private placeTags(
+    held: number[],
+    spot: Uint8Array | null,
+    radii: Map<number, number>,
+    mark: (x0: number, y0: number, x1: number, y1: number, disc?: { x: number; y: number; r: number }, value?: number) => void,
+    taken: (x0: number, y0: number, x1: number, y1: number, tagsOnly?: boolean) => boolean,
+  ) {
+    const { ctx, palette: P, layout, view } = this;
+    if (!layout || !held.length) return;
+    const { k } = view;
+    ctx.font = `600 10.5px ${this.sans}`;
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    const order = held.filter((i) => layout.nodes[i].agent).sort((a, b) => {
+      const left = layout.nodes[a].agent!;
+      const right = layout.nodes[b].agent!;
+      const rank = (agent: typeof left) => (agent.name === this.spotlight ? 0 : agent.live ? 1 : 2);
+      return (rank(left) - rank(right)) || left.name.localeCompare(right.name);
+    });
+    const offsets = [0, 0.7, -0.7, 1.4, -1.4, Math.PI, Math.PI + 0.7, Math.PI - 0.7];
+    for (const i of order) {
+      const node = layout.nodes[i];
+      const agent = node.agent!;
+      const sx = this.rx[i] * k + view.x;
+      const sy = this.ry[i] * k + view.y;
+      if (sx < 0 || sx > this.W || sy < 0 || sy > this.H) continue;
+      const faulty = node.fault;
+      const text = this.fitText(agent.name, TAG_MAX_TEXT);
+      const w = this.width(text) + TAG_PAD * 2;
+      const reach = (radii.get(i) ?? 0) + 2;
+      const boxes = offsets.map((offset) => {
+        const a = node.angle + offset;
+        const cos = Math.cos(a);
+        const sin = Math.sin(a);
+        const half = Math.abs(cos) * w / 2 + Math.abs(sin) * TAG_H / 2;
+        const cx = sx + cos * (reach + half);
+        const cy = sy + sin * (reach + half);
+        return { x: cx - w / 2, y: cy - TAG_H / 2 };
+      });
+      const inside = (box: { x: number; y: number }) =>
+        box.x >= 2 && box.y >= 2 && box.x + w <= this.W - 2 && box.y + TAG_H <= this.H - 2;
+      const free = (box: { x: number; y: number }, tagsOnly: boolean) =>
+        inside(box) && !taken(box.x - 1, box.y - 1, box.x + w + 1, box.y + TAG_H + 1, tagsOnly);
+      const box = boxes.find((candidate) => free(candidate, false))
+        ?? boxes.find((candidate) => free(candidate, true))
+        ?? {
+          x: Math.max(2, Math.min(this.W - w - 2, boxes[0].x)),
+          y: Math.max(2, Math.min(this.H - TAG_H - 2, boxes[0].y)),
+        };
+      mark(box.x - 1, box.y - 1, box.x + w + 1, box.y + TAG_H + 1, undefined, 2);
+
+      ctx.globalAlpha = spot && !spot[i] ? DIM_ALPHA : 1;
+      ctx.fillStyle = faulty ? P.accent : agent.color;
+      ctx.beginPath();
+      ctx.roundRect(box.x, box.y, w, TAG_H, TAG_H / 2);
+      ctx.fill();
+      ctx.fillStyle = textOn(faulty ? P.accent : agent.color, P.onInk, P.ink);
+      ctx.fillText(text, box.x + TAG_PAD, box.y + TAG_H / 2 + 0.5);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  /** The ring just outside each held node: solid, or dashed and marching while the agent is live. */
+  private paintRings(held: number[], now: number, spot: Uint8Array | null) {
+    const { ctx, layout, view } = this;
+    if (!layout) return;
+    const { k } = view;
+    const moving = !reducedMotion();
+    for (const i of held) {
+      const node = layout.nodes[i];
+      const agent = node.agent;
+      if (!agent) continue;
+      const x = this.rx[i];
+      const y = this.ry[i];
+      const radius = this.ringRadius(node);
+      const dimmed = spot && !spot[i];
+      ctx.strokeStyle = agent.color;
+      ctx.globalAlpha = dimmed ? DIM_ALPHA : 1;
+      ctx.lineWidth = 3 / k;
+      if (agent.live) {
+        ctx.setLineDash([5 / k, 4 / k]);
+        ctx.lineDashOffset = moving ? -(now * 0.03) / k : 0;
+      } else ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, TAU);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.lineDashOffset = 0;
+      if (spot && spot[i] && this.spotlight === agent.name) {
+        ctx.lineWidth = 1.6 / k;
+        ctx.globalAlpha = 0.6;
+        ctx.beginPath();
+        ctx.arc(x, y, radius + 5 / k, 0, TAU);
+        ctx.stroke();
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  private drawTopicNames(vx0: number, vy0: number, vx1: number, vy1: number, spot: Uint8Array | null) {
     const { ctx, palette: P, layout } = this;
     if (!layout) return;
     ctx.font = `600 11px ${this.sans}`;
     ctx.textBaseline = 'middle';
     let colour = '';
-    for (const node of layout.nodes) {
+    for (let index = 0; index < layout.nodes.length; index++) {
+      const node = layout.nodes[index];
       if (node.kind !== 'topic' || node.topic === null) continue;
       const cos = Math.cos(node.angle);
       const sin = Math.sin(node.angle);
       const midX = ((R_LABEL + R_TOPIC) / 2) * cos;
       const midY = ((R_LABEL + R_TOPIC) / 2) * sin;
       if (midX < vx0 - 60 || midX > vx1 + 60 || midY < vy0 - 60 || midY > vy1 + 60) continue;
+      ctx.globalAlpha = spot && !spot[index] ? DIM_ALPHA : 1;
       const next = node.fault ? P.accent : P.ink;
       if (next !== colour) {
         ctx.fillStyle = next;
@@ -797,10 +1052,14 @@ export class BoardTreeRenderer {
       }
       ctx.restore();
     }
+    ctx.globalAlpha = 1;
   }
 
-  /** Card titles in screen space; a coarse occupancy grid keeps each off every node and every other title. */
-  private drawTitles(seen: number[]) {
+  /**
+   * Agent name tags, then card titles, in screen space. A coarse occupancy grid keeps every
+   * label off every node and off every other label; tags are placed first so they win.
+   */
+  private drawLabels(seen: number[], held: number[], spot: Uint8Array | null) {
     const { ctx, palette: P, layout, view } = this;
     if (!layout) return;
     const { k } = view;
@@ -811,7 +1070,10 @@ export class BoardTreeRenderer {
     else this.occupancy.fill(0, 0, cols * rows);
     const grid = this.occupancy;
 
-    const mark = (x0: number, y0: number, x1: number, y1: number, disc?: { x: number; y: number; r: number }) => {
+    const mark = (
+      x0: number, y0: number, x1: number, y1: number,
+      disc?: { x: number; y: number; r: number }, value = 1,
+    ) => {
       const c0 = Math.max(0, Math.floor(x0 / CELL));
       const c1 = Math.min(cols - 1, Math.floor(x1 / CELL));
       const r0 = Math.max(0, Math.floor(y0 / CELL));
@@ -819,11 +1081,12 @@ export class BoardTreeRenderer {
       for (let row = r0; row <= r1; row++) {
         for (let col = c0; col <= c1; col++) {
           if (disc && Math.hypot((col + 0.5) * CELL - disc.x, (row + 0.5) * CELL - disc.y) > disc.r) continue;
-          grid[row * cols + col] = 1;
+          grid[row * cols + col] = value;
         }
       }
     };
-    const taken = (x0: number, y0: number, x1: number, y1: number) => {
+    /** `tagsOnly` ignores nodes and titles and only reports other name tags. */
+    const taken = (x0: number, y0: number, x1: number, y1: number, tagsOnly = false) => {
       const c0 = Math.max(0, Math.floor(x0 / CELL));
       const c1 = Math.min(cols - 1, Math.floor(x1 / CELL));
       const r0 = Math.max(0, Math.floor(y0 / CELL));
@@ -832,7 +1095,8 @@ export class BoardTreeRenderer {
         for (let col = c0; col <= c1; col++) {
           const cx = (col + 0.5) * CELL;
           const cy = (row + 0.5) * CELL;
-          if (cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1 && grid[row * cols + col]) return true;
+          const filled = grid[row * cols + col];
+          if (cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1 && filled && (!tagsOnly || filled === 2)) return true;
         }
       }
       return false;
@@ -843,14 +1107,19 @@ export class BoardTreeRenderer {
       const node = layout.nodes[i];
       const sx = this.rx[i] * k + view.x;
       const sy = this.ry[i] * k + view.y;
-      const reach = (node.r + (node.kind === 'card' ? 7 : 2)) * k;
+      let reach = (node.r + (node.kind === 'card' ? 7 : 2)) * k;
+      // A held node carries its ring, which is part of what labels must stay clear of.
+      if (node.agent) reach = Math.max(reach, this.ringRadius(node) * k + 3);
       radii.set(i, reach);
       mark(sx - reach, sy - reach, sx + reach, sy + reach, { x: sx, y: sy, r: reach });
     }
 
+    this.placeTags(held, spot, radii, mark, taken);
+    if (k < TITLE_K) return;
+
     const rank: Record<string, number> = { waiting: 0, doing: 1, todo: 2, done: 3 };
     const cards = seen
-      .filter((i) => layout.nodes[i].kind === 'card')
+      .filter((i) => layout.nodes[i].kind === 'card' && (!spot || spot[i]))
       .sort((a, b) => {
         const left = layout.nodes[a];
         const right = layout.nodes[b];

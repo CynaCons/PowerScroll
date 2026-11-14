@@ -67,6 +67,12 @@ canvas undo history.
 | REQ-BOARD-051 | Clicking a card in the tree shall open the card; clicking a topic shall zoom to its branch; hovering a node shows its number and title (or the topic name) in a tooltip. The wheel zooms about the pointer, dragging pans, two fingers pinch, and with the tree focused 0 or f fits and + and - zoom. Card titles show once zoomed in, never over a node or over each other. Owner request 2026-11-14 | Must | T244 |
 | REQ-BOARD-052 | The tree shall offer an "N need you" button, shown only when N is above zero, that moves the view to the next fault in card-number order on each click and goes round again after the last. Owner request 2026-11-14 | Must | T244 |
 | REQ-BOARD-053 | The tree shall draw nothing while nothing changes (no frames at rest, none while hidden) and shall stay responsive with 1,000 cards across 40 labels: a frame takes well under 50 ms. Owner request 2026-11-14 | Must | T244 |
+| REQ-BOARD-054 | In the tree, a task held by a connected agent shall be ringed in that agent's colour, the same colour as the agent's chip above the board, and shall carry the agent's name in a tag beside it at every zoom from 30% up; tags keep one size on screen and do not cover each other, other tasks' nodes or card titles where there is room. A task held by an agent that is not shown as connected on this board is drawn as any other. Owner request 2026-11-14: "in the tree I don't see where the agents are working" | Must | T246 |
+| REQ-BOARD-055 | A task the agent acted on in the last minute shall show a moving dashed ring and a soft halo in the agent's colour; this is the only thing the tree animates at rest, at most about 12 frames a second, only while such a task is in view and the page is visible. With no agent working nothing is animated, and under reduced motion the ring is dashed but never moves. Owner request 2026-11-14 | Must | T246 |
+| REQ-BOARD-056 | Clicking an agent's chip while the tree is shown shall move the view to that agent's task and dim everything except the path from the centre through its topic to that task, which gets a second ring; clicking the chip again shall restore the picture and leave the view where it is. Owner request 2026-11-14 | Must | T246 |
+| REQ-BOARD-057 | A task held by an agent shall never be folded into a "+N" node: it takes one of the shown places of its branch (6 done, 8 queued). Owner request 2026-11-14 | Must | T246 |
+| REQ-BOARD-058 | A task waiting for the owner, or in progress and quiet for 10 minutes, keeps the fault colour and does not animate; if an agent holds it, its name tag is in the fault colour instead of the agent's. Hovering a held task shows "#12 Title" and a second line with the agent's name and "working now", "holding" or "quiet N min". Owner request 2026-11-14 | Must | T246 |
+| REQ-BOARD-059 | Agent presence shall not redraw the tree needlessly: a note or other action by an agent that holds no task on the board leaves the layout alone, and an agent taking a task changes the picture once. Owner request 2026-11-14 | Must | T246 |
 
 ## Traceability
 
@@ -85,3 +91,4 @@ canvas undo history.
 - T237 — `tests/board/237-checklist-nesting.spec.ts`
 - T238 — `tests/board/238-swim-lanes.spec.ts`
 - T244 — `tests/board/244-board-tree.spec.ts`
+- T246 — `tests/board/246-tree-agents.spec.ts`

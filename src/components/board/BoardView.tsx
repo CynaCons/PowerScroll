@@ -24,6 +24,7 @@ import { agentChips, AgentsStrip } from './AgentsStrip';
 import { BoardColumn, type CardLanding } from './BoardColumn';
 import { BoardCardFace } from './BoardCardFace';
 import { BoardTree } from './BoardTree';
+import type { TreeAgent } from '../../board/treeLayout';
 import { CardOverlay } from './CardOverlay';
 import { useSearchStore } from '../../stores/useSearchStore';
 import { boardLabels } from './CardProperties';
@@ -32,6 +33,7 @@ import { QuestionPrompt } from './QuestionPrompt';
 import { boardLanes, inLane, relabel } from './lanes';
 import './BoardView.css';
 
+const LIST_BREAK = '\n';
 const ACTOR = 'you';
 const VIEW_KEY = 'powerscroll-board-view';
 
@@ -212,6 +214,33 @@ export function BoardView() {
     .sort()
     .join(',');
   const quietCardIds = useMemo(() => new Set(quietKey ? quietKey.split(',') : []), [quietKey]);
+
+  // Tree view: the agents that hold a card on this board. Keyed by strings so each list keeps its
+  // identity until something it shows changes (the notes change once a minute, the agents do not).
+  const heldRows = chips.flatMap((chip) => {
+    const actor = actors[chip.name];
+    const card = actor?.cardId ? board?.cards.find((item) => item.id === actor.cardId) : undefined;
+    if (!actor || !card || card.archivedAt || card.assignee !== chip.name) return [];
+    const minutes = Math.floor((now - actor.lastActionAt) / 60_000);
+    const note = chip.active ? 'working now' : quietCardIds.has(card.id) ? `quiet ${minutes} min` : 'holding';
+    return [{ name: chip.name, color: chip.color, cardId: card.id, live: chip.active, note }];
+  });
+  const treeKey = heldRows.map((row) => `${row.name}|${row.color}|${row.cardId}|${row.live ? 1 : 0}`).join(LIST_BREAK);
+  const notesKey = heldRows.map((row) => `${row.name}|${row.note}`).join(LIST_BREAK);
+  const treeAgents = useMemo<TreeAgent[]>(
+    () => treeKey.split(LIST_BREAK).filter(Boolean).map((entry) => {
+      const [name, color, cardId, live] = entry.split('|');
+      return { name, color, cardId, live: live === '1' };
+    }),
+    [treeKey],
+  );
+  const treeNotes = useMemo<Record<string, string>>(
+    () => Object.fromEntries(notesKey.split(LIST_BREAK).filter(Boolean).map((entry) => {
+      const cut = entry.indexOf('|');
+      return [entry.slice(0, cut), entry.slice(cut + 1)];
+    })),
+    [notesKey],
+  );
 
   useEffect(() => {
     if (spotlight && !(chipNames ? chipNames.split(',') : []).includes(spotlight)) {
@@ -538,6 +567,9 @@ export function BoardView() {
               cards={visibleCards}
               events={board.events}
               quietCardIds={quietCardIds}
+              agents={treeAgents}
+              agentNotes={treeNotes}
+              spotlight={spotlightActive}
               title={page.title}
               onOpenCard={(cardId) => {
                 const card = board.cards.find((item) => item.id === cardId);

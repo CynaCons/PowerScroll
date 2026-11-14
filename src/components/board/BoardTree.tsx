@@ -1,17 +1,22 @@
 import { useEffect, useMemo, useRef } from 'react';
 import type { BoardCard, BoardEvent } from '../../types/data';
-import { createTreeLayouter } from '../../board/treeLayout';
+import { createTreeLayouter, type TreeAgent } from '../../board/treeLayout';
 import { BoardTreeRenderer } from './boardTreeRenderer';
 
 interface BoardTreeProps {
   cards: BoardCard[];
   events: BoardEvent[];
   quietCardIds: Set<string>;
+  /** Connected agents that hold a card on this board. */
+  agents: TreeAgent[];
+  /** Per agent: what the tooltip says ("working now", "holding", "quiet 15 min"). */
+  agentNotes: Record<string, string>;
+  spotlight: string | null;
   title: string;
   onOpenCard: (cardId: string) => void;
 }
 
-export function BoardTree({ cards, events, quietCardIds, title, onOpenCard }: BoardTreeProps) {
+export function BoardTree({ cards, events, quietCardIds, agents, agentNotes, spotlight, title, onOpenCard }: BoardTreeProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const tipRef = useRef<HTMLDivElement>(null);
@@ -22,8 +27,8 @@ export function BoardTree({ cards, events, quietCardIds, title, onOpenCard }: Bo
 
   // The board object changes on every note; the layouter hands back the same layout unless the picture changes.
   const layout = useMemo(
-    () => layouter.current(cards, events, quietCardIds),
-    [cards, events, quietCardIds],
+    () => layouter.current(cards, events, quietCardIds, agents),
+    [cards, events, quietCardIds, agents],
   );
   const needCount = useMemo(
     () => layout.nodes.filter((node) => node.kind === 'card' && node.fault).length,
@@ -48,6 +53,15 @@ export function BoardTree({ cards, events, quietCardIds, title, onOpenCard }: Bo
     rendererRef.current?.setTitle(title);
     rendererRef.current?.setLayout(layout);
   }, [layout, title]);
+
+  useEffect(() => {
+    rendererRef.current?.setAgentNotes(agentNotes);
+  }, [agentNotes]);
+
+  // After the layout, so the spotlight finds its node when both change together.
+  useEffect(() => {
+    rendererRef.current?.setSpotlight(spotlight);
+  }, [spotlight, layout]);
 
   return (
     <div className="board-tree" data-testid="board-tree" ref={containerRef}>

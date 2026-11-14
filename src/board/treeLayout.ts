@@ -19,6 +19,21 @@ const NO_LABEL_KEY = 't:__none__';
 export type TreeKind = 'hub' | 'topic' | 'fold' | 'more' | 'card';
 export type TreeState = 'done' | 'doing' | 'waiting' | 'todo';
 
+/** A connected agent that holds a card on this board. */
+export interface TreeAgent {
+  name: string;
+  color: string;
+  cardId: string;
+  /** Acted within the last minute. */
+  live: boolean;
+}
+
+export interface TreeNodeAgent {
+  name: string;
+  color: string;
+  live: boolean;
+}
+
 export interface TreeNode {
   key: string;
   kind: TreeKind;
@@ -36,6 +51,8 @@ export interface TreeNode {
   checkTotal: number;
   checkDone: number;
   initials?: string;
+  /** The connected agent holding this card. */
+  agent?: TreeNodeAgent;
   title?: string;
   number?: number;
 }
@@ -49,7 +66,7 @@ export interface TreeLayout {
 
 type Item =
   | { kind: 'fold' | 'more'; count: number }
-  | { kind: 'card'; card: BoardCard; fault: boolean };
+  | { kind: 'card'; card: BoardCard; fault: boolean; agent?: TreeNodeAgent };
 
 interface Topic {
   key: string;
@@ -75,7 +92,12 @@ function checkCounts(card: BoardCard): [number, number] {
 }
 
 /** Topics in first-use order (the rule `boardLanes` uses), "No label" last; archived cards left out. */
-function groupTopics(cards: BoardCard[], events: BoardEvent[], quiet: ReadonlySet<string>): Topic[] {
+function groupTopics(
+  cards: BoardCard[],
+  events: BoardEvent[],
+  quiet: ReadonlySet<string>,
+  held: ReadonlyMap<string, TreeAgent>,
+): Topic[] {
   const live = cards.filter((card) => !card.archivedAt);
   const order: string[] = [];
   for (const card of [...live].sort((left, right) => left.createdAt - right.createdAt)) {
@@ -104,12 +126,28 @@ function groupTopics(cards: BoardCard[], events: BoardEvent[], quiet: ReadonlySe
     const doing = column('doing').sort(byOrder);
     const todo = column('todo').sort(byOrder);
     const isFault = (card: BoardCard) => card.column === 'waiting' || quiet.has(card.id);
+    const holder = (card: BoardCard): TreeNodeAgent | undefined => {
+      const agent = held.get(card.id);
+      if (!agent || card.assignee !== agent.name) return undefined;
+      // Quiet and waiting cards keep the fault look: their agent shows by name, not by motion.
+      return { name: agent.name, color: agent.color, live: agent.live && !isFault(card) };
+    };
+    // A card an agent holds is never folded away: it takes one of the shown slots.
+    const shown = (pool: BoardCard[], limit: number, newest: boolean) => {
+      const keep = pool.filter((card) => holder(card));
+      const free = Math.max(0, limit - keep.length);
+      const rest = pool.filter((card) => !holder(card));
+      const chosen = new Set([...keep, ...(newest ? rest.slice(rest.length - free) : rest.slice(0, free))]);
+      return pool.filter((card) => chosen.has(card));
+    };
+    const doneShown = shown(done, DONE_SHOWN, true);
+    const todoShown = shown(todo, QUEUED_SHOWN, false);
     const items: Item[] = [];
-    if (done.length > DONE_SHOWN) items.push({ kind: 'fold', count: done.length - DONE_SHOWN });
-    for (const card of [...done.slice(-DONE_SHOWN), ...waiting, ...doing, ...todo.slice(0, QUEUED_SHOWN)]) {
-      items.push({ kind: 'card', card, fault: isFault(card) });
+    if (done.length > doneShown.length) items.push({ kind: 'fold', count: done.length - doneShown.length });
+    for (const card of [...doneShown, ...waiting, ...doing, ...todoShown]) {
+      items.push({ kind: 'card', card, fault: isFault(card), agent: holder(card) });
     }
-    if (todo.length > QUEUED_SHOWN) items.push({ kind: 'more', count: todo.length - QUEUED_SHOWN });
+    if (todo.length > todoShown.length) items.push({ kind: 'more', count: todo.length - todoShown.length });
     return { key, name, items, fault: list.some(isFault) };
   };
 
@@ -125,7 +163,8 @@ function signatureOf(topics: Topic[]): string {
         if (item.kind !== 'card') return `${item.kind}${item.count}`;
         const { card } = item;
         const [done, total] = checkCounts(card);
-        return `${card.id}|${card.column}|${done}/${total}|${card.assignee ?? ''}|${item.fault ? 1 : 0}|${card.title}`;
+        const agent = item.agent ? `${item.agent.name}:${item.agent.color}:${item.agent.live ? 1 : 0}` : '';
+        return `${card.id}|${card.column}|${done}/${total}|${card.assignee ?? ''}|${item.fault ? 1 : 0}|${agent}|${card.title}`;
       });
       return `${topic.name}${topic.fault ? '!' : ''}\u0001${parts.join('\u0002')}`;
     })
@@ -188,6 +227,7 @@ function place(topics: Topic[], signature: string): TreeLayout {
             ...base, key: card.id, kind: 'card', r: big ? 12 : 6, cardId: card.id, state: card.column,
             fault: item.fault, checkDone: done, checkTotal: count, number: card.number, title: card.title,
             initials: card.column === 'doing' || card.column === 'waiting' ? initialsOf(card.assignee) : undefined,
+            agent: item.agent,
           });
         } else {
           nodes.push({
@@ -230,8 +270,14 @@ function place(topics: Topic[], signature: string): TreeLayout {
  */
 export function createTreeLayouter() {
   let last: TreeLayout | null = null;
-  return (cards: BoardCard[], events: BoardEvent[], quietCardIds: ReadonlySet<string>): TreeLayout => {
-    const topics = groupTopics(cards, events, quietCardIds);
+  return (
+    cards: BoardCard[],
+    events: BoardEvent[],
+    quietCardIds: ReadonlySet<string>,
+    agents: readonly TreeAgent[] = [],
+  ): TreeLayout => {
+    const held = new Map(agents.map((agent) => [agent.cardId, agent]));
+    const topics = groupTopics(cards, events, quietCardIds, held);
     const signature = signatureOf(topics);
     if (last && last.signature === signature) return last;
     last = place(topics, signature);
