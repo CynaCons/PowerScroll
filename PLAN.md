@@ -1824,7 +1824,7 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Measure v0.92.0, v0.93.0 and this build on one page [agent: sonnet]
 - [x] Run the release checks and the full campaign [agent: sonnet]
 - [x] Publish the showcase [agent: claude]
-- [ ] Release v0.94.0
+- [x] Release v0.94.0 [agent: claude]
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.
