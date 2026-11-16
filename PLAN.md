@@ -1852,8 +1852,9 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Card details and card face show what a card waits on [agent: sonnet]
 - [x] Tree draws arrows in a topic and links on hover [agent: sonnet]
 - [x] Run the checks and the full campaign [agent: sonnet]
-- [ ] Showcase and release v0.95.0
+- [x] Showcase and release v0.95.0 [agent: claude]
 - [x] Owner report 2026-11-16: tree hides tasks behind "+N more" [agent: sonnet]
+- [ ] Bump and publish the agent tools package to npm
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.

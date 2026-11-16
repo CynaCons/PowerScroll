@@ -4,15 +4,15 @@ This file records externally observed deployment state. Update it after every
 release or distribution change. It is a ledger, not a substitute for querying
 the live services before a new release.
 
-**Last verified:** 2026-11-14, after v0.94.2
+**Last verified:** 2026-11-16, after v0.95.0
 
 ## Current public state
 
 | Surface | Deployed state | Verification |
 |---|---|---|
-| Source repository | `CynaCons/PowerScroll`; app release source is tag `v0.94.2` at `cb48fea` | [Repository](https://github.com/CynaCons/PowerScroll) |
-| Application release | `v0.94.2`, published 2026-11-14, non-draft, latest; app reports `0.94.2` | [GitHub release](https://github.com/CynaCons/PowerScroll/releases/tag/v0.94.2) |
-| GitHub Pages | Public, HTTPS, workflow-deployed from `main` at `cb48fea` (run 43635968255 succeeded 2026-11-14); live app HTML contains `0.94.2` | [Storefront](https://cynacons.github.io/PowerScroll/) · [App](https://cynacons.github.io/PowerScroll/app/) |
+| Source repository | `CynaCons/PowerScroll`; app release source is tag `v0.95.0` at `402ceed` | [Repository](https://github.com/CynaCons/PowerScroll) |
+| Application release | `v0.95.0`, published 2026-11-16, non-draft, latest; app reports `0.95.0` | [GitHub release](https://github.com/CynaCons/PowerScroll/releases/tag/v0.95.0) |
+| GitHub Pages | Public, HTTPS, workflow-deployed from `main` at `402ceed` (run succeeded 2026-11-16); live app HTML contains `0.95.0` | [Storefront](https://cynacons.github.io/PowerScroll/) · [App](https://cynacons.github.io/PowerScroll/app/) |
 | npm | `powerscroll-mcp@0.67.1`; `latest` = `0.67.1`. **0.70.0 and 0.71.0 (0.71.0 adds the checklist tools: `card_checklist_update/_remove/_move/_set`, nested items) are committed but NOT published**: npm is not signed in on the release machine (`npm whoami` 401 on 2026-10-23; `npm view` still `0.67.1` on 2026-10-28). Local checkouts (`node powernote-mcp/server.js`) have them | [npm package](https://www.npmjs.com/package/powerscroll-mcp) |
 | Official MCP Registry | `io.github.CynaCons/powerscroll@0.67.1`, active (re-checked 2026-10-28). 0.71.0 waits for npm (Registry validation queries npm) | [Registry search](https://registry.modelcontextprotocol.io/?q=powerscroll) |
 
@@ -24,14 +24,36 @@ them, and the release carries the 0.70.0 tarball as an asset.
 
 ## GitHub release assets
 
-The `v0.94.2` release contains (digests reported by the GitHub API; the HTML
+The `v0.95.0` release contains (digests reported by the GitHub API; the HTML
 digest equals the committed and locally tested `dist-template/index.html`):
 
 | Asset | Size | SHA-256 | Meaning |
 |---|---:|---|---|
-| `PowerScroll.html` | 3,076,348 bytes | `8bf17171da1fdeaf69dda33a1c14dc294379fb5da9479d6da48a7d987f8cb9ce` | Primary self-contained notebook application |
-| `PowerNote.html` | 3,076,348 bytes | `8bf17171da1fdeaf69dda33a1c14dc294379fb5da9479d6da48a7d987f8cb9ce` | Byte-identical compatibility alias for legacy updates |
-| `powerscroll-mcp.tgz` | 34,200 bytes | `1f04ed044ead26ee9f36c208e72c67d89e0a232c1c6a4b88a0d6f26e98868240` | MCP package snapshot (version `0.71.0`, digest unchanged since v0.90.0, not on npm) |
+| `PowerScroll.html` | 3,091,761 bytes | `4f6d00d938e1e868c3ae5f325f15e8b56a9a65702575e1cc7de5913b3fbb98f2` | Primary self-contained notebook application |
+| `PowerNote.html` | 3,091,761 bytes | `4f6d00d938e1e868c3ae5f325f15e8b56a9a65702575e1cc7de5913b3fbb98f2` | Byte-identical compatibility alias for legacy updates |
+| `powerscroll-mcp.tgz` | 34,531 bytes | `641ea6ed2d18e50a428333156192f21d74826f2fbe6fff544e98db74beaf4299` | MCP package snapshot, still labelled `0.71.0` although `server.js` gained the dependency arguments in v0.95.0; not on npm |
+
+## Verified for v0.95.0
+
+- Owner request 2026-11-16: cards can wait on other cards (REQ-BOARD-061..066),
+  and the board tree no longer folds cards into "+N" nodes (REQ-BOARD-048 and
+  057 reworded). App and MCP `server.js` changed (dependency arguments on
+  card_create / card_update, NOT_READY refusals, newly_ready, waits_on/ready).
+- Tag `v0.95.0` pushed at release commit `402ceed` (feature commit `e7d86a9`).
+  `Build & Release`, `Deploy GitHub Pages` and CI succeeded; release non-draft
+  and the API's latest. Both HTML assets 3,091,761 bytes, sha256
+  `4f6d00d9...3fbb98f2`, equal to the committed `dist-template/index.html`.
+  The live app HTML contains `0.95.0`.
+- MCP: the tarball digest changed (`641ea6ed...`) but `powernote-mcp/package.json`
+  still says `0.71.0`, the same version as the earlier tarball. npm still serves
+  `powerscroll-mcp@0.67.1`. A version bump and npm / Registry publication are
+  open.
+- Pre-tag evidence: typecheck clean; lint 0 errors (35 warnings); MCP 13/13;
+  bridge all passed; dev app smoke test 0 console errors. Full campaign
+  1,045/1,045 before the last two fixes (hover lines drawn as wedges, clipped
+  dependency rows); after them `tests/board` + `tests/agent` 200/200. The
+  full campaign was not repeated. The built single-file template was not
+  opened by hand.
 
 ## Verified for v0.94.2
 
