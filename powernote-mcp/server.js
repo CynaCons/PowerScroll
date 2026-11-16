@@ -2226,7 +2226,7 @@ async function writeReadImageFile(result, params) {
 }
 
 const server = new Server(
-  { name: 'powerscroll-mcp', version: '0.71.0' },
+  { name: 'powerscroll-mcp', version: '0.72.0' },
   { capabilities: { tools: {} } },
 );
 
