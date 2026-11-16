@@ -172,6 +172,12 @@ export type BridgeErrorCode =
   | 'PRECONDITION'
   | 'QUESTION_REQUIRED'
   | 'ARCHIVED'
+  /** The card still waits on cards that are not Done. */
+  | 'NOT_READY'
+  /** Adding this dependency would make a loop. */
+  | 'DEPENDENCY_LOOP'
+  /** A card can't wait on itself. */
+  | 'DEPENDENCY_SELF'
   | 'INTERNAL';
 
 export interface BridgeOk<T = unknown> {
@@ -694,6 +700,8 @@ export interface CardListEntry {
   lastNote?: CardNoteSummary;
   updatedAt: number;
   archivedAt?: number;
+  /** Numbers of the unfinished cards this one waits on (board_read only). */
+  waits_on?: number[];
 }
 
 /** A checklist item as agents see it: `index` is its 1-based position, `depth` its level (0 to 3). */
@@ -715,6 +723,8 @@ export interface BoardReadResult {
   boardId: string;
   title: string;
   cards: CardListEntry[];
+  /** Cards in To do that wait on nothing unfinished. */
+  ready: Array<{ number: number; title: string }>;
 }
 
 export interface BoardCardDetail {

@@ -1838,3 +1838,138 @@
   outline: 2px solid var(--tree-ink, #14181a);
   outline-offset: 2px;
 }
+
+/* Card dependencies (REQ-BOARD-063, REQ-BOARD-064) */
+.board-card__waits {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 7px;
+  color: #5c6467;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.board-card__waits--stuck {
+  color: #b4552d;
+  font-weight: 600;
+}
+
+.board-deps__blocked {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 8px;
+  margin-bottom: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: #eef1f0;
+  color: #2f3738;
+  font-size: 12px;
+}
+
+.board-deps__blocked-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.board-deps__blocked-text svg {
+  flex: none;
+}
+
+.board-deps__list,
+.board-deps__options {
+  display: grid;
+  gap: 2px;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.board-deps__row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.board-deps__open,
+.board-deps__option {
+  display: grid;
+  flex: 1;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 1px 8px;
+  align-items: baseline;
+  min-width: 0;
+  width: 100%;
+  padding: 4px 6px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #2f3738;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.board-deps__open:hover:not(:disabled),
+.board-deps__option:hover:not(:disabled) {
+  background: #eef1f0;
+}
+
+.board-deps__title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board-deps__meta,
+.board-deps__reason {
+  grid-column: 2;
+  color: #5c6467;
+  font-size: 11px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.board-deps__option--blocked {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.board-deps__row {
+  min-width: 0;
+}
+
+.board-deps__remove {
+  display: inline-flex;
+  padding: 3px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #5c6467;
+  cursor: pointer;
+}
+
+.board-deps__remove:hover {
+  background: #eef1f0;
+}
+
+.board-deps__input {
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid #c3cbc9;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+}
+
+.board-deps__subhead {
+  margin-top: 14px;
+}

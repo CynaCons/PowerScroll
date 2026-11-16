@@ -121,7 +121,9 @@ const BOARD_WORKFLOW =
   'Workflow: board_read the board, card_claim a card, card_move it to doing, ' +
   'work and call card_check/card_note as you go (card_checklist_* to edit the checklist), agent_status for what you are doing now, ' +
   'card_move to waiting WITH a question when you need the owner, ' +
-  'board_updates {mine:true, wait_seconds} to hear back, then card_move to done.';
+  'board_updates {mine:true, wait_seconds} to hear back, then card_move to done. ' +
+  'Cards can wait on others (depends_on): pick from the "ready" list of board_read; a card with ' +
+  '"waits_on" is refused with NOT_READY until those are done, and card_move to done reports "newly_ready".';
 const HUB_CONNECTED_AT = Date.now();
 const ME_PROP = {
   type: 'string',
@@ -1712,7 +1714,7 @@ const TOOLS = [
     name: 'board_read',
     description:
       'Read cards on a board: number, id, title, column, order, assignee, labels, ' +
-      'checklist done/total, question, last note, updatedAt. Filter with column or assignee. ' +
+      'checklist done/total, question, last note, updatedAt, waits_on (numbers of unfinished cards it waits on), plus a top-level ready list (cards you can start now). Filter with column or assignee. ' +
       'Archived cards are omitted unless include_archived is true. ' +
       BOARD_WORKFLOW,
     inputSchema: {
@@ -1754,6 +1756,11 @@ const TOOLS = [
             'Checklist items: titles, or { text, done?, depth? } where depth 0-3 nests an item ' +
             'under the one above it.',
         },
+        depends_on: {
+          type: 'array',
+          items: { type: ['integer', 'string'] },
+          description: 'Cards this one waits on, by number or id. It cannot be started until they are done.',
+        },
         me: ME_PROP,
       },
       required: ['boardId', 'title'],
@@ -1778,7 +1785,7 @@ const TOOLS = [
   },
   {
     name: 'card_update',
-    description: 'Update a card title, description or labels. ' + BOARD_WORKFLOW,
+    description: 'Update a card title, description, labels, or the cards it waits on. ' + BOARD_WORKFLOW,
     inputSchema: {
       type: 'object',
       properties: {
@@ -1787,6 +1794,16 @@ const TOOLS = [
         title: { type: 'string' },
         description: { type: 'string' },
         labels: { type: 'array', items: { type: 'string' } },
+        depends_on_add: {
+          type: 'array',
+          items: { type: ['integer', 'string'] },
+          description: 'Cards (number or id) this one should also wait on. Loops are refused.',
+        },
+        depends_on_remove: {
+          type: 'array',
+          items: { type: ['integer', 'string'] },
+          description: 'Cards (number or id) this one no longer waits on.',
+        },
         me: ME_PROP,
       },
       required: ['boardId', 'card'],
@@ -1795,7 +1812,7 @@ const TOOLS = [
   },
   {
     name: 'card_claim',
-    description: 'Assign the card to me. ' + BOARD_WORKFLOW,
+    description: 'Assign the card to me. Refused with NOT_READY while the card waits on unfinished cards. ' + BOARD_WORKFLOW,
     inputSchema: {
       type: 'object',
       properties: {
@@ -1824,7 +1841,7 @@ const TOOLS = [
   {
     name: 'card_move',
     description:
-      'Move a card to todo, doing, waiting or done. `question` is required when moving to waiting. ' +
+      'Move a card to todo, doing, waiting or done. `question` is required when moving to waiting. Moving to doing is refused with NOT_READY while the card waits on unfinished cards; moving to done returns newly_ready (cards that can now start). ' +
       BOARD_WORKFLOW,
     inputSchema: {
       type: 'object',

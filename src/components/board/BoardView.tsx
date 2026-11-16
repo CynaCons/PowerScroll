@@ -10,7 +10,7 @@ import {
   restoreCard,
   updateCard,
 } from '../../board/boardOps';
-import { boardLabelColors, displayName, labelColor, relativeTime } from './boardUi';
+import { boardLabelColors, confirmStart, dependencyLines, displayName, labelColor, relativeTime } from './boardUi';
 import { LabelColorsContext } from './labelColors';
 import {
   AGENT_ACTIVE_MS,
@@ -286,6 +286,7 @@ export function BoardView() {
 
   const edit = (fn: (current: BoardData) => BoardData) => updateBoard(page.id, fn);
   const live = liveCards(board.cards);
+  const dependencyInfo = dependencyLines(board, live);
   const archivedCards = board.cards
     .filter((card) => card.archivedAt)
     .slice()
@@ -380,8 +381,16 @@ export function BoardView() {
     ) {
       setQuestionDrop({ cardId: currentCard.id, column: drop.column, index, labels });
     } else {
+      // A card that still waits on others asks before it starts (REQ-BOARD-063).
+      const force = currentCard ? confirmStart(board, currentCard, drop.column) : false;
+      if (force === null) {
+        setLanding(null);
+        setDrag(null);
+        setDrop(null);
+        return;
+      }
       edit((current) => {
-        const moved = moveCard(current, { cardId: drag.cardId, to: drop.column, index }, ACTOR, Date.now());
+        const moved = moveCard(current, { cardId: drag.cardId, to: drop.column, index, force }, ACTOR, Date.now());
         return labels ? updateCard(moved, { cardId: drag.cardId, labels }, ACTOR, Date.now()) : moved;
       });
     }
@@ -419,10 +428,14 @@ export function BoardView() {
       return;
     }
 
+    const force = confirmStart(board, card, target);
+    if (force === null) return;
+
     edit((current) => moveCard(current, {
       cardId: card.id,
       to: target,
       index,
+      force,
     }, ACTOR, Date.now()));
   };
 
@@ -604,6 +617,7 @@ export function BoardView() {
                     landing={landing}
                     onLanded={() => setLanding(null)}
                     activeCardIds={activeCardIds}
+                    dependencyInfo={dependencyInfo}
                     fadingCardIds={fading}
                     flashingCardIds={flashing}
                     onCreate={(title) => edit((current) => createCard(current, {
@@ -712,8 +726,14 @@ export function BoardView() {
         )}
         {opened && (
           <CardOverlay
+            key={opened.id}
             card={opened}
             cards={board.cards}
+            board={board}
+            onOpenCard={(id) => {
+              const target = board.cards.find((item) => item.id === id && !item.archivedAt);
+              if (target) setOpened(target);
+            }}
             events={board.events}
             edit={edit}
             onClose={() => setOpened(null)}

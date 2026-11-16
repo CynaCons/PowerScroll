@@ -3,7 +3,7 @@ import { Check, ChevronDown, Plus, X } from 'lucide-react';
 import type { BoardCard, BoardColumnId, BoardData } from '../../types/data';
 import { BOARD_COLUMNS, claimCard, releaseCard, updateCard } from '../../board/boardOps';
 import { BoardMenu } from './BoardMenu';
-import { avatarColor, avatarInitial, displayName, relativeTime, statusClass } from './boardUi';
+import { avatarColor, avatarInitial, confirmStart, displayName, relativeTime, statusClass } from './boardUi';
 import { useLabelColor } from './labelColors';
 
 const ACTOR = 'you';
@@ -11,12 +11,13 @@ const ACTOR = 'you';
 interface CardPropertiesProps {
   card: BoardCard;
   cards: BoardCard[];
+  board: BoardData;
   edit: (fn: (board: BoardData) => BoardData) => void;
   onMove: (to: BoardColumnId) => void;
 }
 
 /** The sidebar's Details panel: status, assignee and labels as menus, then dates. */
-export function CardProperties({ card, cards, edit, onMove }: CardPropertiesProps) {
+export function CardProperties({ card, cards, board, edit, onMove }: CardPropertiesProps) {
   return (
     <section className="board-overlay__section board-properties" data-testid="card-properties">
       <h2>Details</h2>
@@ -27,7 +28,7 @@ export function CardProperties({ card, cards, edit, onMove }: CardPropertiesProp
         </div>
         <div>
           <dt>Assignee</dt>
-          <dd><AssigneeMenu card={card} cards={cards} edit={edit} /></dd>
+          <dd><AssigneeMenu card={card} cards={cards} board={board} edit={edit} /></dd>
         </div>
         <div>
           <dt>Labels</dt>
@@ -98,7 +99,7 @@ function knownNames(cards: BoardCard[]): string[] {
   return [...names];
 }
 
-function AssigneeMenu({ card, cards, edit }: Omit<CardPropertiesProps, 'onMove'>) {
+function AssigneeMenu({ card, cards, board, edit }: Omit<CardPropertiesProps, 'onMove'>) {
   const [query, setQuery] = useState('');
 
   // One choice is one event: a claim for the new name or a release. Typing in
@@ -107,7 +108,10 @@ function AssigneeMenu({ card, cards, edit }: Omit<CardPropertiesProps, 'onMove'>
     setQuery('');
     try {
       if (name && name !== card.assignee) {
-        edit((board) => claimCard(board, { cardId: card.id }, name, Date.now()));
+        // Claiming a card that waits on others starts it: ask first.
+        const force = confirmStart(board, card, 'doing');
+        if (force === null) return;
+        edit((current) => claimCard(current, { cardId: card.id, force }, name, Date.now()));
       } else if (!name && card.assignee) {
         edit((board) => releaseCard(board, { cardId: card.id }, ACTOR, Date.now()));
       }
@@ -230,7 +234,7 @@ export function boardLabels(cards: BoardCard[]): Array<{ label: string; count: n
     .sort((left, right) => right.count - left.count || left.label.localeCompare(right.label));
 }
 
-function LabelsField({ card, cards, edit }: Omit<CardPropertiesProps, 'onMove'>) {
+function LabelsField({ card, cards, edit }: Pick<CardPropertiesProps, 'card' | 'cards' | 'edit'>) {
   const labelColor = useLabelColor();
   const [query, setQuery] = useState('');
   const setLabels = (labels: string[]) => edit((board) => updateCard(board, {

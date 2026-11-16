@@ -1,4 +1,39 @@
-import type { BoardColumnId, BoardEvent } from '../../types/data';
+import type { BoardCard, BoardColumnId, BoardData, BoardEvent } from '../../types/data';
+import { blockersOf } from '../../board/boardOps';
+
+/** What a card face shows about dependencies: numbers it still waits on, and those among them that need the owner. */
+export interface DependencyLine {
+  waits: number[];
+  stuck: number[];
+}
+
+/** Dependency lines for the cards that wait on something unfinished; ready cards are left out (REQ-BOARD-064). */
+export function dependencyLines(board: BoardData, cards: BoardCard[]): Map<string, DependencyLine> {
+  const lines = new Map<string, DependencyLine>();
+  for (const card of cards) {
+    if (!card.dependsOn?.length) continue;
+    const blockers = blockersOf(board, card);
+    if (!blockers.length) continue;
+    lines.set(card.id, {
+      waits: blockers.map((item) => item.number),
+      stuck: blockers.filter((item) => item.column === 'waiting').map((item) => item.number),
+    });
+  }
+  return lines;
+}
+
+/**
+ * Asks the owner before a card that still waits on others is started
+ * (REQ-BOARD-063). Returns false when no question is needed, true when the
+ * owner chose "Start anyway" (pass `force`), and null when they cancelled.
+ */
+export function confirmStart(board: BoardData, card: BoardCard, to: BoardColumnId): boolean | null {
+  if (to !== 'doing' || card.column === 'doing') return false;
+  const blockers = blockersOf(board, card);
+  if (!blockers.length) return false;
+  const list = blockers.map((item) => `#${item.number}`).join(', ');
+  return window.confirm(`#${card.number} still waits on ${list}. Start anyway?`) ? true : null;
+}
 
 export const AVATAR_PALETTE = [
   '#2563eb',

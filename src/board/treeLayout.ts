@@ -7,8 +7,6 @@ export const R_TOPIC = 218;
 export const R_CARD = 262;
 export const DR = 38;
 export const SP = 27;
-export const DONE_SHOWN = 6;
-export const QUEUED_SHOWN = 8;
 export const GRID_CELL = 48;
 /** Hit-test slack the grid is built for, in world units. */
 const GRID_SLACK = 8;
@@ -16,7 +14,7 @@ const GRID_SLACK = 8;
 export const NO_LABEL_TOPIC = 'No label';
 const NO_LABEL_KEY = 't:__none__';
 
-export type TreeKind = 'hub' | 'topic' | 'fold' | 'more' | 'card';
+export type TreeKind = 'hub' | 'topic' | 'card';
 export type TreeState = 'done' | 'doing' | 'waiting' | 'todo';
 
 /** A connected agent that holds a card on this board. */
@@ -47,7 +45,6 @@ export interface TreeNode {
   cardId?: string;
   state?: TreeState;
   fault: boolean;
-  count?: number;
   checkTotal: number;
   checkDone: number;
   initials?: string;
@@ -55,6 +52,25 @@ export interface TreeNode {
   agent?: TreeNodeAgent;
   title?: string;
   number?: number;
+  /** Not ready: this card waits on a card that is not finished. */
+  locked: boolean;
+  /** Dependencies (either direction) that cross to another topic. */
+  crossDeps: number;
+}
+
+/** One dependency seen from a card node: the node and card at the other end. */
+export interface TreeRel {
+  /** Node index of the other end. */
+  other: number;
+  cardId: string;
+  topic: string;
+  number: number;
+  title: string;
+  column: string;
+  /** True when the hovered card waits on the other one; false when the other waits on it. */
+  waitsOn: boolean;
+  /** The other card is waiting for the owner. */
+  accent: boolean;
 }
 
 export interface TreeLayout {
@@ -62,11 +78,17 @@ export interface TreeLayout {
   radius: number;
   signature: string;
   grid: Map<number, number[]>;
+  /** Unfinished same-topic dependencies between two shown cards: [from (must finish), to (waits)] node indices. */
+  edges: Array<[number, number]>;
+  /** Per card node: every live dependency it takes part in, any topic. */
+  related: Map<number, TreeRel[]>;
 }
 
-type Item =
-  | { kind: 'fold' | 'more'; count: number }
-  | { kind: 'card'; card: BoardCard; fault: boolean; agent?: TreeNodeAgent };
+interface Item {
+  card: BoardCard;
+  fault: boolean;
+  agent?: TreeNodeAgent;
+}
 
 interface Topic {
   key: string;
@@ -132,22 +154,10 @@ function groupTopics(
       // Quiet and waiting cards keep the fault look: their agent shows by name, not by motion.
       return { name: agent.name, color: agent.color, live: agent.live && !isFault(card) };
     };
-    // A card an agent holds is never folded away: it takes one of the shown slots.
-    const shown = (pool: BoardCard[], limit: number, newest: boolean) => {
-      const keep = pool.filter((card) => holder(card));
-      const free = Math.max(0, limit - keep.length);
-      const rest = pool.filter((card) => !holder(card));
-      const chosen = new Set([...keep, ...(newest ? rest.slice(rest.length - free) : rest.slice(0, free))]);
-      return pool.filter((card) => chosen.has(card));
-    };
-    const doneShown = shown(done, DONE_SHOWN, true);
-    const todoShown = shown(todo, QUEUED_SHOWN, false);
-    const items: Item[] = [];
-    if (done.length > doneShown.length) items.push({ kind: 'fold', count: done.length - doneShown.length });
-    for (const card of [...doneShown, ...waiting, ...doing, ...todoShown]) {
-      items.push({ kind: 'card', card, fault: isFault(card), agent: holder(card) });
-    }
-    if (todo.length > todoShown.length) items.push({ kind: 'more', count: todo.length - todoShown.length });
+    // Every live card gets its own node: done cards keep their time order, then waiting, doing, queued.
+    const items: Item[] = [...done, ...waiting, ...doing, ...todo].map((card) => ({
+      card, fault: isFault(card), agent: holder(card),
+    }));
     return { key, name, items, fault: list.some(isFault) };
   };
 
@@ -156,11 +166,25 @@ function groupTopics(
   return topics.filter((topic) => topic.items.length > 0);
 }
 
-function signatureOf(topics: Topic[]): string {
+/** What the dependency picture depends on: who waits on whom, and the state of what they wait on. */
+function depsSignature(cards: BoardCard[]): string {
+  const byId = new Map(cards.map((card) => [card.id, card]));
+  const parts: string[] = [];
+  for (const card of cards) {
+    if (card.archivedAt || !card.dependsOn?.length) continue;
+    const ends = card.dependsOn.map((id) => {
+      const target = byId.get(id);
+      return target ? `${id}:${target.column}${target.archivedAt ? 'a' : ''}:${target.number}:${target.title}` : `${id}:x`;
+    });
+    parts.push(`${card.id}>${ends.join(',')}`);
+  }
+  return parts.join('\u0004');
+}
+
+function signatureOf(topics: Topic[], deps: string): string {
   return topics
     .map((topic) => {
       const parts = topic.items.map((item) => {
-        if (item.kind !== 'card') return `${item.kind}${item.count}`;
         const { card } = item;
         const [done, total] = checkCounts(card);
         const agent = item.agent ? `${item.agent.name}:${item.agent.color}:${item.agent.live ? 1 : 0}` : '';
@@ -168,13 +192,59 @@ function signatureOf(topics: Topic[]): string {
       });
       return `${topic.name}${topic.fault ? '!' : ''}\u0001${parts.join('\u0002')}`;
     })
-    .join('\u0003');
+    .join('\u0003') + `\u0005${deps}`;
 }
 
-function place(topics: Topic[], signature: string): TreeLayout {
+/** Dependency edges and per-card relations, indexed by node. Runs once per layout, never per frame. */
+function linkDependencies(nodes: TreeNode[], cards: BoardCard[]) {
+  const byId = new Map(cards.map((card) => [card.id, card]));
+  const nodeOf = new Map<string, number>();
+  nodes.forEach((node, index) => { if (node.kind === 'card' && node.cardId) nodeOf.set(node.cardId, index); });
+  const finished = (card: BoardCard) => card.column === 'done' || Boolean(card.archivedAt);
+  const edges: Array<[number, number]> = [];
+  const related = new Map<number, TreeRel[]>();
+  const push = (at: number, rel: TreeRel) => {
+    const list = related.get(at);
+    if (list) list.push(rel);
+    else related.set(at, [rel]);
+  };
+  for (const card of cards) {
+    if (card.archivedAt || !card.dependsOn?.length) continue;
+    const to = nodeOf.get(card.id);
+    if (to === undefined) continue;
+    let locked = false;
+    for (const id of new Set(card.dependsOn)) {
+      const blocker = byId.get(id);
+      if (!blocker || blocker.archivedAt) continue;
+      const from = nodeOf.get(id);
+      if (from === undefined || from === to) continue;
+      if (!finished(blocker)) locked = true;
+      const mine = nodes[to];
+      const theirs = nodes[from];
+      push(to, {
+        other: from, cardId: blocker.id, topic: theirs.topic ?? '', number: blocker.number, title: blocker.title,
+        column: blocker.column, waitsOn: true, accent: blocker.column === 'waiting',
+      });
+      push(from, {
+        other: to, cardId: card.id, topic: mine.topic ?? '', number: card.number, title: card.title,
+        column: card.column, waitsOn: false, accent: card.column === 'waiting',
+      });
+      if (mine.topic !== theirs.topic) {
+        mine.crossDeps++;
+        theirs.crossDeps++;
+      } else if (!finished(blocker)) {
+        edges.push([from, to]);
+      }
+    }
+    if (locked && card.column !== 'done') nodes[to].locked = true;
+  }
+  return { edges, related };
+}
+
+function place(topics: Topic[], signature: string, cards: BoardCard[]): TreeLayout {
   const nodes: TreeNode[] = [{
     key: 'hub', kind: 'hub', x: 0, y: 0, r: 22, angle: 0, parent: -1, topic: null,
-    fault: false, checkTotal: 0, checkDone: 0,
+    fault: false, checkTotal: 0, checkDone: 0, locked: false, crossDeps: 0,
   }];
   const total = topics.reduce((sum, topic) => sum + 4 + topic.items.length, 0);
   let start = -Math.PI / 2;
@@ -187,6 +257,7 @@ function place(topics: Topic[], signature: string): TreeLayout {
     nodes.push({
       key: topic.key, kind: 'topic', x: R_TOPIC * Math.cos(mid), y: R_TOPIC * Math.sin(mid), r: 8,
       angle: mid, parent: 0, topic: topic.name, fault: topic.fault, checkTotal: 0, checkDone: 0,
+      locked: false, crossDeps: 0,
     });
 
     let previous = [{ index: topicIndex, a: mid }];
@@ -198,7 +269,7 @@ function place(topics: Topic[], signature: string): TreeLayout {
       let used = 0;
       while (cursor < topic.items.length) {
         const item = topic.items[cursor];
-        const big = item.kind === 'card' && (item.card.column === 'doing' || item.card.column === 'waiting');
+        const big = item.card.column === 'doing' || item.card.column === 'waiting';
         const slots = big ? 1.7 : 1;
         if (row.length && used + slots > capacity) break;
         row.push({ item, slots, big });
@@ -218,28 +289,23 @@ function place(topics: Topic[], signature: string): TreeLayout {
         }
         const base = {
           x: radius * Math.cos(a), y: radius * Math.sin(a), angle: a, parent: parent.index,
-          topic: topic.name, checkTotal: 0, checkDone: 0,
+          topic: topic.name, checkTotal: 0, checkDone: 0, locked: false, crossDeps: 0,
         };
-        if (item.kind === 'card') {
-          const { card } = item;
-          const [done, count] = checkCounts(card);
-          nodes.push({
-            ...base, key: card.id, kind: 'card', r: big ? 12 : 6, cardId: card.id, state: card.column,
-            fault: item.fault, checkDone: done, checkTotal: count, number: card.number, title: card.title,
-            initials: card.column === 'doing' || card.column === 'waiting' ? initialsOf(card.assignee) : undefined,
-            agent: item.agent,
-          });
-        } else {
-          nodes.push({
-            ...base, key: `${item.kind === 'fold' ? 'f' : 'm'}:${topic.key}`, kind: item.kind, r: 9,
-            fault: false, count: item.count,
-          });
-        }
+        const { card } = item;
+        const [done, count] = checkCounts(card);
+        nodes.push({
+          ...base, key: card.id, kind: 'card', r: big ? 12 : 6, cardId: card.id, state: card.column,
+          fault: item.fault, checkDone: done, checkTotal: count, number: card.number, title: card.title,
+          initials: card.column === 'doing' || card.column === 'waiting' ? initialsOf(card.assignee) : undefined,
+          agent: item.agent,
+        });
         current.push({ index: nodes.length - 1, a });
       }
       previous = current;
     }
   }
+
+  const { edges, related } = linkDependencies(nodes, cards);
 
   const grid = new Map<number, number[]>();
   let radius = 0;
@@ -260,7 +326,7 @@ function place(topics: Topic[], signature: string): TreeLayout {
       }
     }
   });
-  return { nodes, radius, signature, grid };
+  return { nodes, radius, signature, grid, edges, related };
 }
 
 /**
@@ -278,9 +344,9 @@ export function createTreeLayouter() {
   ): TreeLayout => {
     const held = new Map(agents.map((agent) => [agent.cardId, agent]));
     const topics = groupTopics(cards, events, quietCardIds, held);
-    const signature = signatureOf(topics);
+    const signature = signatureOf(topics, depsSignature(cards));
     if (last && last.signature === signature) return last;
-    last = place(topics, signature);
+    last = place(topics, signature, cards);
     return last;
   };
 }

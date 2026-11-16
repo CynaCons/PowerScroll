@@ -1,4 +1,4 @@
-import { nodeAt, R_LABEL, R_TOPIC, type TreeLayout } from '../../board/treeLayout';
+import { nodeAt, R_LABEL, R_TOPIC, type TreeLayout, type TreeNode, type TreeRel } from '../../board/treeLayout';
 
 const DIM_ALPHA = 0.25;
 
@@ -10,6 +10,8 @@ const DIM_ALPHA = 0.25;
 
 interface View { k: number; x: number; y: number }
 
+interface Decor { i: number; kind: 'lock' | 'cross'; x: number; y: number }
+
 export interface TreeDebugNode {
   key: string;
   kind: string;
@@ -17,7 +19,6 @@ export interface TreeDebugNode {
   state?: string;
   fault: boolean;
   topic: string | null;
-  count?: number;
   x: number;
   y: number;
   r: number;
@@ -28,10 +29,18 @@ export interface TreeDebugNode {
   agentColor: string | null;
   /** The ring is marching: the agent acted in the last minute and the card is not a fault. */
   live: boolean;
+  /** Waits on a card that is not finished: carries the lock. */
+  locked: boolean;
+  /** Dependencies to or from other topics: carries the small arrow marker. */
+  crossDeps: number;
 }
 
 export interface TreeDebug {
   nodes(): TreeDebugNode[];
+  /** Same-topic dependency arrows drawn at rest: node indices, from the card that must finish to the one that waits. */
+  deps(): Array<{ from: number; to: number }>;
+  /** Lines drawn from the hovered card to the cards it waits on and the cards waiting on it. */
+  hoverLinks(): Array<{ from: number; to: number; accent: boolean }>;
   stats(): { frames: number; layouts: number; lastFrameMs: number; animating: boolean };
   view(): View;
 }
@@ -69,6 +78,15 @@ const TAG_MIN_K = 0.3;
 const TAG_H = 16;
 const TAG_PAD = 6;
 const TAG_MAX_TEXT = 118;
+/** Dependency arrows, lock badges and cross-topic markers. */
+const ARROW_PX = 1.5;
+const HEAD_MIN_PX = 5;
+const HEAD_MAX_PX = 8.5;
+const HOVER_HEAD_PX = 6.5;
+const MARK_PX = 5.5;
+const BADGE_R = 6.5;
+const COLUMN_NAME: Record<string, string> = { todo: 'To do', doing: 'Doing', waiting: 'Waiting', done: 'Done' };
+const TIP_ROWS = 6;
 const MONO = 'ui-monospace, "JetBrains Mono", Consolas, monospace';
 
 const ease = (t: number) => 1 - Math.pow(1 - t, 3);
@@ -141,6 +159,8 @@ export class BoardTreeRenderer {
   private agentNotes: Record<string, string> = {};
   private needIndex = -1;
   private hover = -1;
+  /** While a card with dependencies is hovered: it, what it is linked to, and their paths to the hub. */
+  private hoverLit: Uint8Array | null = null;
   private pointers = new Map<number, { x: number; y: number }>();
   private press: { x: number; y: number; moved: boolean } | null = null;
   private pinch: { d: number; cx: number; cy: number } | null = null;
@@ -198,14 +218,22 @@ export class BoardTreeRenderer {
         const rect = this.canvas.getBoundingClientRect();
         return (this.layout?.nodes ?? []).map((node) => ({
           key: node.key, kind: node.kind, cardId: node.cardId, state: node.state, fault: node.fault,
-          topic: node.topic, count: node.count, x: node.x, y: node.y, r: node.r,
+          topic: node.topic, x: node.x, y: node.y, r: node.r,
           sx: rect.left + node.x * this.view.k + this.view.x,
           sy: rect.top + node.y * this.view.k + this.view.y,
           agent: node.agent?.name ?? null,
           agentColor: node.agent?.color ?? null,
           live: Boolean(node.agent?.live),
+          locked: node.locked,
+          crossDeps: node.crossDeps,
         }));
       },
+      deps: () => (this.layout?.edges ?? []).map(([from, to]) => ({ from, to })),
+      hoverLinks: () => this.hoverRelations().map((rel) => ({
+        from: rel.waitsOn ? rel.other : this.hover,
+        to: rel.waitsOn ? this.hover : rel.other,
+        accent: rel.accent,
+      })),
       stats: () => ({
         frames: this.frames, layouts: this.layouts, lastFrameMs: this.lastFrameMs, animating: this.liveTimer !== 0,
       }),
@@ -256,7 +284,7 @@ export class BoardTreeRenderer {
         const old = previous.nodes[before];
         if (
           old.state !== node.state || old.fault !== node.fault || old.checkDone !== node.checkDone
-          || old.checkTotal !== node.checkTotal || old.count !== node.count
+          || old.checkTotal !== node.checkTotal
         ) {
           this.pulseAt[index] = now;
           this.animUntil = Math.max(this.animUntil, now + PULSE_MS);
@@ -270,6 +298,9 @@ export class BoardTreeRenderer {
       });
     }
 
+    this.hover = -1;
+    this.hoverLit = null;
+    this.tip.hidden = true;
     this.liveNodes = [];
     layout.nodes.forEach((node, index) => { if (node.agent?.live) this.liveNodes.push(index); });
     this.buildLit();
@@ -300,6 +331,28 @@ export class BoardTreeRenderer {
       this.goTo({ k, x: this.W / 2 - k * node.x, y: this.H / 2 - k * node.y }, true);
     }
     this.invalidate();
+  }
+
+  /** The dependencies of the hovered card node, for the lines, the fade and the tooltip. */
+  private hoverRelations(): TreeRel[] {
+    const node = this.layout?.nodes[this.hover];
+    if (!this.layout || !node || node.kind !== 'card') return [];
+    return this.layout.related.get(this.hover) ?? [];
+  }
+
+  private buildHoverLit() {
+    const layout = this.layout;
+    const rels = this.hoverRelations();
+    this.hoverLit = null;
+    if (!layout || !rels.length) return;
+    const lit = new Uint8Array(layout.nodes.length);
+    const light = (index: number) => {
+      for (let at = index; at >= 0 && !lit[at]; at = layout.nodes[at].parent) lit[at] = 1;
+    };
+    light(this.hover);
+    for (const rel of rels) light(rel.other);
+    lit[0] = 1;
+    this.hoverLit = lit;
   }
 
   private buildLit() {
@@ -570,31 +623,111 @@ export class BoardTreeRenderer {
       if (this.hover !== -1) {
         this.hover = -1;
         this.tip.hidden = true;
+        if (this.hoverLit) {
+          this.hoverLit = null;
+          this.invalidate();
+        }
       }
       return;
     }
     if (index !== this.hover) {
       this.hover = index;
+      const hadLit = this.hoverLit !== null;
+      this.buildHoverLit();
+      if (hadLit || this.hoverLit) this.invalidate();
       const note = node.kind === 'card' && node.agent ? this.agentNotes[node.agent.name] : undefined;
       this.tip.textContent = node.kind === 'card'
         ? `#${node.number} ${node.title ?? ''}`
-        : node.kind === 'topic'
-          ? `${node.topic} · click to zoom in`
-          : node.kind === 'fold'
-            ? `${node.count} earlier finished cards in ${node.topic}`
-            : `${node.count} more queued in ${node.topic}`;
+        : `${node.topic} · click to zoom in`;
       if (node.kind === 'card' && node.agent) {
         const line = document.createElement('div');
         line.textContent = `${node.agent.name} - ${note ?? 'holding'}`;
         line.style.opacity = '0.8';
         this.tip.appendChild(line);
       }
+      if (node.kind === 'card') {
+        const rels = this.hoverRelations();
+        this.addTipSection('Waits on', rels.filter((rel) => rel.waitsOn));
+        this.addTipSection('Waited on by', rels.filter((rel) => !rel.waitsOn));
+      }
       this.tip.hidden = false;
     }
     const width = this.tip.offsetWidth;
+    const spot = this.tipSpot(px, py, width, this.tip.offsetHeight);
+    if (spot) {
+      this.tip.style.left = `${spot.x}px`;
+      this.tip.style.top = `${spot.y}px`;
+      return;
+    }
     const left = px + 14 + width > this.W ? Math.max(4, px - 14 - width) : px + 14;
     this.tip.style.left = `${left}px`;
     this.tip.style.top = `${Math.min(py + 14, Math.max(4, this.H - 34))}px`;
+  }
+
+  /**
+   * While links are drawn: a place for the tooltip clear of the hovered node, the related
+   * nodes and the lines, on the side away from the related nodes; a corner if none fits.
+   */
+  private tipSpot(px: number, py: number, w: number, h: number): { x: number; y: number } | null {
+    const layout = this.layout;
+    const rels = this.hoverRelations();
+    if (!layout || !rels.length) return null;
+    const { k, x, y } = this.view;
+    const at = (i: number) => ({ x: layout.nodes[i].x * k + x, y: layout.nodes[i].y * k + y });
+    const ends = [this.hover, ...rels.map((rel) => rel.other)];
+    const discs = ends.map((i) => ({ ...at(i), r: layout.nodes[i].r * k + 10 }));
+    const here = discs[0];
+    let cx = 0;
+    let cy = 0;
+    for (const d of discs.slice(1)) { cx += d.x / (discs.length - 1); cy += d.y / (discs.length - 1); }
+    const hits = (left: number, top: number) => {
+      if (left < 4 || top < 4 || left + w > this.W - 4 || top + h > this.H - 4) return true;
+      if (discs.some((d) => left < d.x + d.r && left + w > d.x - d.r && top < d.y + d.r && top + h > d.y - d.r)) return true;
+      return discs.slice(1).some((d) => {
+        for (let step = 1; step < 16; step++) {
+          const px1 = here.x + ((d.x - here.x) * step) / 16;
+          const py1 = here.y + ((d.y - here.y) * step) / 16;
+          if (px1 > left - 3 && px1 < left + w + 3 && py1 > top - 3 && py1 < top + h + 3) return true;
+        }
+        return false;
+      });
+    };
+    const gap = 16;
+    const near = [
+      { x: here.x + here.r + gap - 10, y: here.y - h / 2 },
+      { x: here.x - here.r - gap + 10 - w, y: here.y - h / 2 },
+      { x: here.x - w / 2, y: here.y + here.r + gap - 10 },
+      { x: here.x - w / 2, y: here.y - here.r - gap + 10 - h },
+    ].sort((a, b) => Math.hypot(b.x + w / 2 - cx, b.y + h / 2 - cy) - Math.hypot(a.x + w / 2 - cx, a.y + h / 2 - cy));
+    const corners = [
+      { x: 8, y: this.H - h - 8 }, { x: this.W - w - 8, y: this.H - h - 8 },
+      { x: 8, y: 8 }, { x: this.W - w - 8, y: 8 },
+    ].sort((a, b) => Math.hypot(b.x + w / 2 - cx, b.y + h / 2 - cy) - Math.hypot(a.x + w / 2 - cx, a.y + h / 2 - cy));
+    const pick = [...near, ...corners].find((c) => !hits(c.x, c.y)) ?? corners[0];
+    void px;
+    void py;
+    return { x: Math.max(4, pick.x), y: Math.max(4, pick.y) };
+  }
+
+  private addTipSection(heading: string, rels: TreeRel[]) {
+    if (!rels.length) return;
+    const head = document.createElement('div');
+    head.textContent = heading;
+    head.style.cssText = 'margin-top:4px;font-size:11px;font-weight:600;opacity:0.8';
+    this.tip.appendChild(head);
+    for (const rel of rels.slice(0, TIP_ROWS)) {
+      const row = document.createElement('div');
+      row.dataset.testid = 'board-tree-tip-dep';
+      row.textContent = `${rel.topic} · #${rel.number} ${rel.title} · ${COLUMN_NAME[rel.column] ?? rel.column}`;
+      row.style.cssText = 'font-size:11px;opacity:0.9';
+      this.tip.appendChild(row);
+    }
+    if (rels.length > TIP_ROWS) {
+      const more = document.createElement('div');
+      more.textContent = `+${rels.length - TIP_ROWS} more`;
+      more.style.cssText = 'font-size:11px;opacity:0.7';
+      this.tip.appendChild(more);
+    }
   }
 
   // ---- drawing ----
@@ -675,7 +808,7 @@ export class BoardTreeRenderer {
     const vx1 = (this.W - view.x) / k + CULL_PAD;
     const vy1 = (this.H - view.y) / k + CULL_PAD;
 
-    const spot = this.lit;
+    const spot = this.hoverLit ?? this.lit;
     const main = makeBatch();
     const dim = spot ? makeBatch() : null;
     const labelled: number[] = [];
@@ -711,7 +844,7 @@ export class BoardTreeRenderer {
           const px = this.rx[node.parent];
           const py = this.ry[node.parent];
           if (!(Math.max(x, px) < vx0 || Math.min(x, px) > vx1 || Math.max(y, py) < vy0 || Math.min(y, py) > vy1)) {
-            const path = node.kind === 'more' || node.state === 'todo' ? batch.dashed : batch.solid;
+            const path = node.state === 'todo' ? batch.dashed : batch.solid;
             const parentRadius = Math.hypot(px, py);
             const parentAngle = Math.atan2(py, px);
             const radius = Math.hypot(x, y);
@@ -737,12 +870,6 @@ export class BoardTreeRenderer {
         const path = node.fault ? batch.topicsFault : batch.topics;
         path.moveTo(x + r, y);
         path.arc(x, y, r, 0, TAU);
-        continue;
-      }
-      if (node.kind === 'fold' || node.kind === 'more') {
-        batch.grey.moveTo(x + r, y);
-        batch.grey.arc(x, y, r, 0, TAU);
-        if (screenR >= 6) labelled.push(i);
         continue;
       }
 
@@ -799,6 +926,7 @@ export class BoardTreeRenderer {
     if (dim) this.paintBatch(dim, DIM_ALPHA);
     this.paintBatch(main, 1);
     ctx.globalAlpha = 1;
+    const incident = this.drawDependencies(spot, vx0, vy0, vx1, vy1);
     if (showNames) this.drawTopicNames(vx0, vy0, vx1, vy1, spot);
 
     // Hub: solid, with the board title cut to fit.
@@ -824,15 +952,10 @@ export class BoardTreeRenderer {
         const node = nodes[i];
         const x = this.rx[i];
         const y = this.ry[i];
-        if (node.kind === 'card') {
-          const text = node.state === 'waiting' ? '?' : node.initials;
-          if (!text) continue;
-          ctx.font = `500 9.5px ${MONO}`;
-          ctx.fillText(text, x, y + 0.5);
-        } else {
-          ctx.font = `500 7.5px ${MONO}`;
-          ctx.fillText(`+${node.count}`, x, y + 0.5);
-        }
+        const text = node.state === 'waiting' ? '?' : node.initials;
+        if (!text) continue;
+        ctx.font = `500 9.5px ${MONO}`;
+        ctx.fillText(text, x, y + 0.5);
       }
     }
 
@@ -867,7 +990,7 @@ export class BoardTreeRenderer {
       } else this.focus = null;
     }
 
-    if (k >= TAG_MIN_K) this.drawLabels(seen, held, spot);
+    if (k >= TAG_MIN_K) this.drawLabels(seen, held, spot, k >= TITLE_K ? this.placeDecor(seen, incident) : []);
 
     this.frames++;
     this.lastFrameMs = performance.now() - started;
@@ -900,6 +1023,193 @@ export class BoardTreeRenderer {
     ctx.lineWidth = 2.2;
     ctx.strokeStyle = P.ink; ctx.stroke(batch.topics);
     ctx.strokeStyle = P.accent; ctx.stroke(batch.topicsFault);
+    ctx.globalAlpha = 1;
+  }
+
+  /** Distance from the node's centre to the arrow end: just outside its circle and agent ring. */
+  private trimOf(node: TreeNode): number {
+    const big = node.state === 'doing' || node.state === 'waiting';
+    return node.r + (big ? 5.8 : 3) + 1.5 / this.view.k;
+  }
+
+  /** A filled triangle at the tip, pointing along (dx, dy). */
+  private head(path: Path2D, tipX: number, tipY: number, dx: number, dy: number, size: number) {
+    const baseX = tipX - dx * size;
+    const baseY = tipY - dy * size;
+    const wing = size * 0.45;
+    path.moveTo(tipX, tipY);
+    path.lineTo(baseX - dy * wing, baseY + dx * wing);
+    path.lineTo(baseX + dy * wing, baseY - dx * wing);
+    path.closePath();
+  }
+
+  /** Arrow head size in world units: 5 px at low zoom, 8.5 px once titles show. */
+  private headSize(): number {
+    const { k } = this.view;
+    const t = Math.max(0, Math.min(1, (k - 0.6) / (TITLE_K - 0.6)));
+    return (HEAD_MIN_PX + (HEAD_MAX_PX - HEAD_MIN_PX) * t) / k;
+  }
+
+  /**
+   * Same-topic dependency arrows (straight, ink, constant screen width), then the hover lines.
+   * Returns, per node, the world angles its arrows leave at, so badges keep clear of them.
+   */
+  private drawDependencies(
+    spot: Uint8Array | null, vx0: number, vy0: number, vx1: number, vy1: number,
+  ): Map<number, number[]> {
+    const { ctx, palette: P, layout, view } = this;
+    const incident = new Map<number, number[]>();
+    if (!layout) return incident;
+    const { k } = view;
+    const nodes = layout.nodes;
+    const wantAngles = k >= TITLE_K;
+    const note = (index: number, angle: number) => {
+      const list = incident.get(index);
+      if (list) list.push(angle);
+      else incident.set(index, [angle]);
+    };
+    const size = this.headSize();
+    const draw = (path: Path2D, heads: Path2D, from: number, to: number, bend: number, headSize: number) => {
+      const ax = this.rx[from];
+      const ay = this.ry[from];
+      const bx = this.rx[to];
+      const by = this.ry[to];
+      if (Math.max(ax, bx) < vx0 || Math.min(ax, bx) > vx1 || Math.max(ay, by) < vy0 || Math.min(ay, by) > vy1) return;
+      const length = Math.hypot(bx - ax, by - ay);
+      if (length < 1e-6) return;
+      // Control point of a gentle curve; bend 0 is a straight line.
+      const cx = (ax + bx) / 2 - ((by - ay) / length) * length * bend;
+      const cy = (ay + by) / 2 + ((bx - ax) / length) * length * bend;
+      const aimX = bend ? cx : bx;
+      const aimY = bend ? cy : by;
+      const startLen = Math.hypot(aimX - ax, aimY - ay) || 1;
+      const sx = (aimX - ax) / startLen;
+      const sy = (aimY - ay) / startLen;
+      const fromX = bend ? cx : ax;
+      const fromY = bend ? cy : ay;
+      const endLen = Math.hypot(bx - fromX, by - fromY) || 1;
+      const ex = (bx - fromX) / endLen;
+      const ey = (by - fromY) / endLen;
+      const trimA = this.trimOf(nodes[from]);
+      const trimB = this.trimOf(nodes[to]);
+      const room = length - trimA - trimB;
+      if (room <= 0.5 / k) return;
+      const headLen = Math.min(headSize, room * 0.7);
+      const tipX = bx - ex * trimB;
+      const tipY = by - ey * trimB;
+      path.moveTo(ax + sx * trimA, ay + sy * trimA);
+      const endX = tipX - ex * headLen * 0.8;
+      const endY = tipY - ey * headLen * 0.8;
+      if (bend) path.quadraticCurveTo(cx, cy, endX, endY);
+      else path.lineTo(endX, endY);
+      this.head(heads, tipX, tipY, ex, ey, headLen);
+      if (wantAngles) {
+        note(from, Math.atan2(sy, sx));
+        note(to, Math.atan2(-ey, -ex));
+      }
+    };
+
+    const full = new Path2D();
+    const fullHeads = new Path2D();
+    const faded = new Path2D();
+    const fadedHeads = new Path2D();
+    for (const [from, to] of layout.edges) {
+      const dimmed = spot && (!spot[from] || !spot[to]);
+      draw(dimmed ? faded : full, dimmed ? fadedHeads : fullHeads, from, to, 0, size);
+    }
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = ARROW_PX / k;
+    ctx.strokeStyle = P.ink;
+    ctx.fillStyle = P.ink;
+    ctx.globalAlpha = DIM_ALPHA;
+    ctx.stroke(faded);
+    ctx.fill(fadedHeads);
+    ctx.globalAlpha = 1;
+    ctx.stroke(full);
+    ctx.fill(fullHeads);
+
+    // Hover: every card the hovered one waits on and every card waiting on it, any topic.
+    const rels = this.hoverRelations();
+    if (rels.length) {
+      const ink = new Path2D();
+      const inkHeads = new Path2D();
+      const accent = new Path2D();
+      const accentHeads = new Path2D();
+      const hoverHead = HOVER_HEAD_PX / k;
+      for (const rel of rels) {
+        const from = rel.waitsOn ? rel.other : this.hover;
+        const to = rel.waitsOn ? this.hover : rel.other;
+        draw(rel.accent ? accent : ink, rel.accent ? accentHeads : inkHeads, from, to, 0.16, hoverHead);
+      }
+      ctx.stroke(ink);
+      ctx.fill(inkHeads);
+      ctx.strokeStyle = P.accent;
+      ctx.fillStyle = P.accent;
+      ctx.stroke(accent);
+      ctx.fill(accentHeads);
+    }
+    return incident;
+  }
+
+  /** Lock badges and cross-topic markers, in screen space, once titles show. */
+  private placeDecor(seen: number[], incident: Map<number, number[]>): Decor[] {
+    const { layout, view } = this;
+    const out: Decor[] = [];
+    if (!layout) return out;
+    const { k } = view;
+    const clear = (index: number, angle: number) => {
+      const used = incident.get(index);
+      return !used || used.every((a) => Math.abs(Math.atan2(Math.sin(a - angle), Math.cos(a - angle))) > 0.7);
+    };
+    for (const i of seen) {
+      const node = layout.nodes[i];
+      if (node.kind !== 'card' || (!node.locked && node.crossDeps === 0)) continue;
+      const sx = this.rx[i] * k + view.x;
+      const sy = this.ry[i] * k + view.y;
+      const big = node.state === 'doing' || node.state === 'waiting';
+      const edge = (node.r + (big ? 5.4 : 3)) * k + 1.5;
+      const place = (kind: Decor['kind'], first: number) => {
+        const reach = edge + (kind === 'lock' ? BADGE_R : MARK_PX + 1);
+        const angle = clear(i, first) ? first : first + Math.PI;
+        out.push({ i, kind, x: sx + Math.cos(angle) * reach, y: sy + Math.sin(angle) * reach });
+      };
+      if (node.locked) place('lock', -Math.PI / 4);
+      if (node.crossDeps > 0) place('cross', Math.PI / 4);
+    }
+    return out;
+  }
+
+  private paintDecor(decor: Decor[], spot: Uint8Array | null) {
+    const { ctx, palette: P } = this;
+    ctx.lineCap = 'round';
+    for (const { i, kind, x, y } of decor) {
+      ctx.globalAlpha = spot && !spot[i] ? DIM_ALPHA : 1;
+      if (kind === 'lock') {
+        ctx.fillStyle = P.paper;
+        ctx.strokeStyle = P.ink;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(x, y, BADGE_R - 0.6, 0, TAU);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = P.ink;
+        ctx.fillRect(x - 2.6, y - 0.4, 5.2, 3.8);
+        ctx.lineWidth = 1.1;
+        ctx.beginPath();
+        ctx.arc(x, y - 0.6, 1.8, Math.PI, TAU);
+        ctx.stroke();
+      } else {
+        ctx.strokeStyle = P.ink;
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(x - MARK_PX, y + MARK_PX);
+        ctx.lineTo(x + MARK_PX, y - MARK_PX);
+        ctx.moveTo(x - 1, y - MARK_PX);
+        ctx.lineTo(x + MARK_PX, y - MARK_PX);
+        ctx.lineTo(x + MARK_PX, y + 1);
+        ctx.stroke();
+      }
+    }
     ctx.globalAlpha = 1;
   }
 
@@ -1070,7 +1380,7 @@ export class BoardTreeRenderer {
    * Agent name tags, then card titles, in screen space. A coarse occupancy grid keeps every
    * label off every node and off every other label; tags are placed first so they win.
    */
-  private drawLabels(seen: number[], held: number[], spot: Uint8Array | null) {
+  private drawLabels(seen: number[], held: number[], spot: Uint8Array | null, decor: Decor[]) {
     const { ctx, palette: P, layout, view } = this;
     if (!layout) return;
     const { k } = view;
@@ -1125,6 +1435,10 @@ export class BoardTreeRenderer {
       mark(sx - reach, sy - reach, sx + reach, sy + reach, { x: sx, y: sy, r: reach });
     }
 
+    for (const item of decor) {
+      mark(item.x - BADGE_R - 1, item.y - BADGE_R - 1, item.x + BADGE_R + 1, item.y + BADGE_R + 1, { x: item.x, y: item.y, r: BADGE_R + 1 });
+    }
+    this.paintDecor(decor, spot);
     this.placeTags(held, spot, radii, mark, taken);
     if (k < TITLE_K) return;
 

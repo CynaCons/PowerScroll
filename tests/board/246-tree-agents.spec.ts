@@ -130,7 +130,7 @@ test('under reduced motion a live agent does not animate', async ({ page }) => {
   expect((await stats(page)).frames).toBe(before.frames);
 });
 
-test('a card an agent holds is never folded into a +N node', async ({ page }) => {
+test('a card an agent holds is shown, and so is every other card', async ({ page }) => {
   const boardId = await openBoard(page);
   await page.evaluate((id) => {
     const store = (window as any).__POWERNOTE_STORES__.workspace.getState();
@@ -147,11 +147,10 @@ test('a card an agent holds is never folded into a +N node', async ({ page }) =>
 
   await expect.poll(async () => (await nodeOf(page, 'seed-3'))?.agent).toBe('feature-1');
   const all = await nodes(page);
-  // The 3rd oldest finished card would have been folded; the held card takes one of the six places.
-  expect(all.filter((node) => node.kind === 'card')).toHaveLength(6);
-  expect(all.find((node) => node.kind === 'fold')!.count).toBe(8);
+  // Nothing is folded away: all 14 cards have a node.
+  expect(all.filter((node) => node.kind === 'card')).toHaveLength(14);
   expect(await nodeOf(page, 'seed-14')).toBeTruthy();
-  expect(await nodeOf(page, 'seed-9')).toBeFalsy();
+  expect(await nodeOf(page, 'seed-1')).toBeTruthy();
 });
 
 test('clicking the agent chip moves the tree to its card and a second click leaves the view alone', async ({ page }) => {

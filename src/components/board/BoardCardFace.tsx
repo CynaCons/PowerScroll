@@ -1,4 +1,4 @@
-import { CheckSquare, MessageSquare } from 'lucide-react';
+import { CheckSquare, Lock, MessageSquare } from 'lucide-react';
 import { ChecklistPreview, ChecklistProgress } from './Checklist';
 import { useLabelColor } from './labelColors';
 import type { BoardCard } from '../../types/data';
@@ -8,6 +8,7 @@ import {
   colorWithAlpha,
   displayName,
   relativeTime,
+  type DependencyLine,
 } from './boardUi';
 
 interface BoardCardFaceProps {
@@ -18,6 +19,8 @@ interface BoardCardFaceProps {
   flashing?: boolean;
   spotlight?: boolean;
   dimmed?: boolean;
+  /** What the card still waits on; absent when it is ready (REQ-BOARD-064). */
+  dependencies?: DependencyLine;
   spotlightColor?: string;
   /** The copy that follows the pointer while dragging: no ids, no handlers. */
   ghost?: boolean;
@@ -34,6 +37,7 @@ export function BoardCardFace({
   flashing = false,
   spotlight = false,
   dimmed = false,
+  dependencies,
   spotlightColor,
   ghost = false,
   onOpen,
@@ -95,6 +99,17 @@ export function BoardCardFace({
         </>
       )}
       <strong className="board-card__title">{card.title}</strong>
+      {dependencies && (
+        <span
+          className={`board-card__waits${dependencies.stuck.length ? ' board-card__waits--stuck' : ''}`}
+          data-testid={ghost ? undefined : `board-card-waits-${card.number}`}
+        >
+          <Lock size={11} />
+          {dependencies.stuck.length
+            ? `Stuck: ${dependencies.stuck.map((number) => `#${number}`).join(' ')} needs you`
+            : `Waits on ${dependencies.waits.map((number) => `#${number}`).join(' ')}`}
+        </span>
+      )}
       <ChecklistProgress items={card.checklist} testId={`board-card-progress-${card.number}`} />
       <ChecklistPreview items={card.checklist} testId={`board-card-subtasks-${card.number}`} />
       <footer className="board-card__footer">

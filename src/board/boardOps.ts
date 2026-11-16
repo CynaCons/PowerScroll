@@ -22,7 +22,13 @@ export const BOARD_COLUMNS: ReadonlyArray<{
 /** A small, inspectable domain error for UI callers and future agent tools. */
 export class BoardOperationError extends Error {
   constructor(
-    public readonly code: 'NOT_FOUND' | 'QUESTION_REQUIRED' | 'ARCHIVED',
+    public readonly code:
+      | 'NOT_FOUND'
+      | 'QUESTION_REQUIRED'
+      | 'ARCHIVED'
+      | 'NOT_READY'
+      | 'DEPENDENCY_LOOP'
+      | 'DEPENDENCY_SELF',
     message: string,
   ) {
     super(message);
@@ -36,6 +42,8 @@ interface CreateCardArgs {
   description?: string;
   labels?: string[];
   checklist?: Array<string | ChecklistEntry>;
+  /** Ids of the cards the new card waits on. */
+  dependsOn?: string[];
 }
 
 /** A checklist item as written by a person or an agent, before it has an id. */
@@ -57,6 +65,8 @@ interface MoveCardArgs {
   to: BoardColumnId;
   index: number;
   question?: string;
+  /** Move into Doing even though the card still waits on others (the owner's "Start anyway"). */
+  force?: boolean;
 }
 
 export function createBoard(): BoardData {
@@ -197,6 +207,9 @@ export function createCard(
     createdAt: now,
     updatedAt: now,
   };
+  const dependsOn = uniqueIds(args.dependsOn ?? []);
+  for (const id of dependsOn) getCard(board, id);
+  if (dependsOn.length) newCard.dependsOn = dependsOn;
 
   return appendEvent(
     {
@@ -253,6 +266,8 @@ export function moveCard(
     );
   }
 
+  if (args.to === 'doing' && found.column !== 'doing' && !args.force) requireReady(board, found);
+
   const remaining = board.cards.filter((item) => item.id !== args.cardId);
   const destination = orderedInColumn(remaining, args.to);
   const index = Math.max(0, Math.min(args.index, destination.length));
@@ -288,11 +303,12 @@ export function moveCard(
 
 export function claimCard(
   board: BoardData,
-  args: { cardId: string },
+  args: { cardId: string; force?: boolean },
   actor: string,
   now: number,
 ): BoardData {
-  requireLive(getCard(board, args.cardId));
+  const found = requireLive(getCard(board, args.cardId));
+  if (!args.force && found.column !== 'doing') requireReady(board, found);
 
   return appendEvent(
     {
@@ -602,7 +618,13 @@ export function deleteCard(
   return appendEvent(
     {
       ...board,
-      cards: normalizeOrders(board.cards.filter((item) => item.id !== args.cardId)),
+      cards: normalizeOrders(
+        board.cards
+          .filter((item) => item.id !== args.cardId)
+          .map((item) => (item.dependsOn?.includes(args.cardId)
+            ? { ...item, dependsOn: item.dependsOn.filter((id) => id !== args.cardId) }
+            : item)),
+      ),
     },
     'deleted',
     actor,
@@ -692,5 +714,132 @@ export function recordAgentLeave(
     actor,
     now,
     note ? { text: note } : {},
+  );
+}
+
+// ---- dependencies ----
+
+function uniqueIds(ids: string[]): string[] {
+  return [...new Set(ids)];
+}
+
+/** A card waited on counts as finished once it is Done or archived. A deleted card no longer blocks. */
+function isFinished(card: BoardCard | undefined): boolean {
+  return !card || isArchived(card) || card.column === 'done';
+}
+
+/** The cards this one waits on, in the order they were added. Missing ids are dropped. */
+export function dependenciesOf(board: BoardData, card: BoardCard): BoardCard[] {
+  return (card.dependsOn ?? [])
+    .map((id) => board.cards.find((item) => item.id === id))
+    .filter((item): item is BoardCard => Boolean(item));
+}
+
+/** The cards this one still waits on: not Done and not archived. */
+export function blockersOf(board: BoardData, card: BoardCard): BoardCard[] {
+  return dependenciesOf(board, card).filter((item) => !isFinished(item));
+}
+
+/** Live cards that list this one in their dependsOn. */
+export function dependentsOf(board: BoardData, card: BoardCard): BoardCard[] {
+  return liveCards(board.cards).filter((item) => item.dependsOn?.includes(card.id));
+}
+
+/** True when nothing this card waits on is unfinished. */
+export function isReady(board: BoardData, card: BoardCard): boolean {
+  return blockersOf(board, card).length === 0;
+}
+
+/** True when a card it waits on is in Waiting for the owner's answer: the chain is stuck. */
+export function isStuck(board: BoardData, card: BoardCard): boolean {
+  return blockersOf(board, card).some((item) => item.column === 'waiting');
+}
+
+/** Live cards in To do that wait on nothing unfinished: what an agent can pick next. */
+export function readyCards(board: BoardData): BoardCard[] {
+  return liveCards(board.cards).filter((item) => item.column === 'todo' && isReady(board, item));
+}
+
+/** Cards that were not ready in `before` and are ready in `after` (for example after a move to Done). */
+export function newlyReady(before: BoardData, after: BoardData): BoardCard[] {
+  return liveCards(after.cards).filter((item) => {
+    if (item.column === 'done' || !item.dependsOn?.length) return false;
+    const old = before.cards.find((entry) => entry.id === item.id);
+    return Boolean(old) && !isReady(before, old as BoardCard) && isReady(after, item);
+  });
+}
+
+function columnTitle(column: BoardColumnId): string {
+  return BOARD_COLUMNS.find((entry) => entry.id === column)?.title ?? column;
+}
+
+function requireReady(board: BoardData, card: BoardCard) {
+  const blockers = blockersOf(board, card);
+  if (!blockers.length) return;
+  const list = blockers
+    .map((item) => `#${item.number} (${columnTitle(item.column)}${item.assignee ? `, ${item.assignee}` : ''})`)
+    .join(', ');
+  throw new BoardOperationError('NOT_READY', `Card #${card.number} waits on ${list}`);
+}
+
+/** True when `from` waits, directly or through other cards, on the card `target`. */
+function reaches(board: BoardData, from: BoardCard, target: string, seen = new Set<string>()): boolean {
+  if (from.id === target) return true;
+  if (seen.has(from.id)) return false;
+  seen.add(from.id);
+  return dependenciesOf(board, from).some((item) => reaches(board, item, target, seen));
+}
+
+/**
+ * Why `cardId` may not wait on `dependsOnId`, or null when it may.
+ * A card can't wait on itself, nor on a card that already waits on it.
+ */
+export function dependencyProblem(board: BoardData, cardId: string, dependsOnId: string): string | null {
+  const card = getCard(board, cardId);
+  const target = getCard(board, dependsOnId);
+  if (card.id === target.id) return `Card #${card.number} can't wait on itself`;
+  if (reaches(board, target, card.id)) {
+    return `#${target.number} already waits on #${card.number}, so this would make a loop`;
+  }
+  return null;
+}
+
+/** Add and remove cards this one waits on. Refuses self links and loops; unknown ids throw NOT_FOUND. */
+export function setDependencies(
+  board: BoardData,
+  args: { cardId: string; add?: string[]; remove?: string[] },
+  actor: string,
+  now: number,
+): BoardData {
+  const card = requireLive(getCard(board, args.cardId));
+  const removed = new Set(args.remove ?? []);
+  let next = uniqueIds(card.dependsOn ?? []).filter((id) => !removed.has(id));
+  let working: BoardData = {
+    ...board,
+    cards: replaceCard(board, card.id, (current) => ({ ...current, dependsOn: next })),
+  };
+  for (const id of uniqueIds(args.add ?? [])) {
+    if (next.includes(id)) continue;
+    const problem = dependencyProblem(working, card.id, id);
+    if (problem) {
+      throw new BoardOperationError(card.id === id ? 'DEPENDENCY_SELF' : 'DEPENDENCY_LOOP', problem);
+    }
+    next = [...next, id];
+    working = { ...working, cards: replaceCard(working, card.id, (current) => ({ ...current, dependsOn: next })) };
+  }
+
+  return appendEvent(
+    {
+      ...board,
+      cards: replaceCard(board, card.id, (current) => {
+        const rest = { ...current, updatedAt: now };
+        delete rest.dependsOn;
+        return next.length ? { ...rest, dependsOn: next } : rest;
+      }),
+    },
+    'updated',
+    actor,
+    now,
+    { cardId: card.id },
   );
 }

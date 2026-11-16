@@ -23,12 +23,16 @@ import {
   createCard,
   liveCards,
   moveCard,
+  newlyReady,
+  blockersOf,
+  readyCards,
   recordAgentLeave,
   releaseCard,
   resolveCardRef,
   resolveCheckItem,
   restoreCard,
   setChecklistItem,
+  setDependencies,
   updateCard,
 } from '../board/boardOps';
 import { createBoardPage } from '../utils/defaults';
@@ -193,15 +197,35 @@ function requireBoard(boardId: string): { section: Section; page: Page; board: B
   return { ...located, board: located.page.board };
 }
 
-function runBoardOp<T>(fn: () => T): T {
+function runBoardOp<T>(fn: () => T, board?: BoardData): T {
   try {
     return fn();
   } catch (err) {
     if (err instanceof BoardOperationError) {
+      if (err.code === 'NOT_READY' && board) {
+        throw new BridgeCommandError(err.code, `${err.message}. ${readyNowText(board)}`);
+      }
       throw new BridgeCommandError(err.code, err.message);
     }
     throw err;
   }
+}
+
+/** "Ready now: #38 Title, #39 Title." (or a note that nothing is) for a refused start. */
+function readyNowText(board: BoardData): string {
+  const ready = readyCards(board);
+  if (!ready.length) return 'Nothing is ready to start right now.';
+  return `Ready now: ${ready.map((item) => `#${item.number} ${item.title}`).join(', ')}.`;
+}
+
+/** Card numbers or ids as given by an agent, resolved to card ids. */
+function optionalCardRefList(board: BoardData, params: Record<string, unknown>, key: string): string[] | undefined {
+  const value = params[key];
+  if (value === undefined || value === null) return undefined;
+  if (!Array.isArray(value) || value.some((item) => typeof item !== 'string' && typeof item !== 'number')) {
+    throw new BridgeCommandError('INVALID', `"${key}" must be an array of card numbers or ids`);
+  }
+  return value.map((ref) => runBoardOp(() => resolveCardRef(board, ref as string | number)).id);
 }
 
 function recordAction(
@@ -303,7 +327,7 @@ function countsOf(board: BoardData) {
 function editBoard(boardId: string, actor: string, cardId: string | undefined, fn: (board: BoardData) => BoardData) {
   const next = runBoardOp(() => {
     const { board } = requireBoard(boardId);
-    return fn(board);
+    return runBoardOp(() => fn(board), board);
   });
   useWorkspaceStore.getState().updateBoard(boardId, () => next);
   recordAction(actor, { boardId, cardId });
@@ -365,7 +389,12 @@ export function boardRead(params: Record<string, unknown>): BoardReadResult {
   return {
     boardId: page.id,
     title: page.title,
-    cards: cards.map(summariseCard),
+    cards: cards.map((card) => {
+      const waits = blockersOf(board, card).map((item) => item.number);
+      const entry = summariseCard(card);
+      return waits.length ? { ...entry, waits_on: waits } : entry;
+    }),
+    ready: readyCards(board).map((item) => ({ number: item.number, title: item.title })),
   };
 }
 
@@ -381,7 +410,8 @@ export function cardCreate(params: Record<string, unknown>): CardListEntry {
   let createdNumber = 0;
   const board = editBoard(boardId, actor, undefined, (current) => {
     createdNumber = current.nextNumber;
-    return createCard(current, { title, column, description, labels, checklist }, actor, now);
+    const dependsOn = optionalCardRefList(current, params, 'depends_on');
+    return createCard(current, { title, column, description, labels, checklist, dependsOn }, actor, now);
   });
   const card = board.cards.find((item) => item.number === createdNumber)!;
   recordAction(actor, { boardId, cardId: card.id });
@@ -403,9 +433,16 @@ export function cardUpdate(params: Record<string, unknown>): CardListEntry {
   const title = optionalString(params, 'title');
   const description = optionalString(params, 'description');
   const labels = optionalStringList(params, 'labels');
-  const next = editBoard(boardId, actor, card.id, (current) =>
-    updateCard(current, { cardId: card.id, title, description, labels }, actor, Date.now()),
-  );
+  const next = editBoard(boardId, actor, card.id, (current) => {
+    const add = optionalCardRefList(current, params, 'depends_on_add');
+    const remove = optionalCardRefList(current, params, 'depends_on_remove');
+    const now = Date.now();
+    const plain = title === undefined && description === undefined && labels === undefined;
+    const edited = plain && (add || remove)
+      ? current
+      : updateCard(current, { cardId: card.id, title, description, labels }, actor, now);
+    return add || remove ? setDependencies(edited, { cardId: card.id, add, remove }, actor, now) : edited;
+  });
   return summariseCard(next.cards.find((item) => item.id === card.id)!);
 }
 
@@ -431,7 +468,9 @@ export function cardRelease(params: Record<string, unknown>): CardListEntry {
   return summariseCard(next.cards.find((item) => item.id === card.id)!);
 }
 
-export function cardMove(params: Record<string, unknown>): CardListEntry {
+export function cardMove(
+  params: Record<string, unknown>,
+): CardListEntry & { newly_ready?: Array<{ number: number; title: string }> } {
   const actor = requireActor(params);
   const boardId = requireString(params, 'boardId');
   const to = optionalColumnId(params, 'to');
@@ -447,7 +486,9 @@ export function cardMove(params: Record<string, unknown>): CardListEntry {
   const next = editBoard(boardId, actor, card.id, (current) =>
     moveCard(current, { cardId: card.id, to, index, question }, actor, Date.now()),
   );
-  return summariseCard(next.cards.find((item) => item.id === card.id)!);
+  const entry = summariseCard(next.cards.find((item) => item.id === card.id)!);
+  if (to !== 'done') return entry;
+  return { ...entry, newly_ready: newlyReady(board, next).map((item) => ({ number: item.number, title: item.title })) };
 }
 
 export function cardNote(params: Record<string, unknown>): CardListEntry {

@@ -1826,7 +1826,7 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Publish the showcase [agent: claude]
 - [x] Release v0.94.0 [agent: claude]
 
-### v0.94.1 — Zoomed-out pages stay smooth (current) (ACTIVE)
+### v0.94.1 — Zoomed-out pages stay smooth
 **Goal:** Owner (2026-11-14): at very low zoom, draw text as plain bars so the whole page stays smooth.
 - [ ] Owner request 2026-11-14: draw text as bars at very low zoom
 - [ ] Owner report 2026-11-14: tree does not show where agents are working
@@ -1841,6 +1841,19 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Release v0.94.1 [agent: claude]
 - [x] Built and checked: text bars, agents in tree, measures, campaign, showcase [agent: sonnet]
 - [x] Owner report 2026-11-14: tree zoom steps are too coarse [agent: claude]
+
+### v0.95.0 — Card dependencies on the board (current) (ACTIVE)
+**Goal:** Owner (2026-11-16): cards can depend on other cards so agents work in sequence.
+- [ ] Owner request 2026-11-16: dependencies between board cards
+- [x] Visual design for card dependencies on cards and tree [agent: claude]
+- [x] Requirements for card dependencies on board, agent tools and tree [agent: claude]
+- [x] Data model: cards wait on cards, readiness and loop check [agent: claude]
+- [x] Agent tools set and respect dependencies [agent: sonnet]
+- [x] Card details and card face show what a card waits on [agent: sonnet]
+- [x] Tree draws arrows in a topic and links on hover [agent: sonnet]
+- [x] Run the checks and the full campaign [agent: sonnet]
+- [ ] Showcase and release v0.95.0
+- [x] Owner report 2026-11-16: tree hides tasks behind "+N more" [agent: sonnet]
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.

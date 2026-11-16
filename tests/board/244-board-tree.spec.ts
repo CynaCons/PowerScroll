@@ -180,29 +180,30 @@ test('distance from the centre is time: done, then waiting and in progress, then
   expect(at('Todo 1', 1)).toMatchObject({ state: 'todo', fault: false });
 });
 
-test('older finished cards fold into one +N node and far queued cards into another', async ({ page }) => {
+test('every card has its own node, none folded, and nodes do not overlap on a crowded branch', async ({ page }) => {
   const boardId = await openBoard(page);
   const t = Date.now() - 5_000_000;
   const specs: Spec[] = [];
-  for (let index = 0; index < 10; index++) specs.push({ title: `Done ${index}`, labels: ['x'], column: 'done', at: t + index });
-  for (let index = 0; index < 12; index++) specs.push({ title: `Todo ${index}`, labels: ['x'] });
+  for (let index = 0; index < 20; index++) specs.push({ title: `Done ${index}`, labels: ['x'], column: 'done', at: t + index });
+  for (let index = 0; index < 22; index++) specs.push({ title: `Todo ${index}`, labels: ['x'] });
   await seed(page, boardId, specs);
   await showTree(page);
 
   const all = await nodes(page);
-  const fold = all.filter((node) => node.kind === 'fold');
-  const more = all.filter((node) => node.kind === 'more');
-  expect(fold).toHaveLength(1);
-  expect(fold[0].count).toBe(4);
-  expect(more).toHaveLength(1);
-  expect(more[0].count).toBe(4);
-  expect(all.filter((node) => node.kind === 'card' && node.state === 'done')).toHaveLength(6);
-  expect(all.filter((node) => node.kind === 'card' && node.state === 'todo')).toHaveLength(8);
-  // The fold sits nearest the centre of the branch, the rest at the tip; the six shown are the latest finished.
-  expect(radius(fold[0])).toBeLessThanOrEqual(Math.min(...all.filter((n) => n.state === 'done').map(radius)) + 0.01);
-  expect(radius(more[0])).toBeGreaterThanOrEqual(Math.max(...all.filter((n) => n.state === 'todo').map(radius)) - 0.01);
-  expect(all.some((node) => node.cardId === 'seed-1')).toBe(false);
-  expect(all.some((node) => node.cardId === 'seed-10')).toBe(true);
+  expect(all.some((node) => node.kind !== 'hub' && node.kind !== 'topic' && node.kind !== 'card')).toBe(false);
+  const cards = all.filter((node) => node.kind === 'card');
+  expect(cards).toHaveLength(42);
+  expect(cards.filter((node) => node.state === 'done')).toHaveLength(20);
+  expect(cards.filter((node) => node.state === 'todo')).toHaveLength(22);
+  // Done cards keep their time order along the branch: the oldest sits nearest the centre.
+  const done = cards.filter((node) => node.state === 'done').sort((a, b) => Number(a.cardId.slice(5)) - Number(b.cardId.slice(5)));
+  for (let index = 1; index < done.length; index++) expect(radius(done[index])).toBeGreaterThanOrEqual(radius(done[index - 1]) - 0.01);
+  // No two nodes overlap.
+  for (let a = 0; a < all.length; a++) {
+    for (let b = a + 1; b < all.length; b++) {
+      expect(Math.hypot(all[a].x - all[b].x, all[a].y - all[b].y)).toBeGreaterThan(all[a].r + all[b].r);
+    }
+  }
 });
 
 test('waiting and quiet cards are faults, and "N need you" walks through them', async ({ page }) => {

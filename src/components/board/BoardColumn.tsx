@@ -2,7 +2,7 @@ import { Plus } from 'lucide-react';
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { BoardCard, BoardColumnId } from '../../types/data';
 import { BoardCardFace } from './BoardCardFace';
-import { avatarColor, prefersReducedMotion } from './boardUi';
+import { avatarColor, prefersReducedMotion, type DependencyLine } from './boardUi';
 import type { Lane } from './lanes';
 
 /** Where the dragged copy was when it was let go, so the card can glide from there. */
@@ -39,6 +39,7 @@ interface BoardColumnProps {
   landing?: CardLanding | null;
   onLanded?: () => void;
   activeCardIds?: Set<string>;
+  dependencyInfo?: Map<string, DependencyLine>;
   fadingCardIds?: Set<string>;
   flashingCardIds?: Set<string>;
   onCreate: (title: string) => void;
@@ -63,6 +64,7 @@ export function BoardColumn({
   landing = null,
   onLanded,
   activeCardIds,
+  dependencyInfo,
   fadingCardIds,
   flashingCardIds,
   onCreate,
@@ -201,6 +203,7 @@ export function BoardColumn({
                     card={card}
                     dragging={draggingCardId === card.id}
                     active={activeCardIds?.has(card.id)}
+                    dependencies={dependencyInfo?.get(card.id)}
                     fading={fadingCardIds?.has(card.id)}
                     flashing={flashingCardIds?.has(card.id)}
                     spotlight={Boolean(

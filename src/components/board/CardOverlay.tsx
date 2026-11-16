@@ -10,8 +10,9 @@ import {
 } from '../../board/boardOps';
 import { markdownToHtml } from '../../utils/renderMarkdown';
 import { CardProperties } from './CardProperties';
+import { CardDependencies } from './CardDependencies';
 import { Checklist } from './Checklist';
-import { avatarColor, avatarInitial, collapseEditRuns, displayName, relativeTime } from './boardUi';
+import { avatarColor, avatarInitial, collapseEditRuns, confirmStart, displayName, relativeTime } from './boardUi';
 
 const ACTOR = 'you';
 
@@ -26,9 +27,11 @@ const NO_DRAFTS: Drafts = { title: null, description: null };
 interface CardOverlayProps {
   card: BoardCard;
   cards: BoardCard[];
+  board: BoardData;
   events: BoardData['events'];
   edit: (fn: (board: BoardData) => BoardData) => void;
   onClose: () => void;
+  onOpenCard?: (cardId: string) => void;
 }
 
 function EventHistory({ card, events }: Pick<CardOverlayProps, 'card' | 'events'>) {
@@ -51,7 +54,7 @@ function EventHistory({ card, events }: Pick<CardOverlayProps, 'card' | 'events'
   );
 }
 
-export function CardOverlay({ card, cards, events, edit, onClose }: CardOverlayProps) {
+export function CardOverlay({ card, cards, board, events, edit, onClose, onOpenCard }: CardOverlayProps) {
   const dialog = useRef<HTMLDivElement>(null);
   const restoreFocus = useRef<HTMLElement | null>(document.activeElement as HTMLElement);
   const [descriptionEditing, setDescriptionEditing] = useState(false);
@@ -127,11 +130,15 @@ export function CardOverlay({ card, cards, events, edit, onClose }: CardOverlayP
       return;
     }
 
-    edit((board) => moveCard(board, {
+    const force = confirmStart(board, card, to);
+    if (force === null) return;
+
+    edit((current) => moveCard(current, {
       cardId: card.id,
       to,
       index: card.order,
       question,
+      force,
     }, ACTOR, Date.now()));
     setAskingQuestion(false);
   };
@@ -163,11 +170,14 @@ export function CardOverlay({ card, cards, events, edit, onClose }: CardOverlayP
   const reply = (moveAfterReply = false) => {
     if (!note.trim()) return;
 
-    edit((board) => {
-      const withNote = addNote(board, { cardId: card.id, text: note }, ACTOR, Date.now());
+    const force = moveAfterReply ? confirmStart(board, card, 'doing') : false;
+    if (force === null) return;
+
+    edit((current) => {
+      const withNote = addNote(current, { cardId: card.id, text: note }, ACTOR, Date.now());
 
       return moveAfterReply
-        ? moveCard(withNote, { cardId: card.id, to: 'doing', index: card.order }, ACTOR, Date.now())
+        ? moveCard(withNote, { cardId: card.id, to: 'doing', index: card.order, force }, ACTOR, Date.now())
         : withNote;
     });
     setNote('');
@@ -318,7 +328,16 @@ export function CardOverlay({ card, cards, events, edit, onClose }: CardOverlayP
             </section>
           </main>
           <aside className="board-overlay__sidebar">
-            <CardProperties card={card} cards={cards} edit={edit} onMove={move} />
+            <CardProperties card={card} cards={cards} board={board} edit={edit} onMove={move} />
+            <CardDependencies
+              card={card}
+              board={board}
+              edit={edit}
+              onOpenCard={onOpenCard && ((id) => {
+                saveDrafts();
+                onOpenCard(id);
+              })}
+            />
             <section className="board-overlay__section">
               <h2>History</h2>
               <EventHistory card={card} events={events} />

@@ -270,6 +270,11 @@ export interface BoardCard {
   updatedAt: number;
   /** Absent means the card is live; no migration for older notebooks. */
   archivedAt?: number;
+  /**
+   * Ids of the cards this one waits on. The card is ready once every one of them
+   * is Done or archived. Absent on older notebooks; no migration needed.
+   */
+  dependsOn?: string[];
 }
 
 export type BoardEventType =
