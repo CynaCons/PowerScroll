@@ -4,15 +4,15 @@ This file records externally observed deployment state. Update it after every
 release or distribution change. It is a ledger, not a substitute for querying
 the live services before a new release.
 
-**Last verified:** 2026-11-16, after v0.95.0
+**Last verified:** 2026-11-19, after v0.95.1
 
 ## Current public state
 
 | Surface | Deployed state | Verification |
 |---|---|---|
-| Source repository | `CynaCons/PowerScroll`; app release source is tag `v0.95.0` at `402ceed` | [Repository](https://github.com/CynaCons/PowerScroll) |
-| Application release | `v0.95.0`, published 2026-11-16, non-draft, latest; app reports `0.95.0` | [GitHub release](https://github.com/CynaCons/PowerScroll/releases/tag/v0.95.0) |
-| GitHub Pages | Public, HTTPS, workflow-deployed from `main` at `402ceed` (run succeeded 2026-11-16); live app HTML contains `0.95.0` | [Storefront](https://cynacons.github.io/PowerScroll/) · [App](https://cynacons.github.io/PowerScroll/app/) |
+| Source repository | `CynaCons/PowerScroll`; app release source is tag `v0.95.1` at `d0b60fb` | [Repository](https://github.com/CynaCons/PowerScroll) |
+| Application release | `v0.95.1`, published 2026-11-19, non-draft, latest; app reports `0.95.1` | [GitHub release](https://github.com/CynaCons/PowerScroll/releases/tag/v0.95.1) |
+| GitHub Pages | Public, HTTPS, workflow-deployed from `main` at `d0b60fb` (run 44567964989 succeeded 2026-11-19); live app HTML contains `0.95.1` | [Storefront](https://cynacons.github.io/PowerScroll/) · [App](https://cynacons.github.io/PowerScroll/app/) |
 | npm | `powerscroll-mcp@0.67.1`; `latest` = `0.67.1`. **0.70.0 and 0.71.0 (0.71.0 adds the checklist tools: `card_checklist_update/_remove/_move/_set`, nested items) are committed but NOT published**: npm is not signed in on the release machine (`npm whoami` 401 on 2026-10-23; `npm view` still `0.67.1` on 2026-10-28). Local checkouts (`node powernote-mcp/server.js`) have them | [npm package](https://www.npmjs.com/package/powerscroll-mcp) |
 | Official MCP Registry | `io.github.CynaCons/powerscroll@0.67.1`, active (re-checked 2026-10-28). 0.71.0 waits for npm (Registry validation queries npm) | [Registry search](https://registry.modelcontextprotocol.io/?q=powerscroll) |
 
@@ -24,14 +24,32 @@ them, and the release carries the 0.70.0 tarball as an asset.
 
 ## GitHub release assets
 
-The `v0.95.0` release contains (digests reported by the GitHub API; the HTML
+The `v0.95.1` release contains (digests reported by the GitHub API; the HTML
 digest equals the committed and locally tested `dist-template/index.html`):
 
 | Asset | Size | SHA-256 | Meaning |
 |---|---:|---|---|
-| `PowerScroll.html` | 3,091,761 bytes | `4f6d00d938e1e868c3ae5f325f15e8b56a9a65702575e1cc7de5913b3fbb98f2` | Primary self-contained notebook application |
-| `PowerNote.html` | 3,091,761 bytes | `4f6d00d938e1e868c3ae5f325f15e8b56a9a65702575e1cc7de5913b3fbb98f2` | Byte-identical compatibility alias for legacy updates |
-| `powerscroll-mcp.tgz` | 34,531 bytes | `641ea6ed2d18e50a428333156192f21d74826f2fbe6fff544e98db74beaf4299` | MCP package snapshot, still labelled `0.71.0` although `server.js` gained the dependency arguments in v0.95.0; not on npm |
+| `PowerScroll.html` | 3,093,556 bytes | `3feef003e15546c47ac9084aa795b888b81839a496d83b7882eaafa5150cc07e` | Primary self-contained notebook application |
+| `PowerNote.html` | 3,093,556 bytes | `3feef003e15546c47ac9084aa795b888b81839a496d83b7882eaafa5150cc07e` | Byte-identical compatibility alias for legacy updates |
+| `powerscroll-mcp.tgz` | 34,530 bytes | `af4d3c3d175c7cabeeff83aaf179b23eabab2a0eb2f092dcbe1f5d02c5651a2e` | MCP package snapshot, version `0.72.0` (committed `9b030a7`); not on npm yet (npm serves `0.67.1`) |
+
+## Verified for v0.95.1
+
+- Owner reports 2026-11-19: agent page writes moved the owner off the open
+  scroll and lost the typed draft (REQ-AGENT-011 reworded, REQ-AGENT-080, T250);
+  tree dependency arrows crossed other nodes (REQ-BOARD-067, T251). App-only
+  change; MCP `server.js` unchanged.
+- Tag `v0.95.1` pushed at release commit `d0b60fb` (fix commit `16c1f46`).
+  `Build & Release` 44567969897, `Deploy GitHub Pages` 44567964989 and CI
+  44567965182 succeeded; release non-draft and the API's latest. Both HTML
+  assets 3,093,556 bytes, sha256 `3feef003...5150cc07e`, equal to the committed
+  `dist-template/index.html`. The live app HTML contains `0.95.1`.
+- Pre-tag evidence: typecheck clean; lint 0 errors (35 warnings); MCP 13/13.
+  Clean full campaign 1,051/1,052 in 9.8 min; the failure was T238 (search
+  keystroke 104.8 ms against a 100 ms limit), which passed alone. An earlier run
+  under build load had 8 failures that all passed on rerun. Built template
+  opened headless: canvas and bridge loaded, `0.95.1`, 0 console errors.
+- npm still serves `powerscroll-mcp@0.67.1`; `0.72.0` awaits the owner's publish.
 
 ## Verified for v0.95.0
 
