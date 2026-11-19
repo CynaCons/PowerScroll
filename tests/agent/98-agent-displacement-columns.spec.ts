@@ -17,6 +17,7 @@ import {
   sendServerFrame,
   stubBridgeUrl,
   getCanvasStore,
+  getWorkspaceStore,
 } from '../helpers';
 
 const A4_WIDTH = 794;
@@ -169,8 +170,11 @@ test.describe('98 - Displacement & Columns (REQ-AGENT-016..019)', () => {
       column: 2,
     });
 
-    const canvas = await getCanvasStore(page);
-    const heading = canvas.nodes.find((n: any) => n.id === created.headingBlockId);
+    const ws = await getWorkspaceStore(page);
+    const newPage = ws.workspace.sections
+      .flatMap((s: any) => s.pages)
+      .find((p: any) => p.id === created.pageId);
+    const heading = newPage.nodes.find((n: any) => n.id === created.headingBlockId);
     expect(heading.x).toBe(columnX(2));
   });
 

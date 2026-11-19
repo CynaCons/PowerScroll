@@ -25,7 +25,7 @@ import type {
 import { notebookSettings, resolvePageSettings } from '../utils/pageSettings';
 import { useWorkspaceStore } from '../stores/useWorkspaceStore';
 import { useCanvasStore } from '../stores/useCanvasStore';
-import { useHistoryStore } from '../stores/useHistoryStore';
+import { restoreHistory, snapshotHistory, useHistoryStore, type HistorySnapshot } from '../stores/useHistoryStore';
 import { useDrawStore } from '../stores/useDrawStore';
 import { liveCeiling } from '../utils/scrollCeiling';
 import {
@@ -159,10 +159,23 @@ function locatePage(pageId: string) {
   return null;
 }
 
-/** Resolve an optional pageId to a concrete page, defaulting to the active one. */
+/**
+ * The page agents last wrote to, and the owner page that was active at the time.
+ * Agent writes no longer move the owner (REQ-AGENT-011), so a page command with
+ * no `pageId` must follow the agent to the page it is working on (REQ-AGENT-080)
+ * — but only while the owner has not changed page since; then the owner's
+ * active page wins again.
+ */
+let agentPage: { pageId: string; ownerPageId: string } | null = null;
+
+/** Resolve an optional pageId to a concrete page, defaulting to the agent's page, else the active one. */
 function resolvePage(pageId?: string) {
   if (!pageId) {
     const ws = useWorkspaceStore.getState();
+    if (agentPage && ws.activePageId === agentPage.ownerPageId) {
+      const mine = locatePage(agentPage.pageId);
+      if (mine) return mine;
+    }
     const located = locatePage(ws.activePageId);
     if (!located) {
       throw new BridgeCommandError('INTERNAL', 'No active page in this notebook');
@@ -176,13 +189,78 @@ function resolvePage(pageId?: string) {
   return located;
 }
 
+/** The owner's view while an agent command borrows another page. */
+interface OwnerSnapshot {
+  sectionId: string;
+  pageId: string;
+  scrollId: string | null;
+  canvas: ReturnType<typeof useCanvasStore.getState>;
+  draw: ReturnType<typeof useDrawStore.getState>;
+  history: HistorySnapshot;
+}
+
+let borrow: OwnerSnapshot | null = null;
+
+/** Put the owner back on their own page, exactly as they left it. */
+function returnToOwner(): void {
+  const owner = borrow;
+  borrow = null;
+  if (!owner) return;
+
+  // Saves the borrowed page's canvas/strokes into that page (it is still active).
+  flush();
+
+  const ws = useWorkspaceStore.getState();
+  const stillThere = ws.workspace.sections
+    .find((s) => s.id === owner.sectionId)
+    ?.pages.some((p) => p.id === owner.pageId);
+  // The owner's page was deleted meanwhile: stay where the delete logic put us.
+  if (!stillThere) return;
+
+  ws.setActivePage(owner.sectionId, owner.pageId);
+  if (owner.scrollId) useWorkspaceStore.getState().setActiveScroll(owner.scrollId);
+  useCanvasStore.setState(owner.canvas, true);
+  useDrawStore.setState(owner.draw, true);
+  restoreHistory(owner.history);
+}
+
 /**
- * Save the current page, switch, then load the target page's content.
- * Mirrors the navigation sequence used by the hierarchy panel and search.
+ * Make `pageId` the page the canvas/draw stores hold, for the duration of ONE
+ * synchronous command body, then hand the owner back their own page.
+ *
+ * The owner is the human at the keyboard: an agent writing to another page must
+ * not move their view, close their open text editor (losing the uncommitted
+ * draft), or clear their undo history. So we borrow the stores and return them
+ * before React renders anything.
+ *
+ * ORDERING MATTERS: the return is queued as a microtask BEFORE the first store
+ * write (`runBridgeCommand` queues one before the handler runs, because every
+ * command flushes first; this call queues another for commands that await
+ * before navigating). zustand + React 18 (useSyncExternalStore) schedule React's sync render
+ * in a microtask at the first store write; ours was queued earlier, so it runs
+ * first and React only ever sees the owner's page — the owner's TextNode and
+ * ProseMirror editor never unmount. Consequently every command body after this
+ * call must stay synchronous (no `await`) until it returns; do any awaiting
+ * BEFORE calling it.
  */
 function navigateToPage(sectionId: string, pageId: string): void {
   const current = useWorkspaceStore.getState();
+  agentPage = { pageId, ownerPageId: borrow ? borrow.pageId : current.activePageId };
   if (current.activeSectionId === sectionId && current.activePageId === pageId) return;
+  if (borrow) {
+    // Already borrowed within this command (e.g. create_page then rename).
+    // The snapshot stays the true owner; just switch the loaded page.
+  } else {
+    borrow = {
+      sectionId: current.activeSectionId,
+      pageId: current.activePageId,
+      scrollId: current.activeScrollId,
+      canvas: useCanvasStore.getState(),
+      draw: useDrawStore.getState(),
+      history: snapshotHistory(),
+    };
+    queueMicrotask(returnToOwner);
+  }
 
   flush();
   useWorkspaceStore.getState().setActivePage(sectionId, pageId);
@@ -1479,8 +1557,9 @@ async function resizeScrollCmd(params: Record<string, unknown>): Promise<ResizeS
       const scroll = scrollById(page.scrolls, scrollId);
       if (!scroll) continue;
 
-      navigateToPage(section.id, page.id);
+      // Import BEFORE navigating: nothing may await once the page is borrowed.
       const { resizeScroll } = await import('../utils/scrollOps');
+      navigateToPage(section.id, page.id);
       const result = resizeScroll(page.id, scrollId, requestedWidth);
       const activePage = useWorkspaceStore.getState().getActivePage();
       const liveScroll = activePage?.scrolls?.find((item) => item.id === scrollId);
@@ -2515,5 +2594,10 @@ export async function runBridgeCommand(
   if (!handler) {
     throw new BridgeCommandError('UNSUPPORTED', `Unknown command "${cmd}"`);
   }
+  // Queued before the handler's first store write (every command starts with a
+  // flush(), and create_page adds a page before it navigates): React's own
+  // render microtask is scheduled by the first write, so the owner's return
+  // must already be ahead of it. A no-op when the command borrows nothing.
+  queueMicrotask(returnToOwner);
   return await handler(params ?? {});
 }

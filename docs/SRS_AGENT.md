@@ -53,7 +53,7 @@ heading by ~12px, which is enough to overlap the block below.
 | REQ-AGENT-008 | Appended blocks shall render as markdown, including GFM checklists that remain clickable by the user | Must | T96 |
 | REQ-AGENT-009 | An agent shall read a page back as ordered markdown blocks with stable block ids | Must | T96 |
 | REQ-AGENT-010 | An agent shall replace the markdown of an existing block by id (`update_block`). If the block's height changes, occupants below it in the same scroll shall shift by the height delta (REQ-AGENT-067). The response includes `displacedCount`. | Must | T96, T110 |
-| REQ-AGENT-011 | A command targeting a non-active page shall save the current page, switch, and load the target before mutating | Must | T97 |
+| REQ-AGENT-011 | A command targeting a non-active page shall save the current page, load the target, apply the change there, and return the owner to their own page before anything is drawn: the owner's page, view, selection, undo history and open text editor are unchanged. Owner report 2026-11-19: an agent working in the background reset the open scroll and lost the text being typed | Must | T97, T250 |
 | REQ-AGENT-012 | Agent edits shall mark the notebook dirty and survive a save/reload round-trip | Must | T97 |
 | REQ-AGENT-013 | Unknown commands, missing ids, and non-text targets shall return a typed error without crashing the app | Must | T97 |
 | REQ-AGENT-014 | The bridge server shall bind to loopback (127.0.0.1) only | Must | — |
@@ -126,6 +126,7 @@ Added after the feature was demoed live and before it shipped.
 | REQ-AGENT-077 | `card_archive` and `card_restore` are write-lease tools (`boardId`, `card`, `me`). Archive sets `archivedAt`; restore returns the card to the end of its previous column. `me` follows REQ-AGENT-073. | Must | T214, powernote-mcp `board-tools.test.mjs` |
 | REQ-AGENT-078 | `board_read` shall omit archived cards unless `include_archived: true`. `card_get` shall still return archived cards, including `archivedAt`. | Must | T214 |
 | REQ-AGENT-079 | Agents shall name themselves; PowerScroll shall never invent an agent name. Every board tool (board_create, card_*, agent_status, agent_leave, board_updates) lists `me` as required in its schema; a call without `me` fails with NAME_REQUIRED unless `POWERNOTE_AGENT_NAME` is set in the MCP server's environment. Names that look generated (`agent-` or `unnamed-` + 8 hex) are refused with NAME_REQUIRED in the MCP server and in the app. A process without POWERNOTE_AGENT_NAME is listed as `unnamed-<id>` with `named: false` and is never a board actor. Owner request 2026-10-14 (one agent reconnecting showed up as dozens) | Must | T217, MCP agent-names.test.mjs |
+| REQ-AGENT-080 | A page command without `pageId` shall use the page that agents last wrote to, as long as the owner has not changed page since; otherwise the owner's active page. So `create_page` followed by `append_block` still writes to the new page now that the owner is not moved there. | Must | T250 |
 
 ## Related
 

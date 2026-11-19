@@ -72,6 +72,37 @@ function sync(set: (partial: Pick<HistoryState, 'canUndo' | 'canRedo' | 'revisio
   set({ canUndo: undoStack.length > 0, canRedo: redoStack.length > 0, revision: Date.now() });
 }
 
+/** The undo/redo stacks, detached from the store so a caller can put them back. */
+export interface HistorySnapshot {
+  undo: HistoryFrame[];
+  redo: HistoryFrame[];
+  batchDepth: number;
+  batchFrame: HistoryFrame | null;
+  batchRecorded: boolean;
+}
+
+/**
+ * The stacks live in module scope, not store state, so a store-state snapshot
+ * does not hold them. The bridge uses this pair to lend the canvas to an agent
+ * working on another page without losing the owner's undo history.
+ */
+export function snapshotHistory(): HistorySnapshot {
+  return { undo: undoStack, redo: redoStack, batchDepth, batchFrame, batchRecorded };
+}
+
+export function restoreHistory(snapshot: HistorySnapshot): void {
+  undoStack = snapshot.undo;
+  redoStack = snapshot.redo;
+  batchDepth = snapshot.batchDepth;
+  batchFrame = snapshot.batchFrame;
+  batchRecorded = snapshot.batchRecorded;
+  useHistoryStore.setState({
+    canUndo: undoStack.length > 0,
+    canRedo: redoStack.length > 0,
+    revision: Date.now(),
+  });
+}
+
 export const useHistoryStore = create<HistoryState>((set) => ({
   canUndo: false,
   canRedo: false,

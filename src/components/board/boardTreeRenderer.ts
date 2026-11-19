@@ -14,6 +14,8 @@ interface Decor { i: number; kind: 'lock' | 'cross'; x: number; y: number }
 
 export interface TreeDebugNode {
   key: string;
+  /** Index of the parent node, -1 for the hub. */
+  parent: number;
   kind: string;
   cardId?: string;
   state?: string;
@@ -217,7 +219,7 @@ export class BoardTreeRenderer {
       nodes: () => {
         const rect = this.canvas.getBoundingClientRect();
         return (this.layout?.nodes ?? []).map((node) => ({
-          key: node.key, kind: node.kind, cardId: node.cardId, state: node.state, fault: node.fault,
+          key: node.key, parent: node.parent, kind: node.kind, cardId: node.cardId, state: node.state, fault: node.fault,
           topic: node.topic, x: node.x, y: node.y, r: node.r,
           sx: rect.left + node.x * this.view.k + this.view.x,
           sy: rect.top + node.y * this.view.k + this.view.y,

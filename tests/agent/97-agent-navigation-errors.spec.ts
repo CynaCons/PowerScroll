@@ -22,18 +22,20 @@ test.describe('97 - Agent Navigation & Errors (REQ-AGENT-011, REQ-AGENT-012, REQ
     await waitForBridgeReady(page);
   });
 
-  test('writing to a non-active page switches to it and does not lose the other page', async ({ page }) => {
+  test('writing to a non-active page leaves the owner where they are and does not lose the other page', async ({ page }) => {
+    const ownerPageId = (await getWorkspaceStore(page)).activePageId;
     const pageA = await runBridge(page, 'create_page', { title: 'Page A', withHeading: false });
     await runBridge(page, 'append_block', { markdown: 'Content on A' });
 
     const pageB = await runBridge(page, 'create_page', { title: 'Page B', withHeading: false });
     await runBridge(page, 'append_block', { markdown: 'Content on B' });
 
-    // Now write back to A while B is active.
+    // Now write back to A.
     await runBridge(page, 'append_block', { pageId: pageA.pageId, markdown: 'More on A' });
 
     const active = await getWorkspaceStore(page);
-    expect(active.activePageId).toBe(pageA.pageId);
+    // REQ-AGENT-011: the owner is never moved to the agent's page.
+    expect(active.activePageId).toBe(ownerPageId);
 
     const aContent = await runBridge(page, 'read_page', { pageId: pageA.pageId });
     expect(aContent.blocks.map((b: any) => b.markdown)).toEqual(['Content on A', 'More on A']);
@@ -50,9 +52,10 @@ test.describe('97 - Agent Navigation & Errors (REQ-AGENT-011, REQ-AGENT-012, REQ
     const other = await runBridge(page, 'create_page', { title: 'Elsewhere', withHeading: false });
     await runBridge(page, 'read_page', { pageId: originalActive });
 
-    // read_page must not have navigated away from the page create_page opened.
+    // Neither create_page nor read_page moves the owner off their page.
     const ws = await getWorkspaceStore(page);
-    expect(ws.activePageId).toBe(other.pageId);
+    expect(ws.activePageId).toBe(originalActive);
+    expect(other.pageId).not.toBe(originalActive);
   });
 
   test('agent edits mark the notebook dirty', async ({ page }) => {

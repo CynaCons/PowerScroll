@@ -64,12 +64,14 @@ test.describe('95 - Agent Pages (REQ-AGENT-004, REQ-AGENT-005, REQ-AGENT-006)', 
     expect(created.title).toBe('Sprint Plan');
     expect(created.headingBlockId).toBeTruthy();
 
-    // The page is now active and carries the heading block.
+    // The owner stays on their page (REQ-AGENT-011); the new page carries the heading block.
     const ws = await getWorkspaceStore(page);
-    expect(ws.activePageId).toBe(created.pageId);
+    expect(ws.activePageId).not.toBe(created.pageId);
 
-    const canvas = await getCanvasStore(page);
-    const heading = canvas.nodes.find((n: any) => n.id === created.headingBlockId);
+    const created0 = ws.workspace.sections
+      .flatMap((s: any) => s.pages)
+      .find((p: any) => p.id === created.pageId);
+    const heading = created0.nodes.find((n: any) => n.id === created.headingBlockId);
     expect(heading).toBeTruthy();
     expect(heading.type).toBe('text');
     expect(heading.data.text).toBe('# Sprint Plan');

@@ -260,47 +260,96 @@ function place(topics: Topic[], signature: string, cards: BoardCard[]): TreeLayo
       locked: false, crossDeps: 0,
     });
 
-    let previous = [{ index: topicIndex, a: mid }];
-    let cursor = 0;
-    for (let ring = 0; cursor < topic.items.length; ring++) {
-      const radius = R_CARD + ring * DR;
-      const capacity = Math.max(1, Math.min(Math.floor((radius * width * 0.88) / SP), ring + 1));
-      const row: Array<{ item: Item; slots: number; big: boolean }> = [];
-      let used = 0;
-      while (cursor < topic.items.length) {
-        const item = topic.items[cursor];
-        const big = item.card.column === 'doing' || item.card.column === 'waiting';
-        const slots = big ? 1.7 : 1;
-        if (row.length && used + slots > capacity) break;
-        row.push({ item, slots, big });
-        used += slots;
-        cursor++;
+    const count = topic.items.length;
+    const slotIndex = new Map(topic.items.map((item, i) => [item.card.id, i]));
+    // Blockers that are drawn as arrows: same topic, not finished (archived cards are not items).
+    const drawn: number[][] = topic.items.map((item, i) => {
+      const found: number[] = [];
+      for (const id of new Set(item.card.dependsOn ?? [])) {
+        const j = slotIndex.get(id);
+        if (j === undefined || j === i || topic.items[j].card.column === 'done') continue;
+        found.push(j);
       }
+      return found;
+    });
+    const ringOf = new Int32Array(count).fill(-1);
+    const nodeOf = new Int32Array(count);
+    const angleOf = new Float64Array(count);
+
+    let previous = [{ index: topicIndex, a: mid }];
+    let pending = topic.items.map((_, i) => i);
+    for (let ring = 0; pending.length; ring++) {
+      const radius = R_CARD + ring * DR;
+      const geometric = Math.max(1, Math.floor((radius * width * 0.88) / SP));
+      const capacity = Math.max(1, Math.min(geometric, ring + 1));
+      // Ready: every blocker sits in an earlier ring. A cycle is broken by taking the first pending card.
+      let ready = pending.filter((i) => drawn[i].every((j) => ringOf[j] >= 0));
+      if (!ready.length) ready = [pending[0]];
+      // Waiting cards go first so an arrow runs to the next ring; a fan may use the whole ring.
+      const order = [...ready.filter((i) => drawn[i].length), ...ready.filter((i) => !drawn[i].length)];
+      const row: Array<{ i: number; slots: number; big: boolean }> = [];
+      let used = 0;
+      for (const i of order) {
+        const big = topic.items[i].card.column === 'doing' || topic.items[i].card.column === 'waiting';
+        const slots = big ? 1.7 : 1;
+        if (row.length && used + slots > (drawn[i].length ? geometric : capacity)) break;
+        row.push({ i, slots, big });
+        used += slots;
+      }
+
       const step = SP / radius;
+      const span = used * step;
+      const first = mid - span / 2;
+      // Sort key: a waiting card sits at the mean angle of its blockers, a free one at its even share of the row.
+      const freeCount = row.filter((entry) => !drawn[entry.i].length).length;
+      let freeSeen = 0;
+      const keyed = row.map((entry) => {
+        const placed = drawn[entry.i].filter((j) => ringOf[j] >= 0);
+        let key: number;
+        if (placed.length) key = placed.reduce((sum, j) => sum + angleOf[j], 0) / placed.length;
+        else key = first + ((freeSeen++ + 0.5) / freeCount) * span;
+        return { ...entry, key };
+      });
+      keyed.sort((left, right) => left.key - right.key || left.i - right.i);
+
       let consumed = 0;
-      const first = mid - (used * step) / 2;
       const current: Array<{ index: number; a: number }> = [];
-      for (const { item, slots, big } of row) {
+      for (const { i, slots, big } of keyed) {
+        const item = topic.items[i];
         const a = first + (consumed + slots / 2) * step;
         consumed += slots;
         let parent = previous[0];
-        for (const candidate of previous) {
-          if (Math.abs(candidate.a - a) < Math.abs(parent.a - a)) parent = candidate;
+        let chosen = false;
+        // The tree line comes from the card this one waits on, when that card is one ring in.
+        for (const j of drawn[i]) {
+          if (ringOf[j] !== ring - 1) continue;
+          const candidate = { index: nodeOf[j], a: angleOf[j] };
+          if (!chosen || Math.abs(candidate.a - a) < Math.abs(parent.a - a)) parent = candidate;
+          chosen = true;
+        }
+        if (!chosen) {
+          for (const candidate of previous) {
+            if (Math.abs(candidate.a - a) < Math.abs(parent.a - a)) parent = candidate;
+          }
         }
         const base = {
           x: radius * Math.cos(a), y: radius * Math.sin(a), angle: a, parent: parent.index,
           topic: topic.name, checkTotal: 0, checkDone: 0, locked: false, crossDeps: 0,
         };
         const { card } = item;
-        const [done, count] = checkCounts(card);
+        const [done, checks] = checkCounts(card);
         nodes.push({
           ...base, key: card.id, kind: 'card', r: big ? 12 : 6, cardId: card.id, state: card.column,
-          fault: item.fault, checkDone: done, checkTotal: count, number: card.number, title: card.title,
+          fault: item.fault, checkDone: done, checkTotal: checks, number: card.number, title: card.title,
           initials: card.column === 'doing' || card.column === 'waiting' ? initialsOf(card.assignee) : undefined,
           agent: item.agent,
         });
         current.push({ index: nodes.length - 1, a });
+        nodeOf[i] = nodes.length - 1;
+        angleOf[i] = a;
       }
+      for (const { i } of row) ringOf[i] = ring;
+      pending = pending.filter((i) => ringOf[i] < 0);
       previous = current;
     }
   }

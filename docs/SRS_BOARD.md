@@ -78,8 +78,9 @@ canvas undo history.
 | REQ-BOARD-062 | Agent tools: card_create shall take depends_on and card_update depends_on_add and depends_on_remove (card numbers or ids); card_claim, and card_move into In progress, of a card that is not ready shall be refused with the cards it waits on and the cards ready now; card_move to Done shall report which cards became ready; board_read shall list for each card what it waits on and the cards ready now. Owner request 2026-11-16 | Must | T247 |
 | REQ-BOARD-063 | Card details shall show a "Waits on" list where cards are added by number or title and removed, each with its column and agent, a list of the cards waiting on this one, and, while it is not ready, a "Can't start yet" line with a "Start anyway" button that moves it to In progress; a choice that would make a loop is shown greyed with the reason. Owner request 2026-11-16 | Must | T248 |
 | REQ-BOARD-064 | A card face shall show a line for what it waits on: "Waits on #N" with a lock while it is not ready, and "Stuck: #N needs you" in the accent colour when a card it waits on is waiting for the owner. Dragging a card that is not ready into In progress asks before moving it. Owner request 2026-11-16 | Must | T248 |
-| REQ-BOARD-065 | In the tree, a dependency between two cards of the same topic shall be drawn as a straight arrow from the card that must finish to the card that waits, and a card that is not ready gets a small lock; the tree's layout does not change. Owner request 2026-11-16 | Must | T249 |
+| REQ-BOARD-065 | In the tree, a dependency between two cards of the same topic shall be drawn as a straight arrow from the card that must finish to the card that waits, and a card that is not ready gets a small lock; Owner request 2026-11-16 | Must | T249 |
 | REQ-BOARD-066 | In the tree, dependencies between cards of different topics shall not be drawn at rest. A card that has some carries a small marker; hovering it (or clicking it, until the next click) draws lines to the cards it waits on and to the cards waiting on it, fades the rest of the tree, and the tooltip lists them with their topic and column. A line to a card waiting for the owner is in the accent colour. Owner request 2026-11-16: "if it's cross tree ... just when you hover the task" | Must | T249 |
+| REQ-BOARD-067 | In the tree, a card that waits on a card of the same topic shall be placed in a ring further out than that card, as close as possible to the next ring and to its angle, so the arrow runs outward between neighbouring rings; no same-topic arrow shall cross another node, and the tree line to such a card comes from the card it waits on. Owner report 2026-11-19: arrows ran over other nodes | Must | T251 |
 
 ## Traceability
 
@@ -102,3 +103,4 @@ canvas undo history.
 - T247 — `tests/agent/247-card-dependencies-tools.spec.ts`
 - T248 — `tests/board/248-card-dependencies-ui.spec.ts`
 - T249 — `tests/board/249-tree-dependencies.spec.ts`
+- T251 — `tests/board/251-tree-dependency-layout.spec.ts`
