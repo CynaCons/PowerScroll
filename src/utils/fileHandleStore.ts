@@ -158,6 +158,15 @@ export async function clearAllRecentHandles(): Promise<void> {
   await idbDelete(RECENT_KEY);
 }
 
+/** Remember the PLAN.md file a plan page reads (REQ-PLAN-004). */
+export async function setHandleForPlan(pageId: string, handle: FileSystemFileHandle): Promise<void> {
+  await idbPut(`plan:${pageId}`, handle);
+}
+
+export async function getHandleForPlan(pageId: string): Promise<FileSystemFileHandle | null> {
+  return idbGet<FileSystemFileHandle>(`plan:${pageId}`);
+}
+
 /** Remember which file a notebook (by its stable id) is linked to. */
 export async function setHandleForNotebook(id: string, handle: FileSystemFileHandle): Promise<void> {
   await idbPut(`${NOTEBOOK_KEY}${id}`, handle);

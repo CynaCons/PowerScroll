@@ -10,6 +10,7 @@ import { SettingsPanel } from '../settings/SettingsPanel';
 import { NotebookLibraryPanel } from './NotebookLibraryPanel';
 import { ZoomBar } from '../canvas/ZoomBar';
 import { BoardView } from '../board/BoardView';
+import { PlanView } from '../plan/PlanView';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { notebookSettings, resolvePageSettings } from '../../utils/pageSettings';
 import { saveNotebook } from '../../utils/saveNotebook';
@@ -104,7 +105,7 @@ export function AppShell() {
           />
         )}
         <div className="canvas-area__content">
-          {activePage?.kind === 'board' ? <BoardView /> : <><InfiniteCanvas backgroundMode={backgroundMode} bgColor={bgColor} />
+          {activePage?.kind === 'board' ? <BoardView /> : activePage?.kind === 'plan' ? <PlanView /> : <><InfiniteCanvas backgroundMode={backgroundMode} bgColor={bgColor} />
           <BottomToolbar />
           <ZoomBar /></>}
           <SearchPanel />

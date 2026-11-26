@@ -231,9 +231,26 @@ export interface Page {
    */
   settings?: Partial<WorkspaceSettings>;
   /** Absent means canvas, preserving the shape of notebooks written before boards. */
-  kind?: 'canvas' | 'board';
+  kind?: 'canvas' | 'board' | 'plan';
   /** Board-only data. Canvas pages never need to carry an empty board object. */
   board?: BoardData;
+  /** Plan-only data (v0.97+): the last PLAN.md text read, kept so the page shows without the file. */
+  plan?: PlanPageData;
+}
+
+/**
+ * A plan page shows a PLAN.md read-only (REQ-PLAN-001..003). The text is a snapshot: a linked
+ * file is re-read and the snapshot replaced when it changes; PowerScroll never writes PLAN.md.
+ */
+export interface PlanPageData {
+  /** PLAN.md text as last read; empty until a file is opened. */
+  source: string;
+  /** Name of the file it was read from, e.g. "PLAN.md". */
+  fileName?: string;
+  /** When the text was last read (ms). */
+  readAt?: number;
+  /** The file's lastModified when it was last read (ms), to skip unchanged re-reads. */
+  fileModified?: number;
 }
 
 export type BoardColumnId = 'todo' | 'doing' | 'waiting' | 'done';

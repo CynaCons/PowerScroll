@@ -38,6 +38,7 @@ export function HierarchyPanel({ isOpen, onClose }: HierarchyPanelProps) {
   const addSection = useWorkspaceStore((s) => s.addSection);
   const addPage = useWorkspaceStore((s) => s.addPage);
   const addBoardPage = useWorkspaceStore((s) => s.addBoardPage);
+  const addPlanPage = useWorkspaceStore((s) => s.addPlanPage);
   const renameSection = useWorkspaceStore((s) => s.renameSection);
   const deleteSection = useWorkspaceStore((s) => s.deleteSection);
   const renamePage = useWorkspaceStore((s) => s.renamePage);
@@ -219,6 +220,7 @@ export function HierarchyPanel({ isOpen, onClose }: HierarchyPanelProps) {
             onNavigate={handleNavigate}
             onAddPage={(sid) => addPage(sid)}
             onAddBoard={(sid) => addBoardPage(sid)}
+            onAddPlan={(sid) => addPlanPage(sid)}
             onRenameSection={renameSection}
             onDeleteSection={handleDeleteSection}
             onRenamePage={renamePage}

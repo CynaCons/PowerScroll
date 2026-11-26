@@ -37,6 +37,17 @@ export function createBoardPage(title = 'Untitled Board'): Page {
   };
 }
 
+export function createPlanPage(title = 'Untitled Plan'): Page {
+  return {
+    id: generateId(),
+    title,
+    kind: 'plan',
+    plan: { source: '' },
+    nodes: [],
+    scrolls: [],
+  };
+}
+
 export function createSection(title = 'New Section'): Section {
   return {
     id: generateId(),

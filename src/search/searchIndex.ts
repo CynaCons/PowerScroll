@@ -8,6 +8,7 @@
  * accents (REQ-SEARCH-016) through a folded copy of the text that keeps a map
  * back to the original characters, so marks land on what is shown.
  */
+import { parsePlan } from '../plan/planParser';
 import type { Node as PMNode } from 'prosemirror-model';
 import type {
   BoardCard, CanvasNode, DiagramNodeData, ImageNodeData, Page, Section, ShapeNodeData, TextNodeData, WorkspaceData,
@@ -282,6 +283,18 @@ function pageEntries(section: Section, page: Page, liveNodes: CanvasNode[] | nul
   const base = { sectionId: section.id, pageId: page.id, group, groupTitle: `${section.title} > ${page.title}` };
   const out: SearchEntry[] = [];
   if (withTitle && page.title.trim()) out.push({ ...base, kind: 'page', label: KIND_LABEL.page, text: page.title });
+  if (page.kind === 'plan') {
+    // Iterations and their tasks, newest last, as the plan file orders them (REQ-PLAN-009).
+    const plan = parsePlan(page.plan?.source ?? '');
+    for (const iteration of plan.iterations) {
+      out.push({
+        ...base, kind: 'card', label: `Plan ${iteration.version}`,
+        text: [iteration.title, iteration.goal ?? '', ...iteration.tasks.map((task) => task.text)].filter(Boolean).join('\n'),
+        targetId: iteration.version,
+      });
+    }
+    return out;
+  }
   if (page.kind === 'board') {
     const cards = (page.board?.cards ?? [])
       .filter((card) => !card.archivedAt)
@@ -328,7 +341,7 @@ export function collectEntries(
     for (const page of section.pages) {
       const isActive = section.id === activeSectionId && page.id === activePageId;
       if (scope === 'page' && !isActive) continue;
-      const live = isActive && page.kind !== 'board' ? liveNodes : null;
+      const live = isActive && page.kind !== 'board' && page.kind !== 'plan' ? liveNodes : null;
       out.push(...pageEntries(section, page, live, scope === 'notebook'));
     }
   }
