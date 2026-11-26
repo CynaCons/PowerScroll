@@ -1,0 +1,91 @@
+/* Plan page (v0.97): light like the board page, from the diagram tokens. ACCENT marks owner checks only. */
+.plan-view {
+  height: 100%;
+  overflow: auto;
+  padding: 34px 36px 60px;
+  box-sizing: border-box;
+  background: #f7f8f7;
+  color: #14181a;
+  font-size: 13px;
+}
+.plan-view > * { max-width: 1240px; margin-left: auto; margin-right: auto; }
+.plan-mono { font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace; font-size: 11.5px; color: #5c6467; margin-right: 7px; font-weight: 500; }
+
+.plan-view__header { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 22px; }
+.plan-view h1 { margin: 0; font-size: 24px; letter-spacing: -0.03em; }
+.plan-view__header p { margin: 5px 0 0; color: #5c6467; font-size: 13px; }
+.plan-view__controls { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+
+.plan-button {
+  border: 1px solid #c3cbc9; background: #fff; color: #14181a; border-radius: 6px;
+  padding: 5px 11px; font: inherit; font-size: 12.5px; cursor: pointer;
+}
+.plan-button:hover { border-color: #8a9295; }
+.plan-button--primary { background: #14181a; border-color: #14181a; color: #fff; }
+.plan-button:focus-visible, .plan-it:focus-visible, .plan-need:focus-visible, .plan-more:focus-visible { outline: 2px solid #14181a; outline-offset: 2px; }
+.plan-badge {
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace; font-size: 11px; color: #5c6467;
+  border: 1px solid #c3cbc9; border-radius: 4px; padding: 2px 7px; background: #fff; white-space: nowrap;
+}
+.plan-need {
+  border: 1px solid #b4552d; color: #b4552d; background: #fff; border-radius: 999px;
+  padding: 4px 11px; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+}
+.plan-need--on { background: #b4552d; color: #fff; }
+.plan-error { border: 1px solid #b4552d; color: #b4552d; background: #fff; border-radius: 6px; padding: 8px 12px; margin-bottom: 14px; }
+
+.plan-empty {
+  border: 1px dashed #c3cbc9; border-radius: 8px; background: #fff; padding: 32px; display: grid; gap: 10px; justify-items: start;
+}
+.plan-empty h2 { margin: 0; font-size: 17px; }
+.plan-empty p { margin: 0; color: #5c6467; max-width: 64ch; line-height: 1.55; }
+
+.plan-needs { display: grid; gap: 2px; margin-bottom: 16px; border: 1px solid #c3cbc9; border-radius: 8px; background: #fff; padding: 6px; }
+.plan-needs__row {
+  display: flex; gap: 6px; align-items: baseline; text-align: left; background: none; border: 0; border-radius: 4px;
+  padding: 6px 8px; font: inherit; color: #14181a; cursor: pointer;
+}
+.plan-needs__row:hover { background: #eef1f0; }
+
+.plan-rail { display: grid; gap: 9px; border: 1px solid #c3cbc9; border-radius: 8px; background: #fff; padding: 14px 16px; margin-bottom: 16px; }
+.plan-more { justify-self: start; background: none; border: 0; padding: 0 0 4px; color: #5c6467; font: inherit; font-size: 12px; cursor: pointer; text-decoration: underline; }
+.plan-major { display: grid; grid-template-columns: minmax(140px, 260px) minmax(0, 1fr) 44px; gap: 12px; align-items: center; }
+.plan-major__name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12.5px; }
+.plan-major__pc { font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace; font-size: 11px; color: #5c6467; text-align: right; font-variant-numeric: tabular-nums; }
+.plan-major__its { display: flex; gap: 3px; height: 20px; min-width: 0; }
+.plan-it {
+  position: relative; flex-basis: 0; min-width: 7px; padding: 0; border: 1px solid #c3cbc9; border-radius: 3px;
+  background: #eef1f0; overflow: hidden; cursor: pointer;
+}
+.plan-it > i { position: absolute; inset: 0 auto 0 0; background: #14181a; }
+.plan-it--current { box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px #14181a; }
+.plan-it--selected { border-color: #14181a; border-width: 2px; }
+.plan-it--need { border-color: #b4552d; }
+.plan-it--need::after { content: ''; position: absolute; top: 2px; right: 2px; width: 6px; height: 6px; border-radius: 50%; background: #b4552d; box-shadow: 0 0 0 1.5px #fff; }
+
+.plan-detail { border: 1px solid #c3cbc9; border-radius: 8px; background: #fff; padding: 14px 16px; display: grid; gap: 8px; margin-bottom: 16px; }
+.plan-detail__head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.plan-detail h2 { margin: 0; font-size: 15px; }
+.plan-detail__goal { margin: 0; color: #5c6467; line-height: 1.5; max-width: 90ch; }
+.plan-bar { height: 6px; border-radius: 3px; background: #eef1f0; overflow: hidden; }
+.plan-bar > i { display: block; height: 100%; background: #14181a; }
+.plan-tasks { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 5px; }
+.plan-task { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 9px; align-items: start; line-height: 1.45; }
+.plan-task__box { width: 12px; height: 12px; margin-top: 3px; border: 1.5px solid #8a9295; border-radius: 2px; box-sizing: border-box; }
+.plan-task--done .plan-task__box { background: #14181a; border-color: #14181a; }
+.plan-task--done .plan-task__text { color: #5c6467; }
+.plan-task--need .plan-task__box { border-color: #b4552d; }
+.plan-task__tag { font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace; font-size: 11px; color: #8a9295; white-space: nowrap; }
+.plan-task--need .plan-task__tag { color: #b4552d; }
+.plan-task--empty { color: #8a9295; display: block; }
+
+.plan-backlog { border: 1px solid #c3cbc9; border-radius: 8px; background: #fff; padding: 10px 16px; }
+.plan-backlog__toggle { background: none; border: 0; padding: 0; font: inherit; color: #14181a; cursor: pointer; font-weight: 600; }
+.plan-backlog ul { margin: 8px 0 2px; padding-left: 20px; display: grid; gap: 4px; color: #5c6467; line-height: 1.45; }
+
+@media (max-width: 720px) {
+  .plan-view { padding: 20px 14px 40px; }
+  .plan-view__header { flex-direction: column; }
+  .plan-major { grid-template-columns: minmax(0, 1fr) 40px; }
+  .plan-major__name { grid-column: 1 / -1; }
+}

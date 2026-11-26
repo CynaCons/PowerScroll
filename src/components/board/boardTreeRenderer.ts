@@ -903,7 +903,7 @@ export class BoardTreeRenderer {
         }
         // "Now" mark: a short arc across the branch where finished work ends (REQ-BOARD-070).
         if (node.nowR && node.span) {
-          const half = Math.min(node.span * 0.42, 34 / node.nowR);
+          const half = Math.min(node.span * 0.3, 15 / node.nowR);
           batch.now.moveTo(node.nowR * Math.cos(node.angle - half), node.nowR * Math.sin(node.angle - half));
           batch.now.arc(0, 0, node.nowR, node.angle - half, node.angle + half);
         }

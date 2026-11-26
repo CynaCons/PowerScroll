@@ -1881,15 +1881,15 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 
 ### v0.97.0 — Plan pages: a PLAN.md beside your boards
 **Goal:** Owner (2026-11-26): plans in PowerScroll as a new page type, like boards, drawn as the iteration rail (option A). Read-only: powerplan stays the single writer of PLAN.md.
-- [ ] Owner request 2026-11-26: PowerPlan visualizer embedded in PowerScroll as a plan page type
-- [ ] Requirements: new SRS_PLAN.md (REQ-PLAN-NNN) for page kind, parsing, rail, refresh and "need you"
-- [ ] Page kind 'plan' in data model, sidebar icon, new-page menu, search index
-- [ ] PLAN.md parser in TypeScript matching powerplan's rules (majors, iterations, tasks, agent tags, status), with fixture tests against PowerScroll's and powerplan's PLAN.md
-- [ ] Link a PLAN.md through the file-handle store and re-read it every few seconds; snapshot fallback where File System Access is missing
-- [ ] Rail view: one row per major, iteration blocks sized by tasks and filled by done; current iteration open as a checklist with agent tags
-- [ ] "N need you" for unticked Owner request / Owner report tasks
-- [ ] Tests, run the checks and the full campaign
-- [ ] Showcase and release v0.97.0
+- [x] Owner request 2026-11-26: PowerPlan visualizer embedded in PowerScroll as a plan page type
+- [x] Requirements: new SRS_PLAN.md (REQ-PLAN-NNN) for page kind, parsing, rail, refresh and "need you" [agent: claude]
+- [x] Page kind 'plan' in data model, sidebar icon, new-page menu, search index [agent: claude]
+- [x] PLAN.md parser in TypeScript matching powerplan's rules (majors, iterations, tasks, agent tags, status), with fixture tests against PowerScroll's and powerplan's PLAN.md [agent: claude]
+- [x] Link a PLAN.md through the file-handle store and re-read it every few seconds; snapshot fallback where File System Access is missing [agent: claude]
+- [x] Rail view: one row per major, iteration blocks sized by tasks and filled by done; current iteration open as a checklist with agent tags [agent: claude]
+- [x] "N need you" for unticked Owner request / Owner report tasks [agent: claude]
+- [x] Tests, run the checks and the full campaign [agent: claude]
+- [x] Showcase and release v0.97.0 [agent: claude]
 
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.

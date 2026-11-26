@@ -5,6 +5,7 @@ import type {
   Section,
   Page,
   BoardData,
+  PlanPageData,
   CanvasNode,
   ScrollRecord,
 } from '../types/data';
@@ -13,6 +14,7 @@ import {
   createSection,
   createPage,
   createBoardPage,
+  createPlanPage,
   DEFAULT_WORKSPACE_SETTINGS,
 } from '../utils/defaults';
 import { generateId } from '../utils/ids';
@@ -64,6 +66,8 @@ interface WorkspaceState {
   // Page actions
   addPage: (sectionId: string, title?: string) => void;
   addBoardPage: (sectionId: string, title?: string) => void;
+  addPlanPage: (sectionId: string, title?: string) => void;
+  updatePlan: (pageId: string, fn: (plan: PlanPageData) => PlanPageData) => void;
   /** Board edits intentionally do not enter the canvas undo history. */
   updateBoard: (pageId: string, fn: (board: BoardData) => BoardData) => void;
   renamePage: (sectionId: string, pageId: string, title: string) => void;
@@ -299,6 +303,40 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => {
                 : section,
             ),
           },
+        };
+      });
+    },
+
+    addPlanPage: (sectionId, title?: string) => {
+      set((state) => {
+        const page = createPlanPage(title);
+
+        return {
+          isDirty: true,
+          activeSectionId: sectionId,
+          activePageId: page.id,
+          workspace: {
+            ...state.workspace,
+            sections: state.workspace.sections.map((section) =>
+              section.id === sectionId
+                ? { ...section, pages: [...section.pages, page] }
+                : section,
+            ),
+          },
+        };
+      });
+    },
+
+    updatePlan: (pageId, fn) => {
+      set((state) => {
+        const page = findPage(state.workspace, pageId);
+        if (!page?.plan) return state;
+        return {
+          isDirty: true,
+          workspace: mapPage(state.workspace, pageId, (currentPage) => ({
+            ...currentPage,
+            plan: fn(currentPage.plan!),
+          })),
         };
       });
     },
