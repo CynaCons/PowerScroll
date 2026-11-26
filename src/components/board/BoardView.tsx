@@ -10,7 +10,7 @@ import {
   restoreCard,
   updateCard,
 } from '../../board/boardOps';
-import { boardLabelColors, confirmStart, dependencyLines, displayName, labelColor, relativeTime } from './boardUi';
+import { boardLabelColors, confirmStart, dependencyLines, displayName, labelColor, relativeTime, workableColumn } from './boardUi';
 import { LabelColorsContext } from './labelColors';
 import {
   AGENT_ACTIVE_MS,
@@ -173,9 +173,10 @@ export function BoardView() {
   }, [board]);
 
   // Agents act under the `me` name they pass on each call, which need not match
-  // their MCP process label, so presence cannot be matched per name. Activity
-  // in the last minute is what lights a card; only an empty agent list (every
-  // agent gone) puts the lights out early.
+  // their MCP process label, so presence cannot be matched per name. A held card
+  // stays lit while its agent has shown a sign of life within the quiet window and
+  // the card is not finished or waiting; only an empty agent list (every agent gone)
+  // or the agent leaving puts the light out early.
   const agentsGone = presenceSeen && connected.length === 0;
   const activeIdList = (board?.cards ?? [])
     .filter((card) => {
@@ -183,6 +184,7 @@ export function BoardView() {
       if (!card.assignee || card.assignee === 'you') return false;
       const actor = actors[card.assignee];
       if (!actor || actor.cardId !== card.id) return false;
+      if (card.archivedAt || !workableColumn(card.column)) return false;
       if (now - actor.lastActionAt > AGENT_ACTIVE_MS) return false;
       if (agentsGone) return false;
       if (left[card.assignee]) return false;

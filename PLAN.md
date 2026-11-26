@@ -1864,11 +1864,11 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 ### v0.96.0 — A task moves for as long as an agent works on it
 **Goal:** Owner (2026-11-26): constant animation while agents work on a task. Working = in progress, held by an agent still on the board, sign of life in the last 10 min; after that the existing fault (REQ-BOARD-049) takes over.
 - [ ] Owner request 2026-11-26: constant animation while an agent works on a task
-- [ ] Requirements: reword REQ-BOARD-020 and REQ-BOARD-055 to the held-and-alive rule; new REQ for the comet
-- [ ] One "working" rule shared by cards and tree (replaces the 60 s window)
-- [ ] Tree: orbiting comet in the agent's colour around each working task (option B), ~12 fps cap, in view and visible page only, still under reduced motion
-- [ ] Cards: the ring pulse keeps running for the whole working span
-- [ ] Tests for the rule, the comet and the 10 min hand-off to fault
+- [x] Requirements: reword REQ-BOARD-020 and REQ-BOARD-055 to the held-and-alive rule; new REQ for the comet [agent: claude]
+- [x] One "working" rule shared by cards and tree (replaces the 60 s window) [agent: claude]
+- [x] Tree: orbiting comet in the agent's colour around each working task (option B), ~12 fps cap, in view and visible page only, still under reduced motion [agent: claude]
+- [x] Cards: the ring pulse keeps running for the whole working span [agent: claude]
+- [x] Tests for the rule, the comet and the 10 min hand-off to fault [agent: claude]
 - [ ] Run the checks and the full campaign
 - [ ] Showcase and release v0.96.0
 

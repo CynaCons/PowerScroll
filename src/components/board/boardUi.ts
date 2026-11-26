@@ -163,3 +163,11 @@ export function boardLabelColors(cards: ReadonlyArray<{ labels: string[]; create
 export function labelColor(label: string, colors?: Map<string, LabelColor>): LabelColor {
   return colors?.get(label.trim().toLowerCase()) ?? LABEL_PALETTE[hashLabel(label) % LABEL_PALETTE.length];
 }
+
+/**
+ * A held card can be worked on unless it is finished or waiting for the owner: those two
+ * never animate, whoever holds them (REQ-BOARD-020).
+ */
+export function workableColumn(column: string): boolean {
+  return column !== 'done' && column !== 'waiting';
+}

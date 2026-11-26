@@ -10,6 +10,7 @@ import {
   avatarInitial,
   colorWithAlpha,
   displayName,
+  workableColumn,
 } from './boardUi';
 
 export interface AgentChipModel {
@@ -53,7 +54,8 @@ export function agentChips(
     // "Working on" means the agent holds the card, not that it last touched it
     // (creating a card for someone else is not working on it).
     const active = Boolean(
-      actedRecently && card && card.assignee === name && !disconnected && !left[name],
+      actedRecently && card && card.assignee === name && !card.archivedAt && workableColumn(card.column)
+        && !disconnected && !left[name],
     );
     const quietMin = actor
       ? Math.max(0, Math.floor((now - actor.lastActionAt) / 60_000))

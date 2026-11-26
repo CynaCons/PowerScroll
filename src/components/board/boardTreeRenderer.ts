@@ -29,8 +29,10 @@ export interface TreeDebugNode {
   /** Name of the connected agent holding this card, else null. */
   agent: string | null;
   agentColor: string | null;
-  /** The ring is marching: the agent acted in the last minute and the card is not a fault. */
+  /** The agent is working on this card (sign of life within the quiet window): the comet circles it. */
   live: boolean;
+  /** A comet is circling the card right now (live, and motion is allowed). */
+  comet: boolean;
   /** Waits on a card that is not finished: carries the lock. */
   locked: boolean;
   /** Dependencies to or from other topics: carries the small arrow marker. */
@@ -76,6 +78,9 @@ const MAX_TITLES = 250;
 const CULL_PAD = 26;
 /** Agent rings, halos and name tags. Tags keep one on-screen size at every zoom. */
 const LIVE_FRAME_MS = 80;
+/** One turn of the working comet, and the number of dots in its head and tail. */
+const COMET_TURN_MS = 2400;
+const COMET_TAIL = 9;
 const TAG_MIN_K = 0.3;
 const TAG_H = 16;
 const TAG_PAD = 6;
@@ -226,6 +231,7 @@ export class BoardTreeRenderer {
           agent: node.agent?.name ?? null,
           agentColor: node.agent?.color ?? null,
           live: Boolean(node.agent?.live),
+          comet: Boolean(node.agent?.live) && !reducedMotion(),
           locked: node.locked,
           crossDeps: node.crossDeps,
         }));
@@ -370,7 +376,7 @@ export class BoardTreeRenderer {
   }
 
   /**
-   * The one place that decides whether the marching rings need frames: only while a
+   * The one place that decides whether the comets need frames: only while a
    * live node is inside the view, the page is visible and motion is allowed.
    */
   private syncLive() {
@@ -1304,7 +1310,11 @@ export class BoardTreeRenderer {
     ctx.globalAlpha = 1;
   }
 
-  /** The ring just outside each held node: solid, or dashed and marching while the agent is live. */
+  /**
+   * The ring just outside each held node, solid in the agent's colour. While the agent is working
+   * a comet circles it: a head with a fading tail, one turn every COMET_TURN_MS (REQ-BOARD-055).
+   * Under reduced motion the ring is dashed instead and nothing moves.
+   */
   private paintRings(held: number[], now: number, spot: Uint8Array | null) {
     const { ctx, layout, view } = this;
     if (!layout) return;
@@ -1320,21 +1330,35 @@ export class BoardTreeRenderer {
       const dimmed = spot && !spot[i];
       ctx.strokeStyle = agent.color;
       ctx.globalAlpha = dimmed ? DIM_ALPHA : 1;
-      ctx.lineWidth = 3 / k;
-      if (agent.live) {
-        ctx.setLineDash([5 / k, 4 / k]);
-        ctx.lineDashOffset = moving ? -(now * 0.03) / k : 0;
-      } else ctx.setLineDash([]);
+      const comet = agent.live && moving;
+      ctx.lineWidth = (comet ? 2 : 3) / k;
+      if (agent.live && !moving) ctx.setLineDash([5 / k, 4 / k]);
+      else ctx.setLineDash([]);
       ctx.beginPath();
       ctx.arc(x, y, radius, 0, TAU);
       ctx.stroke();
       ctx.setLineDash([]);
-      ctx.lineDashOffset = 0;
+      if (comet) {
+        // Phase from the card id too, so two working cards do not circle in step.
+        const offset = (node.key.length * 0.7 + i * 1.3) % TAU;
+        const head = (now / COMET_TURN_MS) * TAU + offset;
+        const orbit = radius + 3 / k;
+        ctx.fillStyle = agent.color;
+        for (let step = COMET_TAIL - 1; step >= 0; step--) {
+          const a = head - step * 0.17;
+          const fade = 1 - step / COMET_TAIL;
+          ctx.globalAlpha = (dimmed ? DIM_ALPHA : 1) * fade;
+          ctx.beginPath();
+          ctx.arc(x + Math.cos(a) * orbit, y + Math.sin(a) * orbit, (1.2 + 2.3 * fade) / k, 0, TAU);
+          ctx.fill();
+        }
+        ctx.globalAlpha = dimmed ? DIM_ALPHA : 1;
+      }
       if (spot && spot[i] && this.spotlight === agent.name) {
         ctx.lineWidth = 1.6 / k;
         ctx.globalAlpha = 0.6;
         ctx.beginPath();
-        ctx.arc(x, y, radius + 5 / k, 0, TAU);
+        ctx.arc(x, y, radius + 7 / k, 0, TAU);
         ctx.stroke();
       }
     }
