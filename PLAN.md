@@ -1874,9 +1874,9 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 
 ### v0.96.1 — Tree polish where it lives today
 **Goal:** Owner (2026-11-26): keep the tree as the Cards | Tree switch on the board page; polish only. Candidates from the mockups, owner to confirm or drop.
-- [ ] Topic progress arcs (share of a topic's cards done)
-- [ ] "Now" mark on each branch where finished work ends
-- [ ] Ready-next notch on queued cards whose blockers are done
+- [x] Topic progress arcs (share of a topic's cards done) [agent: claude]
+- [x] "Now" mark on each branch where finished work ends [agent: claude]
+- [x] Ready-next notch on queued cards whose blockers are done [agent: claude]
 - [ ] Tests, showcase and release v0.96.1
 
 ### v0.97.0 — Plan pages: a PLAN.md beside your boards

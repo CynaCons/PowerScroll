@@ -82,6 +82,9 @@ canvas undo history.
 | REQ-BOARD-066 | In the tree, dependencies between cards of different topics shall not be drawn at rest. A card that has some carries a small marker; hovering it (or clicking it, until the next click) draws lines to the cards it waits on and to the cards waiting on it, fades the rest of the tree, and the tooltip lists them with their topic and column. A line to a card waiting for the owner is in the accent colour. Owner request 2026-11-16: "if it's cross tree ... just when you hover the task" | Must | T249 |
 | REQ-BOARD-067 | In the tree, a card that waits on a card of the same topic shall be placed in a ring further out than that card, as close as possible to the next ring and to its angle, so the arrow runs outward between neighbouring rings; no same-topic arrow shall cross another node, and the tree line to such a card comes from the card it waits on. Owner report 2026-11-19: arrows ran over other nodes | Must | T251 |
 | REQ-BOARD-068 | An agent works on a card, for both the card view and the tree, while it holds the card (it is the assignee and the card its agent last acted on), the card is neither done nor waiting for the owner nor archived, the agent has not left (REQ-BOARD-025) and not every agent is gone, and its last sign of life on the board is no more than 10 minutes old. Past 10 minutes an in-progress card is quiet (the fault of REQ-BOARD-049), so a held card is always either working or quiet. Owner request 2026-11-26: "constant animations as long as a task is being worked on by agents" | Must | T252 |
+| REQ-BOARD-069 | Each topic in the tree shall carry a progress arc just outside its circle: a track in the rule colour filled in ink, clockwise from the top, to the share of the topic's shown cards that are done. Owner pick 2026-11-26 (tree polish) | Should | T253 |
+| REQ-BOARD-070 | A topic that has both finished and live cards shall show a short "now" arc across its branch, centred on the topic's angle, halfway between its outermost finished card and its innermost live card; a topic that is all finished or all live shows none. Owner pick 2026-11-26 (tree polish) | Should | T253 |
+| REQ-BOARD-071 | A queued card that is ready next shall be drawn with a heavier ink outline instead of the faint one: the innermost queued card of its topic that waits on nothing unfinished, and any queued card whose blockers are all finished. A card still waiting on an unfinished card is never ready. Owner pick 2026-11-26 (tree polish) | Should | T253 |
 
 ## Traceability
 
@@ -106,3 +109,4 @@ canvas undo history.
 - T249 — `tests/board/249-tree-dependencies.spec.ts`
 - T251 — `tests/board/251-tree-dependency-layout.spec.ts`
 - T252 — `tests/board/252-working-motion.spec.ts`
+- T253 — `tests/board/253-tree-polish.spec.ts`
