@@ -97,6 +97,7 @@ test('a linked PLAN.md draws majors, iterations, the current checklist and the o
   await page.getByTestId('plan-open').click();
 
   await expect(page.getByTestId('plan-title')).toHaveText('Demo');
+  await expect(page.getByTestId('page-title').last()).toHaveText('Demo');
   await expect(page.getByTestId('plan-link')).toHaveText('PLAN.md · linked');
   await expect(page.getByTestId('plan-major-v0.1')).toContainText('Foundations');
   await expect(page.getByTestId('plan-major-v0.1')).toContainText('100%');

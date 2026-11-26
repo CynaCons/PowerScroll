@@ -10,6 +10,7 @@ import './PlanView.css';
 export const PLAN_REREAD_MS = 3000;
 /** Majors shown before "Show all": the newest ones, oldest of them first. */
 const RECENT_MAJORS = 6;
+const DEFAULT_PLAN_TITLE = 'Untitled Plan';
 
 type LinkState = 'none' | 'linked' | 'needs-permission' | 'snapshot';
 
@@ -71,6 +72,12 @@ export function PlanView() {
   const store = useCallback((text: string, fileName: string, modified: number) => {
     if (!pageId) return;
     updatePlan(pageId, (current) => ({ ...current, source: text, fileName, readAt: Date.now(), fileModified: modified }));
+    // A page still called "Untitled Plan" takes the plan's own title the first time a file is read.
+    const { workspace, renamePage } = useWorkspaceStore.getState();
+    const section = workspace.sections.find((item) => item.pages.some((entry) => entry.id === pageId));
+    const own = section?.pages.find((entry) => entry.id === pageId);
+    const title = parsePlan(text).title;
+    if (section && own?.title === DEFAULT_PLAN_TITLE && title) renamePage(section.id, pageId, title);
   }, [pageId, updatePlan]);
 
   /** Read the linked file when it changed since the last read. */
