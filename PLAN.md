@@ -1869,15 +1869,15 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Tree: orbiting comet in the agent's colour around each working task (option B), ~12 fps cap, in view and visible page only, still under reduced motion [agent: claude]
 - [x] Cards: the ring pulse keeps running for the whole working span [agent: claude]
 - [x] Tests for the rule, the comet and the 10 min hand-off to fault [agent: claude]
-- [ ] Run the checks and the full campaign
-- [ ] Showcase and release v0.96.0
+- [x] Run the checks and the full campaign (1,056/1,058; T191 fails on main too, T234 passed alone) [agent: claude]
+- [x] Released as v0.96.1 together with the tree polish; showcase with v0.97.0 [agent: claude]
 
 ### v0.96.1 — Tree polish where it lives today
 **Goal:** Owner (2026-11-26): keep the tree as the Cards | Tree switch on the board page; polish only. Candidates from the mockups, owner to confirm or drop.
 - [x] Topic progress arcs (share of a topic's cards done) [agent: claude]
 - [x] "Now" mark on each branch where finished work ends [agent: claude]
 - [x] Ready-next notch on queued cards whose blockers are done [agent: claude]
-- [ ] Tests, showcase and release v0.96.1
+- [x] Tests and release v0.96.1 (showcase published with v0.97.0) [agent: claude]
 
 ### v0.97.0 — Plan pages: a PLAN.md beside your boards
 **Goal:** Owner (2026-11-26): plans in PowerScroll as a new page type, like boards, drawn as the iteration rail (option A). Read-only: powerplan stays the single writer of PLAN.md.
