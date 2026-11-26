@@ -1858,10 +1858,44 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Owner report 2026-11-19: agent writes reset the open scroll and lose typing [agent: sonnet]
 - [x] Owner report 2026-11-19: tree arrows run over other nodes [agent: sonnet]
 
+## v0.96 — Agents you can see working, plans as pages
+> Owner (2026-11-26): picked from the trees-and-plans mockups (https://claude.ai/artifact/LVDG4fQdqemkd1r7YEqBPx): comet motion (B), the tree stays where it is (page switch, polish only), plan page with the iteration rail (A).
+
+### v0.96.0 — A task moves for as long as an agent works on it
+**Goal:** Owner (2026-11-26): constant animation while agents work on a task. Working = in progress, held by an agent still on the board, sign of life in the last 10 min; after that the existing fault (REQ-BOARD-049) takes over.
+- [ ] Owner request 2026-11-26: constant animation while an agent works on a task
+- [ ] Requirements: reword REQ-BOARD-020 and REQ-BOARD-055 to the held-and-alive rule; new REQ for the comet
+- [ ] One "working" rule shared by cards and tree (replaces the 60 s window)
+- [ ] Tree: orbiting comet in the agent's colour around each working task (option B), ~12 fps cap, in view and visible page only, still under reduced motion
+- [ ] Cards: the ring pulse keeps running for the whole working span
+- [ ] Tests for the rule, the comet and the 10 min hand-off to fault
+- [ ] Run the checks and the full campaign
+- [ ] Showcase and release v0.96.0
+
+### v0.96.1 — Tree polish where it lives today
+**Goal:** Owner (2026-11-26): keep the tree as the Cards | Tree switch on the board page; polish only. Candidates from the mockups, owner to confirm or drop.
+- [ ] Topic progress arcs (share of a topic's cards done)
+- [ ] "Now" mark on each branch where finished work ends
+- [ ] Ready-next notch on queued cards whose blockers are done
+- [ ] Tests, showcase and release v0.96.1
+
+### v0.97.0 — Plan pages: a PLAN.md beside your boards
+**Goal:** Owner (2026-11-26): plans in PowerScroll as a new page type, like boards, drawn as the iteration rail (option A). Read-only: powerplan stays the single writer of PLAN.md.
+- [ ] Owner request 2026-11-26: PowerPlan visualizer embedded in PowerScroll as a plan page type
+- [ ] Requirements: new SRS_PLAN.md (REQ-PLAN-NNN) for page kind, parsing, rail, refresh and "need you"
+- [ ] Page kind 'plan' in data model, sidebar icon, new-page menu, search index
+- [ ] PLAN.md parser in TypeScript matching powerplan's rules (majors, iterations, tasks, agent tags, status), with fixture tests against PowerScroll's and powerplan's PLAN.md
+- [ ] Link a PLAN.md through the file-handle store and re-read it every few seconds; snapshot fallback where File System Access is missing
+- [ ] Rail view: one row per major, iteration blocks sized by tasks and filled by done; current iteration open as a checklist with agent tags
+- [ ] "N need you" for unticked Owner request / Owner report tasks
+- [ ] Tests, run the checks and the full campaign
+- [ ] Showcase and release v0.97.0
+
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.
 
 - **Automated MCP distribution** — Add a GitHub Actions workflow for MCP-only and coordinated app+MCP releases. Use npm Trusted Publishing and MCP Registry GitHub OIDC (no long-lived tokens); validate exact, case-sensitive `io.github.CynaCons/powerscroll` identity and synchronized versions; publish the immutable npm version first, wait until it is publicly resolvable, then publish and verify the matching official MCP Registry entry. Support safe/idempotent reruns and `workflow_dispatch`. Keep the full Playwright campaign local rather than making it a publishing-job gate. The canonical manual and future automated order is documented in `docs/RELEASING.md`.
+- **Plan page follow-ups** — Tree and Outline views behind a Rail | Tree | Outline switch; powerplan pushing changes over the bridge instead of file re-reads; ticking a task through powerplan (owner picked Rail only for now, 2026-11-26)
 - **Editable Gantt (PowerPlanner)** — Today the embed is intentionally read-only (`pointerEvents: none` + read-only `GanttRenderer`). Future: double-click / edit mode to change tasks & dates, persist `node.data.doc` on save, optional deep-link into PowerPlanner for full editing
 - **Collapsible Containers** — Canvas-in-canvas named frames (deferred from v0.2); flat shape/stroke groups land in v0.27.0 first
 - **Template Gallery** — Pre-built page templates (meeting notes, project plan, etc.)
