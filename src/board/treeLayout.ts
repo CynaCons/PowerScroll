@@ -460,3 +460,36 @@ export function nodeAt(layout: TreeLayout, worldX: number, worldY: number, slack
   }
   return best;
 }
+
+/**
+ * Agent trails (REQ-BOARD-072): per agent, the live cards it moved to Done, in the order it
+ * finished them. A card counts once, for the last agent that finished it. The owner ("you")
+ * draws no trail. Colours come from `colorOf` so they match the agent chips.
+ */
+export function agentTrails(
+  cards: readonly BoardCard[],
+  events: readonly BoardEvent[],
+  colorOf: (name: string) => string,
+): Array<{ name: string; color: string; keys: string[] }> {
+  const done = new Set(cards.filter((card) => card.column === 'done' && !card.archivedAt).map((card) => card.id));
+  const finisher = new Map<string, { name: string; at: number; seq: number }>();
+  for (const event of events) {
+    if (event.type !== 'moved' || event.to !== 'done' || !event.cardId || !done.has(event.cardId)) continue;
+    if (event.actor === 'you') { finisher.delete(event.cardId); continue; }
+    finisher.set(event.cardId, { name: event.actor, at: event.at, seq: event.seq });
+  }
+  const byAgent = new Map<string, Array<{ id: string; at: number; seq: number }>>();
+  for (const [id, who] of finisher) {
+    const list = byAgent.get(who.name) ?? [];
+    list.push({ id, at: who.at, seq: who.seq });
+    byAgent.set(who.name, list);
+  }
+  return [...byAgent.entries()]
+    .filter(([, list]) => list.length > 1)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([name, list]) => ({
+      name,
+      color: colorOf(name),
+      keys: list.sort((a, b) => (a.at - b.at) || (a.seq - b.seq)).map((item) => item.id),
+    }));
+}

@@ -1891,6 +1891,14 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Tests, run the checks and the full campaign [agent: claude]
 - [x] Showcase and release v0.97.0 [agent: claude]
 
+### v0.97.1 — Tree readability, as the mockups showed it
+**Goal:** Owner report 2026-11-26: the mockups showed more board visuals than 0.97.0 has. Add what was left out: the Show switches for the four tree layers, the agent trail, the "· working" tag and the "now" word.
+- [x] Owner report 2026-11-26: "You showed me more visuals improvements on the powerscroll board, and I don't see them in 0.97.0"
+- [x] Show menu on the tree with four switches (topic arcs, now marks, ready next, agent trail), kept per browser [agent: claude]
+- [x] Agent trail: a line in the agent's colour through the cards it finished, in order; off by default [agent: claude]
+- [x] Working agents' tags read "name · working"; the word "now" beside each now mark [agent: claude]
+- [x] REQ-BOARD-072, T255, checks, release v0.97.1 [agent: claude]
+
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.
 

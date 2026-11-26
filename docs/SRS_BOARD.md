@@ -85,6 +85,7 @@ canvas undo history.
 | REQ-BOARD-069 | Each topic in the tree shall carry a progress arc just outside its circle: a track in the rule colour filled in ink, clockwise from the top, to the share of the topic's shown cards that are done. Owner pick 2026-11-26 (tree polish) | Should | T253 |
 | REQ-BOARD-070 | A topic that has both finished and live cards shall show a short "now" arc across its branch, centred on the topic's angle, halfway between its outermost finished card and its innermost live card; a topic that is all finished or all live shows none. Owner pick 2026-11-26 (tree polish) | Should | T253 |
 | REQ-BOARD-071 | A queued card that is ready next shall be drawn with a heavier ink outline instead of the faint one: the innermost queued card of its topic that waits on nothing unfinished, and any queued card whose blockers are all finished. A card still waiting on an unfinished card is never ready. Owner pick 2026-11-26 (tree polish) | Should | T253 |
+| REQ-BOARD-072 | The tree shall have a "Show" menu with four switches: topic progress arcs, "now" marks, ready-next markers (all on by default) and agent trail (off by default). The choice is kept in the browser. The agent trail is a thin line in each agent's colour through the live Done cards that agent moved to Done, in the order it finished them (an agent with fewer than two such cards draws none; cards the owner finished draw none). A working agent's tag reads "name · working", and each now mark carries the word "now" from 50% zoom. Owner report 2026-11-26 (mockup parity) | Should | T255 |
 
 ## Traceability
 
@@ -110,3 +111,4 @@ canvas undo history.
 - T251 — `tests/board/251-tree-dependency-layout.spec.ts`
 - T252 — `tests/board/252-working-motion.spec.ts`
 - T253 — `tests/board/253-tree-polish.spec.ts`
+- T255 — `tests/board/255-tree-show.spec.ts`

@@ -54,6 +54,8 @@ export interface TreeDebug {
   hoverLinks(): Array<{ from: number; to: number; accent: boolean }>;
   stats(): { frames: number; layouts: number; lastFrameMs: number; animating: boolean };
   view(): View;
+  /** The switched layers and, per agent trail, the card numbers it passes through (in order). */
+  layers(): TreeShow & { trails: Array<{ name: string; numbers: number[] }> };
 }
 
 type Palette = Record<'bg' | 'paper' | 'ink' | 'muted' | 'faint' | 'rule' | 'accent' | 'onInk', string>;
@@ -89,9 +91,11 @@ const LIVE_FRAME_MS = 80;
 const COMET_TURN_MS = 2400;
 const COMET_TAIL = 9;
 const TAG_MIN_K = 0.3;
+/** The "now" word beside a now mark shows from this zoom on. */
+const NOW_LABEL_K = 0.5;
 const TAG_H = 16;
 const TAG_PAD = 6;
-const TAG_MAX_TEXT = 118;
+const TAG_MAX_TEXT = 160;
 /** Dependency arrows, lock badges and cross-topic markers. */
 const ARROW_PX = 1.5;
 const HEAD_MIN_PX = 5;
@@ -117,6 +121,13 @@ function textOn(fill: string, light: string, dark: string): string {
   const luma = (0.299 * (value >> 16) + 0.587 * ((value >> 8) & 255) + 0.114 * (value & 255)) / 255;
   return luma > 0.62 ? dark : light;
 }
+
+/** The four readability layers the owner can switch (REQ-BOARD-072). */
+export interface TreeShow { arcs: boolean; now: boolean; ready: boolean; trail: boolean }
+export const TREE_SHOW_DEFAULT: TreeShow = { arcs: true, now: true, ready: true, trail: false };
+
+/** One agent's finished cards on this board, in the order it finished them. */
+export interface TreeTrail { name: string; color: string; keys: string[] }
 
 interface Batch {
   stubs: Path2D; solid: Path2D; dashed: Path2D; grey: Path2D; hollow: Path2D; inked: Path2D;
@@ -173,6 +184,8 @@ export class BoardTreeRenderer {
   private liveNodes: number[] = [];
   private liveTimer = 0;
   private agentNotes: Record<string, string> = {};
+  private show: TreeShow = { ...TREE_SHOW_DEFAULT };
+  private trails: TreeTrail[] = [];
   private needIndex = -1;
   private hover = -1;
   /** While a card with dependencies is hovered: it, what it is linked to, and their paths to the hub. */
@@ -259,6 +272,16 @@ export class BoardTreeRenderer {
         frames: this.frames, layouts: this.layouts, lastFrameMs: this.lastFrameMs, animating: this.liveTimer !== 0,
       }),
       view: () => ({ ...this.view }),
+      layers: () => ({
+        ...this.show,
+        trails: this.trails.map((trail) => ({
+          name: trail.name,
+          numbers: trail.keys
+            .map((key) => this.keyIndex.get(key))
+            .filter((index): index is number => index !== undefined)
+            .map((index) => this.layout?.nodes[index].number ?? 0),
+        })),
+      }),
     };
     (window as unknown as { __POWERNOTE_BOARD_TREE__?: TreeDebug }).__POWERNOTE_BOARD_TREE__ = this.hook;
     this.measure();
@@ -328,6 +351,23 @@ export class BoardTreeRenderer {
 
     if (!this.userMoved && this.W && this.H) this.goTo(this.fitTarget(), Boolean(previous));
     this.syncLive();
+    this.invalidate();
+  }
+
+  /** Which readability layers are drawn: topic arcs, now marks, ready next, agent trails. */
+  setShow(show: TreeShow) {
+    const same = show.arcs === this.show.arcs && show.now === this.show.now
+      && show.ready === this.show.ready && show.trail === this.show.trail;
+    if (same) return;
+    this.show = { ...show };
+    this.invalidate();
+  }
+
+  /** Redraws only when a trail actually changed, so a note on the board draws nothing. */
+  setTrails(trails: TreeTrail[]) {
+    const sig = (list: TreeTrail[]) => list.map((trail) => `${trail.name}|${trail.color}|${trail.keys.join(',')}`).join(';');
+    if (sig(trails) === sig(this.trails)) return;
+    this.trails = trails;
     this.invalidate();
   }
 
@@ -836,6 +876,8 @@ export class BoardTreeRenderer {
     const pulsing: number[] = [];
     const seen: number[] = [];
     const held: number[] = [];
+    const show = this.show;
+    const nowMarks: number[] = [];
 
     for (let i = 0; i < nodes.length; i++) {
       const node = nodes[i];
@@ -892,7 +934,7 @@ export class BoardTreeRenderer {
         path.moveTo(x + r, y);
         path.arc(x, y, r, 0, TAU);
         // Progress arc: share of the topic's cards that are done (REQ-BOARD-069).
-        if (node.cardCount) {
+        if (show.arcs && node.cardCount) {
           const ring = r + 3.2;
           batch.track.moveTo(x + ring, y);
           batch.track.arc(x, y, ring, 0, TAU);
@@ -902,7 +944,8 @@ export class BoardTreeRenderer {
           }
         }
         // "Now" mark: a short arc across the branch where finished work ends (REQ-BOARD-070).
-        if (node.nowR && node.span) {
+        if (show.now && node.nowR && node.span) {
+          nowMarks.push(i);
           const half = Math.min(node.span * 0.3, 15 / node.nowR);
           batch.now.moveTo(node.nowR * Math.cos(node.angle - half), node.nowR * Math.sin(node.angle - half));
           batch.now.arc(0, 0, node.nowR, node.angle - half, node.angle + half);
@@ -913,7 +956,7 @@ export class BoardTreeRenderer {
       const big = node.state === 'doing' || node.state === 'waiting';
       if (node.state === 'todo') {
         const inner = Math.max(0.1, r - 0.75);
-        const path = node.ready ? batch.ready : batch.hollow;
+        const path = show.ready && node.ready ? batch.ready : batch.hollow;
         path.moveTo(x + inner, y);
         path.arc(x, y, inner, 0, TAU);
       } else {
@@ -961,9 +1004,11 @@ export class BoardTreeRenderer {
     ctx.setLineDash([]);
 
     this.paintHalos(held, spot);
+    if (show.trail) this.paintTrails();
     if (dim) this.paintBatch(dim, DIM_ALPHA);
     this.paintBatch(main, 1);
     ctx.globalAlpha = 1;
+    if (nowMarks.length && k >= NOW_LABEL_K) this.paintNowLabels(nowMarks);
     const incident = this.drawDependencies(spot, vx0, vy0, vx1, vy1);
     if (showNames) this.drawTopicNames(vx0, vy0, vx1, vy1, spot);
 
@@ -1032,6 +1077,64 @@ export class BoardTreeRenderer {
 
     this.frames++;
     this.lastFrameMs = performance.now() - started;
+  }
+
+  /**
+   * Agent trails (REQ-BOARD-072): a thin line in each agent's colour through the cards it moved
+   * to Done, in the order it finished them. Drawn under the nodes so it never hides one.
+   */
+  private paintTrails() {
+    const { ctx, layout } = this;
+    if (!layout || !this.trails.length) return;
+    ctx.lineWidth = 1.6;
+    ctx.lineJoin = 'round';
+    ctx.globalAlpha = 0.75;
+    for (const trail of this.trails) {
+      const points = trail.keys
+        .map((key) => this.keyIndex.get(key))
+        .filter((index): index is number => index !== undefined);
+      if (points.length < 2) continue;
+      ctx.strokeStyle = trail.color;
+      ctx.beginPath();
+      points.forEach((index, n) => {
+        if (n === 0) ctx.moveTo(this.rx[index], this.ry[index]);
+        else ctx.lineTo(this.rx[index], this.ry[index]);
+      });
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  /** The word "now" beside each now mark, past the arc's end, at one on-screen size. */
+  private paintNowLabels(topics: number[]) {
+    const { ctx, layout, palette: P, view } = this;
+    if (!layout) return;
+    ctx.save();
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    ctx.fillStyle = P.muted;
+    ctx.font = `500 9.5px ${MONO}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (const i of topics) {
+      const node = layout.nodes[i];
+      if (!node.nowR || !node.span) continue;
+      const half = Math.min(node.span * 0.3, 15 / node.nowR);
+      // Past either end of the arc, 12 px on; the first spot clear of every node wins, else none.
+      for (const side of [1, -1]) {
+        const end = node.angle + side * half;
+        const sx = node.nowR * Math.cos(end) * view.k + view.x - side * Math.sin(end) * 12;
+        const sy = node.nowR * Math.sin(end) * view.k + view.y + side * Math.cos(end) * 12;
+        const wx = (sx - view.x) / view.k;
+        const wy = (sy - view.y) / view.k;
+        const reach = 10 / view.k;
+        const blocked = [[0, 0], [reach, 0], [-reach, 0], [0, reach / 2], [0, -reach / 2]]
+          .some(([dx, dy]) => nodeAt(layout, wx + dx, wy + dy, 8) >= 0);
+        if (blocked) continue;
+        ctx.fillText('now', sx, sy);
+        break;
+      }
+    }
+    ctx.restore();
   }
 
   /** One batch of shared paths: links, then twigs, nodes, progress rings and topic discs. */
@@ -1309,7 +1412,8 @@ export class BoardTreeRenderer {
       const sy = this.ry[i] * k + view.y;
       if (sx < 0 || sx > this.W || sy < 0 || sy > this.H) continue;
       const faulty = node.fault;
-      const text = this.fitText(agent.name, TAG_MAX_TEXT);
+      // A working agent says so on its tag, as in the mockups: "feat-1 · working".
+      const text = this.fitText(agent.live && !faulty ? `${agent.name} · working` : agent.name, TAG_MAX_TEXT);
       const w = this.width(text) + TAG_PAD * 2;
       const reach = (radii.get(i) ?? 0) + 2;
       const boxes = offsets.map((offset) => {
