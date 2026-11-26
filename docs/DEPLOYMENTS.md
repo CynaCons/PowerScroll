@@ -4,15 +4,15 @@ This file records externally observed deployment state. Update it after every
 release or distribution change. It is a ledger, not a substitute for querying
 the live services before a new release.
 
-**Last verified:** 2026-11-19, after v0.95.1
+**Last verified:** 2026-11-26, after v0.97.0
 
 ## Current public state
 
 | Surface | Deployed state | Verification |
 |---|---|---|
-| Source repository | `CynaCons/PowerScroll`; app release source is tag `v0.95.1` at `d0b60fb` | [Repository](https://github.com/CynaCons/PowerScroll) |
-| Application release | `v0.95.1`, published 2026-11-19, non-draft, latest; app reports `0.95.1` | [GitHub release](https://github.com/CynaCons/PowerScroll/releases/tag/v0.95.1) |
-| GitHub Pages | Public, HTTPS, workflow-deployed from `main` at `d0b60fb` (run 44567964989 succeeded 2026-11-19); live app HTML contains `0.95.1` | [Storefront](https://cynacons.github.io/PowerScroll/) · [App](https://cynacons.github.io/PowerScroll/app/) |
+| Source repository | `CynaCons/PowerScroll`; app release source is tag `v0.97.0` at `335976a` | [Repository](https://github.com/CynaCons/PowerScroll) |
+| Application release | `v0.97.0`, published 2026-11-26, non-draft, latest; app reports `0.97.0` | [GitHub release](https://github.com/CynaCons/PowerScroll/releases/tag/v0.97.0) |
+| GitHub Pages | Public, HTTPS, workflow-deployed from `main` at `335976a` (run 45896418938 succeeded 2026-11-26); live HTML not fetched (the release machine's proxy refuses github.io) | [Storefront](https://cynacons.github.io/PowerScroll/) · [App](https://cynacons.github.io/PowerScroll/app/) |
 | npm | `powerscroll-mcp@0.67.1`; `latest` = `0.67.1`. **0.70.0 and 0.71.0 (0.71.0 adds the checklist tools: `card_checklist_update/_remove/_move/_set`, nested items) are committed but NOT published**: npm is not signed in on the release machine (`npm whoami` 401 on 2026-10-23; `npm view` still `0.67.1` on 2026-10-28). Local checkouts (`node powernote-mcp/server.js`) have them | [npm package](https://www.npmjs.com/package/powerscroll-mcp) |
 | Official MCP Registry | `io.github.CynaCons/powerscroll@0.67.1`, active (re-checked 2026-10-28). 0.71.0 waits for npm (Registry validation queries npm) | [Registry search](https://registry.modelcontextprotocol.io/?q=powerscroll) |
 
@@ -24,14 +24,42 @@ them, and the release carries the 0.70.0 tarball as an asset.
 
 ## GitHub release assets
 
-The `v0.95.1` release contains (digests reported by the GitHub API; the HTML
+The `v0.97.0` release contains (digests reported by the GitHub API; the HTML
 digest equals the committed and locally tested `dist-template/index.html`):
 
 | Asset | Size | SHA-256 | Meaning |
 |---|---:|---|---|
-| `PowerScroll.html` | 3,093,556 bytes | `3feef003e15546c47ac9084aa795b888b81839a496d83b7882eaafa5150cc07e` | Primary self-contained notebook application |
-| `PowerNote.html` | 3,093,556 bytes | `3feef003e15546c47ac9084aa795b888b81839a496d83b7882eaafa5150cc07e` | Byte-identical compatibility alias for legacy updates |
+| `PowerScroll.html` | 3,113,280 bytes | `64f7c8662497b88bc6e60fabdfacbc40f7b3a00c105f2d9971248851b7ad694e` | Primary self-contained notebook application |
+| `PowerNote.html` | 3,113,280 bytes | `64f7c8662497b88bc6e60fabdfacbc40f7b3a00c105f2d9971248851b7ad694e` | Byte-identical compatibility alias for legacy updates |
 | `powerscroll-mcp.tgz` | 34,530 bytes | `af4d3c3d175c7cabeeff83aaf179b23eabab2a0eb2f092dcbe1f5d02c5651a2e` | MCP package snapshot, version `0.72.0` (committed `9b030a7`); not on npm yet (npm serves `0.67.1`) |
+
+## Verified for v0.97.0
+
+- Owner request 2026-11-26: plan pages, a linked PLAN.md drawn as the iteration
+  rail (docs/SRS_PLAN.md, REQ-PLAN-001..009, T254). App-only; MCP `server.js`
+  unchanged. Merged as PR #23 (`335976a`); `Build & Release` dispatched with tag
+  `v0.97.0` (run 45896422572), Pages 45896418938 (succeeded), CI 45896418946.
+- Both HTML assets 3,113,280 bytes, sha256 `64f7c866...5ad694e`, equal to the
+  committed `dist-template/index.html`. Release non-draft and the API's latest;
+  MCP tarball `af4d3c3d...5651a2e` unchanged. CI 45896418946 succeeded.
+- Pre-merge evidence: typecheck clean; lint 0 errors (35 warnings); MCP 13/13;
+  bridge all passed; PR CI green. Full campaign 1,062/1,064 in 9.7 min: T191
+  (rotation snap) also fails on main in this container; T203 failed only in the
+  release worktree, where a linked node_modules put the KaTeX fonts outside
+  Vite's allowed root (six 403s). Both reproduced alone. Capture run: 0 console
+  errors on tree and plan pages.
+
+## Verified for v0.96.1
+
+- Owner requests 2026-11-26: a task keeps moving while its agent works (comet,
+  10 min working window, REQ-BOARD-068) and tree polish (REQ-BOARD-069..071,
+  T252, T253). v0.96.0 and v0.96.1 shipped together as v0.96.1. App-only.
+- Merged as PR #22 (`089d81f`). Release published 2026-11-26 20:57Z, non-draft;
+  both HTML assets 3,095,266 bytes, sha256 `c7348b91...7fe9741a`; MCP tarball
+  `af4d3c3d...5651a2e` (unchanged). Pages run 45894702255 succeeded.
+- Pre-merge evidence: typecheck clean; lint 0 errors (35 warnings); MCP 13/13;
+  bridge passed. Full campaign 1,056/1,058 in 10.5 min: T191 (also fails on
+  main here) and T234 (passed alone).
 
 ## Verified for v0.95.1
 
