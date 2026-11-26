@@ -4,7 +4,7 @@
  *
  * Owner request 2026-11-14: "in the tree I don't see where the agents are working". A task an agent
  * holds is ringed in the agent's colour and carries its name; one it acted on in the last minute
- * has a moving ring. Presence is faked the way T215 does it: bridge calls under an actor name.
+ * has a comet circling it (REQ-BOARD-055, constant since 2026-11-26). Presence is faked the way T215 does it: bridge calls under an actor name.
  */
 import { expect, test, type Page } from '@playwright/test';
 import { runBridge, stubBridgeUrl, waitForBridgeReady, waitForCanvasReady } from '../helpers';
@@ -101,13 +101,13 @@ test('a live agent animates the ring at a low frame rate', async ({ page }) => {
   expect(frames).toBeLessThan(20);
 });
 
-test('with no live agent nothing animates, and the ring stops a minute after the last action', async ({ page }) => {
+test('with no live agent nothing animates, and the comet stops ten minutes after the last action', async ({ page }) => {
   const boardId = await openBoard(page);
   await claim(page, boardId, 'Parser', 'feature-1');
   await showTree(page);
   await expect.poll(async () => (await stats(page)).animating).toBe(true);
 
-  await ageAgents(page, 2);
+  await ageAgents(page, 11);
   await expect.poll(async () => (await stats(page)).animating).toBe(false);
   const held = (await nodes(page)).find((node) => node.agent)!;
   expect(held.live).toBe(false);
@@ -160,7 +160,7 @@ test('clicking the agent chip moves the tree to its card and a second click leav
     await runBridge(page, 'card_create', { boardId, title: `Other ${index}`, labels: ['b', 'c', 'd'][index % 3] ? [['b', 'c', 'd'][index % 3]] : [], actor: 'planner' });
   }
   await showTree(page);
-  await ageAgents(page, 2); // not live, so the tree can come to rest between steps
+  await ageAgents(page, 11); // not live, so the tree can come to rest between steps
   await expect.poll(async () => (await stats(page)).animating).toBe(false);
   await settle(page);
 

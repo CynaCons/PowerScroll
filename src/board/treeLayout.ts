@@ -56,6 +56,14 @@ export interface TreeNode {
   locked: boolean;
   /** Dependencies (either direction) that cross to another topic. */
   crossDeps: number;
+  /** Card: queued, not locked, and next to pick up (first queued card of its topic, or its blockers are all done). */
+  ready?: boolean;
+  /** Topic: finished cards and all cards, for the progress arc. */
+  doneCount?: number;
+  cardCount?: number;
+  /** Topic: radius of the "now" mark between finished and live work, and the wedge it spans; absent when one side is empty. */
+  nowR?: number;
+  span?: number;
 }
 
 /** One dependency seen from a card node: the node and card at the other end. */
@@ -241,6 +249,39 @@ function linkDependencies(nodes: TreeNode[], cards: BoardCard[]) {
   return { edges, related };
 }
 
+/**
+ * Per topic: the "now" radius between its outermost finished card and its innermost live one,
+ * and which queued cards are ready next. Runs after dependencies so `locked` is known.
+ */
+function markProgress(nodes: TreeNode[], cards: BoardCard[]) {
+  const byId = new Map(cards.map((card) => [card.id, card]));
+  const topicOf = new Map<string, number>();
+  nodes.forEach((node, index) => { if (node.kind === 'topic' && node.topic !== null) topicOf.set(node.topic, index); });
+  const doneR = new Map<number, number>();
+  const liveR = new Map<number, number>();
+  const firstQueued = new Set<number>();
+  nodes.forEach((node) => {
+    if (node.kind !== 'card' || node.topic === null) return;
+    const topic = topicOf.get(node.topic);
+    if (topic === undefined) return;
+    const radius = Math.hypot(node.x, node.y);
+    if (node.state === 'done') doneR.set(topic, Math.max(doneR.get(topic) ?? 0, radius));
+    else liveR.set(topic, Math.min(liveR.get(topic) ?? Infinity, radius));
+    if (node.state === 'todo' && !node.locked) {
+      const card = node.cardId ? byId.get(node.cardId) : undefined;
+      const waited = Boolean(card?.dependsOn?.some((id) => byId.has(id)));
+      // Nodes are pushed in board order within a ring, so the first unlocked queued node per topic is next up.
+      if (!firstQueued.has(topic) || waited) node.ready = true;
+      firstQueued.add(topic);
+    }
+  });
+  for (const [topic, outer] of doneR) {
+    const inner = liveR.get(topic);
+    if (inner === undefined || inner <= outer) continue;
+    nodes[topic].nowR = (outer + inner) / 2;
+  }
+}
+
 function place(topics: Topic[], signature: string, cards: BoardCard[]): TreeLayout {
   const nodes: TreeNode[] = [{
     key: 'hub', kind: 'hub', x: 0, y: 0, r: 22, angle: 0, parent: -1, topic: null,
@@ -254,10 +295,11 @@ function place(topics: Topic[], signature: string, cards: BoardCard[]): TreeLayo
     const mid = start + width / 2;
     start += width;
     const topicIndex = nodes.length;
+    const doneCount = topic.items.filter((item) => item.card.column === 'done').length;
     nodes.push({
       key: topic.key, kind: 'topic', x: R_TOPIC * Math.cos(mid), y: R_TOPIC * Math.sin(mid), r: 8,
       angle: mid, parent: 0, topic: topic.name, fault: topic.fault, checkTotal: 0, checkDone: 0,
-      locked: false, crossDeps: 0,
+      locked: false, crossDeps: 0, doneCount, cardCount: topic.items.length, span: width,
     });
 
     const count = topic.items.length;
@@ -355,6 +397,7 @@ function place(topics: Topic[], signature: string, cards: BoardCard[]): TreeLayo
   }
 
   const { edges, related } = linkDependencies(nodes, cards);
+  markProgress(nodes, cards);
 
   const grid = new Map<number, number[]>();
   let radius = 0;

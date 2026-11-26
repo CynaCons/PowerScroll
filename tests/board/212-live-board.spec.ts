@@ -90,7 +90,7 @@ test('agents frame, active highlight, reduced motion, flash and needs-me badge',
   await page.evaluate(() => {
     const store = (window as any).__POWERNOTE_AGENT_PRESENCE__;
     const at = store.getState().actors['feature-1'].lastActionAt;
-    store.getState().setNow(at + 61_000);
+    store.getState().setNow(at + 10 * 60_000 + 1_000);
   });
   await expect(card).toHaveAttribute('data-active', 'false');
   await expect(card).not.toContainText('working now');

@@ -29,12 +29,21 @@ export interface TreeDebugNode {
   /** Name of the connected agent holding this card, else null. */
   agent: string | null;
   agentColor: string | null;
-  /** The ring is marching: the agent acted in the last minute and the card is not a fault. */
+  /** The agent is working on this card (sign of life within the quiet window): the comet circles it. */
   live: boolean;
+  /** A comet is circling the card right now (live, and motion is allowed). */
+  comet: boolean;
   /** Waits on a card that is not finished: carries the lock. */
   locked: boolean;
   /** Dependencies to or from other topics: carries the small arrow marker. */
   crossDeps: number;
+  /** Card: queued and ready next (heavier ink outline). */
+  ready: boolean;
+  /** Topic: finished and total cards behind the progress arc. */
+  doneCount: number | null;
+  cardCount: number | null;
+  /** Topic: radius of the "now" arc, or null when the topic is all done or all live. */
+  nowR: number | null;
 }
 
 export interface TreeDebug {
@@ -76,6 +85,9 @@ const MAX_TITLES = 250;
 const CULL_PAD = 26;
 /** Agent rings, halos and name tags. Tags keep one on-screen size at every zoom. */
 const LIVE_FRAME_MS = 80;
+/** One turn of the working comet, and the number of dots in its head and tail. */
+const COMET_TURN_MS = 2400;
+const COMET_TAIL = 9;
 const TAG_MIN_K = 0.3;
 const TAG_H = 16;
 const TAG_PAD = 6;
@@ -110,13 +122,15 @@ interface Batch {
   stubs: Path2D; solid: Path2D; dashed: Path2D; grey: Path2D; hollow: Path2D; inked: Path2D;
   faulty: Path2D; topics: Path2D; topicsFault: Path2D; track: Path2D; ringInk: Path2D;
   ringFault: Path2D; twigsOff: Path2D; twigsOn: Path2D; leaves: Path2D;
+  /** Queued cards that are ready next, and the per-topic "now" arcs. */
+  ready: Path2D; now: Path2D;
 }
 
 const makeBatch = (): Batch => ({
   stubs: new Path2D(), solid: new Path2D(), dashed: new Path2D(), grey: new Path2D(), hollow: new Path2D(),
   inked: new Path2D(), faulty: new Path2D(), topics: new Path2D(), topicsFault: new Path2D(),
   track: new Path2D(), ringInk: new Path2D(), ringFault: new Path2D(), twigsOff: new Path2D(),
-  twigsOn: new Path2D(), leaves: new Path2D(),
+  twigsOn: new Path2D(), leaves: new Path2D(), ready: new Path2D(), now: new Path2D(),
 });
 
 function reducedMotion(): boolean {
@@ -226,8 +240,13 @@ export class BoardTreeRenderer {
           agent: node.agent?.name ?? null,
           agentColor: node.agent?.color ?? null,
           live: Boolean(node.agent?.live),
+          comet: Boolean(node.agent?.live) && !reducedMotion(),
           locked: node.locked,
           crossDeps: node.crossDeps,
+          ready: Boolean(node.ready),
+          doneCount: node.doneCount ?? null,
+          cardCount: node.cardCount ?? null,
+          nowR: node.nowR ?? null,
         }));
       },
       deps: () => (this.layout?.edges ?? []).map(([from, to]) => ({ from, to })),
@@ -370,7 +389,7 @@ export class BoardTreeRenderer {
   }
 
   /**
-   * The one place that decides whether the marching rings need frames: only while a
+   * The one place that decides whether the comets need frames: only while a
    * live node is inside the view, the page is visible and motion is allowed.
    */
   private syncLive() {
@@ -872,14 +891,31 @@ export class BoardTreeRenderer {
         const path = node.fault ? batch.topicsFault : batch.topics;
         path.moveTo(x + r, y);
         path.arc(x, y, r, 0, TAU);
+        // Progress arc: share of the topic's cards that are done (REQ-BOARD-069).
+        if (node.cardCount) {
+          const ring = r + 3.2;
+          batch.track.moveTo(x + ring, y);
+          batch.track.arc(x, y, ring, 0, TAU);
+          if (node.doneCount) {
+            batch.ringInk.moveTo(x, y - ring);
+            batch.ringInk.arc(x, y, ring, -Math.PI / 2, -Math.PI / 2 + (TAU * node.doneCount) / node.cardCount);
+          }
+        }
+        // "Now" mark: a short arc across the branch where finished work ends (REQ-BOARD-070).
+        if (node.nowR && node.span) {
+          const half = Math.min(node.span * 0.42, 34 / node.nowR);
+          batch.now.moveTo(node.nowR * Math.cos(node.angle - half), node.nowR * Math.sin(node.angle - half));
+          batch.now.arc(0, 0, node.nowR, node.angle - half, node.angle + half);
+        }
         continue;
       }
 
       const big = node.state === 'doing' || node.state === 'waiting';
       if (node.state === 'todo') {
         const inner = Math.max(0.1, r - 0.75);
-        batch.hollow.moveTo(x + inner, y);
-        batch.hollow.arc(x, y, inner, 0, TAU);
+        const path = node.ready ? batch.ready : batch.hollow;
+        path.moveTo(x + inner, y);
+        path.arc(x, y, inner, 0, TAU);
       } else {
         const path = node.fault ? batch.faulty : batch.inked;
         path.moveTo(x + r, y);
@@ -1014,6 +1050,10 @@ export class BoardTreeRenderer {
     ctx.fillStyle = P.muted; ctx.fill(batch.grey);
     ctx.fillStyle = P.bg; ctx.fill(batch.hollow);
     ctx.strokeStyle = P.faint; ctx.lineWidth = 1.5; ctx.stroke(batch.hollow);
+    // Ready next: same hollow node, drawn in ink and heavier, so it reads before a hover (REQ-BOARD-071).
+    ctx.fillStyle = P.bg; ctx.fill(batch.ready);
+    ctx.strokeStyle = P.ink; ctx.lineWidth = 2.2; ctx.stroke(batch.ready);
+    ctx.strokeStyle = P.muted; ctx.lineWidth = 1.4; ctx.stroke(batch.now);
     ctx.fillStyle = P.ink; ctx.fill(batch.inked);
     ctx.fillStyle = P.accent; ctx.fill(batch.faulty);
 
@@ -1304,7 +1344,11 @@ export class BoardTreeRenderer {
     ctx.globalAlpha = 1;
   }
 
-  /** The ring just outside each held node: solid, or dashed and marching while the agent is live. */
+  /**
+   * The ring just outside each held node, solid in the agent's colour. While the agent is working
+   * a comet circles it: a head with a fading tail, one turn every COMET_TURN_MS (REQ-BOARD-055).
+   * Under reduced motion the ring is dashed instead and nothing moves.
+   */
   private paintRings(held: number[], now: number, spot: Uint8Array | null) {
     const { ctx, layout, view } = this;
     if (!layout) return;
@@ -1320,21 +1364,35 @@ export class BoardTreeRenderer {
       const dimmed = spot && !spot[i];
       ctx.strokeStyle = agent.color;
       ctx.globalAlpha = dimmed ? DIM_ALPHA : 1;
-      ctx.lineWidth = 3 / k;
-      if (agent.live) {
-        ctx.setLineDash([5 / k, 4 / k]);
-        ctx.lineDashOffset = moving ? -(now * 0.03) / k : 0;
-      } else ctx.setLineDash([]);
+      const comet = agent.live && moving;
+      ctx.lineWidth = (comet ? 2 : 3) / k;
+      if (agent.live && !moving) ctx.setLineDash([5 / k, 4 / k]);
+      else ctx.setLineDash([]);
       ctx.beginPath();
       ctx.arc(x, y, radius, 0, TAU);
       ctx.stroke();
       ctx.setLineDash([]);
-      ctx.lineDashOffset = 0;
+      if (comet) {
+        // Phase from the card id too, so two working cards do not circle in step.
+        const offset = (node.key.length * 0.7 + i * 1.3) % TAU;
+        const head = (now / COMET_TURN_MS) * TAU + offset;
+        const orbit = radius + 3 / k;
+        ctx.fillStyle = agent.color;
+        for (let step = COMET_TAIL - 1; step >= 0; step--) {
+          const a = head - step * 0.17;
+          const fade = 1 - step / COMET_TAIL;
+          ctx.globalAlpha = (dimmed ? DIM_ALPHA : 1) * fade;
+          ctx.beginPath();
+          ctx.arc(x + Math.cos(a) * orbit, y + Math.sin(a) * orbit, (1.2 + 2.3 * fade) / k, 0, TAU);
+          ctx.fill();
+        }
+        ctx.globalAlpha = dimmed ? DIM_ALPHA : 1;
+      }
       if (spot && spot[i] && this.spotlight === agent.name) {
         ctx.lineWidth = 1.6 / k;
         ctx.globalAlpha = 0.6;
         ctx.beginPath();
-        ctx.arc(x, y, radius + 5 / k, 0, TAU);
+        ctx.arc(x, y, radius + 7 / k, 0, TAU);
         ctx.stroke();
       }
     }

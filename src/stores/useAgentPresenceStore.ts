@@ -1,8 +1,13 @@
 import { create } from 'zustand';
 
-export const AGENT_ACTIVE_MS = 60_000;
 /** An agent card with no sign of life for this long is marked as a fault in the tree. */
 export const AGENT_QUIET_MS = 10 * 60_000;
+/**
+ * How long after its last sign of life an agent still counts as working on the card it holds
+ * (REQ-BOARD-020, REQ-BOARD-055). It equals the quiet window, so a held card is always either
+ * working (moving) or quiet (a fault), never neither. Owner request 2026-11-26.
+ */
+export const AGENT_ACTIVE_MS = AGENT_QUIET_MS;
 export const AGENT_RECENT_MS = 30 * 60_000;
 export const AGENT_TICK_MS = 5_000;
 
