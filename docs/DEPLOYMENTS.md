@@ -4,15 +4,15 @@ This file records externally observed deployment state. Update it after every
 release or distribution change. It is a ledger, not a substitute for querying
 the live services before a new release.
 
-**Last verified:** 2026-11-26, after v0.97.0
+**Last verified:** 2026-11-26, after v0.97.1
 
 ## Current public state
 
 | Surface | Deployed state | Verification |
 |---|---|---|
-| Source repository | `CynaCons/PowerScroll`; app release source is tag `v0.97.0` at `335976a` | [Repository](https://github.com/CynaCons/PowerScroll) |
-| Application release | `v0.97.0`, published 2026-11-26, non-draft, latest; app reports `0.97.0` | [GitHub release](https://github.com/CynaCons/PowerScroll/releases/tag/v0.97.0) |
-| GitHub Pages | Public, HTTPS, workflow-deployed from `main` at `335976a` (run 45896418938 succeeded 2026-11-26); live HTML not fetched (the release machine's proxy refuses github.io) | [Storefront](https://cynacons.github.io/PowerScroll/) · [App](https://cynacons.github.io/PowerScroll/app/) |
+| Source repository | `CynaCons/PowerScroll`; app release source is tag `v0.97.1` at `708aea7` | [Repository](https://github.com/CynaCons/PowerScroll) |
+| Application release | `v0.97.1`, published 2026-11-26, non-draft, latest; app reports `0.97.1` | [GitHub release](https://github.com/CynaCons/PowerScroll/releases/tag/v0.97.1) |
+| GitHub Pages | Public, HTTPS, workflow-deployed from `main` at `708aea7` (run 45908055076 succeeded 2026-11-26); live HTML not fetched (the release machine's proxy refuses github.io) | [Storefront](https://cynacons.github.io/PowerScroll/) · [App](https://cynacons.github.io/PowerScroll/app/) |
 | npm | `powerscroll-mcp@0.67.1`; `latest` = `0.67.1`. **0.70.0 and 0.71.0 (0.71.0 adds the checklist tools: `card_checklist_update/_remove/_move/_set`, nested items) are committed but NOT published**: npm is not signed in on the release machine (`npm whoami` 401 on 2026-10-23; `npm view` still `0.67.1` on 2026-10-28). Local checkouts (`node powernote-mcp/server.js`) have them | [npm package](https://www.npmjs.com/package/powerscroll-mcp) |
 | Official MCP Registry | `io.github.CynaCons/powerscroll@0.67.1`, active (re-checked 2026-10-28). 0.71.0 waits for npm (Registry validation queries npm) | [Registry search](https://registry.modelcontextprotocol.io/?q=powerscroll) |
 
@@ -24,14 +24,27 @@ them, and the release carries the 0.70.0 tarball as an asset.
 
 ## GitHub release assets
 
-The `v0.97.0` release contains (digests reported by the GitHub API; the HTML
+The `v0.97.1` release contains (digests reported by the GitHub API; the HTML
 digest equals the committed and locally tested `dist-template/index.html`):
 
 | Asset | Size | SHA-256 | Meaning |
 |---|---:|---|---|
-| `PowerScroll.html` | 3,113,280 bytes | `64f7c8662497b88bc6e60fabdfacbc40f7b3a00c105f2d9971248851b7ad694e` | Primary self-contained notebook application |
-| `PowerNote.html` | 3,113,280 bytes | `64f7c8662497b88bc6e60fabdfacbc40f7b3a00c105f2d9971248851b7ad694e` | Byte-identical compatibility alias for legacy updates |
+| `PowerScroll.html` | 3,117,647 bytes | `95f26bcb10ea42ade73d134d93cf0f4c9b9113ae2eb6a390369904dde84d5be3` | Primary self-contained notebook application |
+| `PowerNote.html` | 3,117,647 bytes | `95f26bcb10ea42ade73d134d93cf0f4c9b9113ae2eb6a390369904dde84d5be3` | Byte-identical compatibility alias for legacy updates |
 | `powerscroll-mcp.tgz` | 34,530 bytes | `af4d3c3d175c7cabeeff83aaf179b23eabab2a0eb2f092dcbe1f5d02c5651a2e` | MCP package snapshot, version `0.72.0` (committed `9b030a7`); not on npm yet (npm serves `0.67.1`) |
+
+## Verified for v0.97.1
+
+- Owner report 2026-11-26: the mockups showed board visuals 0.97.0 lacked. Tree
+  Show menu (four switches), agent trail, "· working" tags, "now" word
+  (REQ-BOARD-072, T255). App-only; MCP `server.js` unchanged.
+- Merged as PR #25 (`708aea7`). `Build & Release` 45908056084 and Pages
+  45908055076 succeeded; release non-draft and the API's latest. Both HTML
+  assets 3,117,647 bytes, sha256 `95f26bcb...e84d5be3`, equal to the committed
+  `dist-template/index.html`. MCP tarball `af4d3c3d...5651a2e` unchanged.
+- Pre-merge evidence: typecheck clean; lint 0 errors (35 warnings); MCP 13/13;
+  bridge all passed; PR CI green. Full campaign 1,063/1,066 in 8.9 min: T191
+  and T203 as for v0.97.0 (environment), T198 (shape labels) passed alone.
 
 ## Verified for v0.97.0
 
