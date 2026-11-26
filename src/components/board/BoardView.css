@@ -1839,6 +1839,46 @@
   outline-offset: 2px;
 }
 
+/* Tree readability switches (REQ-BOARD-072) */
+.board-tree__show {
+  position: relative;
+}
+
+.board-tree__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  display: grid;
+  gap: 2px;
+  min-width: 220px;
+  padding: 6px;
+  border: 1px solid var(--tree-rule);
+  border-radius: 8px;
+  background: var(--tree-paper);
+  color: var(--tree-ink);
+  box-shadow: 0 6px 18px rgba(20, 24, 26, 0.12);
+}
+
+.board-tree__option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  font-size: 12.5px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.board-tree__option:hover {
+  background: var(--tree-bg);
+}
+
+.board-tree__option input {
+  accent-color: var(--tree-ink);
+  margin: 0;
+}
+
 /* Card dependencies (REQ-BOARD-063, REQ-BOARD-064) */
 .board-card__waits {
   display: flex;
