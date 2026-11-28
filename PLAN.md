@@ -1899,6 +1899,17 @@ Showcase v0.74.0–v0.75.1 (whiteboard feedback round 2, real before/after captu
 - [x] Working agents' tags read "name · working"; the word "now" beside each now mark [agent: claude]
 - [x] REQ-BOARD-072, T255, checks, release v0.97.1 [agent: claude]
 
+## v0.98 — See what changed
+
+### v0.98.0 — Recent: only the cards that changed lately
+**Goal:** Owner request 2026-11-28: a board mode that shows only recently modified tasks. Design agreed in the thread: All | Needs me | Recent, a window menu (last hour, 24 h by default, 7 days, since my last visit), the change read from the board's event log (pure reorders do not count), a "what changed" line on each card, and the tree fading unchanged cards instead of hiding them.
+- [x] Owner request 2026-11-28: "a mode in PowerScroll Agent Board where we see only the recently modified tasks"
+- [x] Recent filter beside Needs me, window menu, kept per browser [agent: claude]
+- [x] Last change per card from the event log, reorders skipped, timestamp fallback past the log [agent: claude]
+- [x] "12 min ago · agent · moved to Done" line on matching cards; empty state offers a wider window [agent: claude]
+- [x] Tree: unchanged cards fade, branches stay put [agent: claude]
+- [x] REQ-BOARD-073, T256, checks, release v0.98.0 [agent: claude]
+
 ## Future (Backlog)
 > Not yet planned — will be prioritized when earlier iterations are complete. Paid tier moved to `docs/VISION.md`.
 

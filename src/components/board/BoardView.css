@@ -2013,3 +2013,55 @@
 .board-deps__subhead {
   margin-top: 14px;
 }
+
+/* Recent filter (REQ-BOARD-073): the toggle and its window menu read as one control. */
+.board-recent {
+  display: inline-flex;
+  align-items: center;
+}
+
+.board-recent .board-recent__toggle {
+  gap: 6px;
+}
+
+.board-recent--active .board-recent__toggle {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.board-recent .board-recent__window {
+  gap: 4px;
+  padding: 0 8px;
+  color: #5c6467;
+  font-variant-numeric: tabular-nums;
+}
+
+.board-recent--active .board-recent__window {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-left: 1px solid #c3cbc9;
+  color: #14181a;
+}
+
+.board-card__change {
+  display: block;
+  margin-top: 7px;
+  color: #5c6467;
+  font-size: 11px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.board-recent-empty {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 1510px;
+  margin: -4px auto 18px;
+  padding: 8px 14px;
+  border: 1px solid #dbe0de;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #5c6467;
+  font-size: 13px;
+}

@@ -56,6 +56,8 @@ export interface TreeDebug {
   view(): View;
   /** The switched layers and, per agent trail, the card numbers it passes through (in order). */
   layers(): TreeShow & { trails: Array<{ name: string; numbers: number[] }> };
+  /** Recent filter: card numbers at full ink, or null when the filter is off. */
+  recent(): number[] | null;
 }
 
 type Palette = Record<'bg' | 'paper' | 'ink' | 'muted' | 'faint' | 'rule' | 'accent' | 'onInk', string>;
@@ -181,6 +183,10 @@ export class BoardTreeRenderer {
   private spotlight: string | null = null;
   /** Per node: on the path hub -> topic -> ... -> the spotlighted agent's node. Null when no spotlight applies. */
   private lit: Uint8Array | null = null;
+  /** Recent filter: the changed cards' ids, or null when the filter is off. */
+  private recent: Set<string> | null = null;
+  /** Per node: a changed card or on its path to the hub. Null when the filter is off. */
+  private recentLit: Uint8Array | null = null;
   private liveNodes: number[] = [];
   private liveTimer = 0;
   private agentNotes: Record<string, string> = {};
@@ -272,6 +278,15 @@ export class BoardTreeRenderer {
         frames: this.frames, layouts: this.layouts, lastFrameMs: this.lastFrameMs, animating: this.liveTimer !== 0,
       }),
       view: () => ({ ...this.view }),
+      recent: () => {
+        const layout = this.layout;
+        const lit = this.recentLit;
+        if (!layout || !lit) return null;
+        return layout.nodes
+          .filter((node, index) => node.kind === 'card' && lit[index])
+          .map((node) => node.number ?? 0)
+          .sort((a, b) => a - b);
+      },
       layers: () => ({
         ...this.show,
         trails: this.trails.map((trail) => ({
@@ -348,6 +363,7 @@ export class BoardTreeRenderer {
     this.liveNodes = [];
     layout.nodes.forEach((node, index) => { if (node.agent?.live) this.liveNodes.push(index); });
     this.buildLit();
+    this.buildRecentLit();
 
     if (!this.userMoved && this.W && this.H) this.goTo(this.fitTarget(), Boolean(previous));
     this.syncLive();
@@ -392,6 +408,32 @@ export class BoardTreeRenderer {
       this.goTo({ k, x: this.W / 2 - k * node.x, y: this.H / 2 - k * node.y }, true);
     }
     this.invalidate();
+  }
+
+  /**
+   * Recent filter: no card leaves the tree (the rings would reshuffle); the cards that did not
+   * change fade, and the changed ones keep their path to the hub at full ink.
+   */
+  setRecent(ids: Set<string> | null) {
+    const same = ids === null ? this.recent === null
+      : this.recent !== null && ids.size === this.recent.size && [...ids].every((id) => this.recent!.has(id));
+    if (same) return;
+    this.recent = ids;
+    this.buildRecentLit();
+    this.invalidate();
+  }
+
+  private buildRecentLit() {
+    const layout = this.layout;
+    this.recentLit = null;
+    if (!layout || !this.recent) return;
+    const lit = new Uint8Array(layout.nodes.length);
+    layout.nodes.forEach((node, index) => {
+      if (!node.cardId || !this.recent!.has(node.cardId)) return;
+      for (let at = index; at >= 0 && !lit[at]; at = layout.nodes[at].parent) lit[at] = 1;
+    });
+    lit[0] = 1;
+    this.recentLit = lit;
   }
 
   /** The dependencies of the hovered card node, for the lines, the fade and the tooltip. */
@@ -869,7 +911,7 @@ export class BoardTreeRenderer {
     const vx1 = (this.W - view.x) / k + CULL_PAD;
     const vy1 = (this.H - view.y) / k + CULL_PAD;
 
-    const spot = this.hoverLit ?? this.lit;
+    const spot = this.hoverLit ?? this.lit ?? this.recentLit;
     const main = makeBatch();
     const dim = spot ? makeBatch() : null;
     const labelled: number[] = [];

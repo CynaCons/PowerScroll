@@ -1,7 +1,7 @@
 # SRS: Board pages
 
 **Project:** PowerScroll
-**Version:** 0.83.4
+**Version:** 0.98.0
 **Date:** 2026-10-14
 
 ## Purpose
@@ -86,6 +86,7 @@ canvas undo history.
 | REQ-BOARD-070 | A topic that has both finished and live cards shall show a short "now" arc across its branch, centred on the topic's angle, halfway between its outermost finished card and its innermost live card; a topic that is all finished or all live shows none. Owner pick 2026-11-26 (tree polish) | Should | T253 |
 | REQ-BOARD-071 | A queued card that is ready next shall be drawn with a heavier ink outline instead of the faint one: the innermost queued card of its topic that waits on nothing unfinished, and any queued card whose blockers are all finished. A card still waiting on an unfinished card is never ready. Owner pick 2026-11-26 (tree polish) | Should | T253 |
 | REQ-BOARD-072 | The tree shall have a "Show" menu with four switches: topic progress arcs, "now" marks, ready-next markers (all on by default) and agent trail (off by default). The choice is kept in the browser. The agent trail is a thin line in each agent's colour through the live Done cards that agent moved to Done, in the order it finished them (an agent with fewer than two such cards draws none; cards the owner finished draw none). A working agent's tag reads "name · working", and each now mark carries the word "now" from 50% zoom. Owner report 2026-11-26 (mockup parity) | Should | T255 |
+| REQ-BOARD-073 | The board header shall offer a Recent filter beside All and Needs me, with a window menu: last hour, last 24 hours (the default), last 7 days and since my last visit (the time this board was last left in this browser; 24 hours when there is none). A card matches when its latest change falls inside the window. The latest change is read from the board's event log, where a move within the same column (a pure reorder) does not count; a card with no counted event in the log falls back to its own last-updated time. Archived cards stay hidden. The filter combines with the label filter, the card count reads "N of M", and the choice and window are kept in the browser. In Cards view each matching card shows a line with when, who and what changed; when nothing matches, the board says so and offers a wider window. In Tree view no card is removed: unchanged cards fade and the changed ones, with their path to the hub, stay at full ink. Owner request 2026-11-28 | Should | T256 |
 
 ## Traceability
 
@@ -112,3 +113,4 @@ canvas undo history.
 - T252 — `tests/board/252-working-motion.spec.ts`
 - T253 — `tests/board/253-tree-polish.spec.ts`
 - T255 — `tests/board/255-tree-show.spec.ts`
+- T256 — `tests/board/256-recent-filter.spec.ts`
