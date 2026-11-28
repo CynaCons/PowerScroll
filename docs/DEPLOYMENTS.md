@@ -4,15 +4,15 @@ This file records externally observed deployment state. Update it after every
 release or distribution change. It is a ledger, not a substitute for querying
 the live services before a new release.
 
-**Last verified:** 2026-11-26, after v0.97.1
+**Last verified:** 2026-11-28, after v0.98.0
 
 ## Current public state
 
 | Surface | Deployed state | Verification |
 |---|---|---|
-| Source repository | `CynaCons/PowerScroll`; app release source is tag `v0.97.1` at `708aea7` | [Repository](https://github.com/CynaCons/PowerScroll) |
-| Application release | `v0.97.1`, published 2026-11-26, non-draft, latest; app reports `0.97.1` | [GitHub release](https://github.com/CynaCons/PowerScroll/releases/tag/v0.97.1) |
-| GitHub Pages | Public, HTTPS, workflow-deployed from `main` at `708aea7` (run 45908055076 succeeded 2026-11-26); live HTML not fetched (the release machine's proxy refuses github.io) | [Storefront](https://cynacons.github.io/PowerScroll/) · [App](https://cynacons.github.io/PowerScroll/app/) |
+| Source repository | `CynaCons/PowerScroll`; app release source is tag `v0.98.0` at `5bdee1c` | [Repository](https://github.com/CynaCons/PowerScroll) |
+| Application release | `v0.98.0`, published 2026-11-28, non-draft, latest; app reports `0.98.0` | [GitHub release](https://github.com/CynaCons/PowerScroll/releases/tag/v0.98.0) |
+| GitHub Pages | Public, HTTPS, workflow-deployed from `main` at `5bdee1c` (run 46113191335 succeeded 2026-11-28); live HTML not fetched (the release machine's proxy refuses github.io) | [Storefront](https://cynacons.github.io/PowerScroll/) · [App](https://cynacons.github.io/PowerScroll/app/) |
 | npm | `powerscroll-mcp@0.67.1`; `latest` = `0.67.1`. **0.70.0 and 0.71.0 (0.71.0 adds the checklist tools: `card_checklist_update/_remove/_move/_set`, nested items) are committed but NOT published**: npm is not signed in on the release machine (`npm whoami` 401 on 2026-10-23; `npm view` still `0.67.1` on 2026-10-28). Local checkouts (`node powernote-mcp/server.js`) have them | [npm package](https://www.npmjs.com/package/powerscroll-mcp) |
 | Official MCP Registry | `io.github.CynaCons/powerscroll@0.67.1`, active (re-checked 2026-10-28). 0.71.0 waits for npm (Registry validation queries npm) | [Registry search](https://registry.modelcontextprotocol.io/?q=powerscroll) |
 
@@ -24,14 +24,30 @@ them, and the release carries the 0.70.0 tarball as an asset.
 
 ## GitHub release assets
 
-The `v0.97.1` release contains (digests reported by the GitHub API; the HTML
+The `v0.98.0` release contains (digests reported by the GitHub API; the HTML
 digest equals the committed and locally tested `dist-template/index.html`):
 
 | Asset | Size | SHA-256 | Meaning |
 |---|---:|---|---|
-| `PowerScroll.html` | 3,117,647 bytes | `95f26bcb10ea42ade73d134d93cf0f4c9b9113ae2eb6a390369904dde84d5be3` | Primary self-contained notebook application |
-| `PowerNote.html` | 3,117,647 bytes | `95f26bcb10ea42ade73d134d93cf0f4c9b9113ae2eb6a390369904dde84d5be3` | Byte-identical compatibility alias for legacy updates |
+| `PowerScroll.html` | 3,123,655 bytes | `6c48b2573dc0c230908d118c8cd8f18352e68886585f7f3d53d60ee3753f5398` | Primary self-contained notebook application |
+| `PowerNote.html` | 3,123,655 bytes | `6c48b2573dc0c230908d118c8cd8f18352e68886585f7f3d53d60ee3753f5398` | Byte-identical compatibility alias for legacy updates |
 | `powerscroll-mcp.tgz` | 34,530 bytes | `af4d3c3d175c7cabeeff83aaf179b23eabab2a0eb2f092dcbe1f5d02c5651a2e` | MCP package snapshot, version `0.72.0` (committed `9b030a7`); not on npm yet (npm serves `0.67.1`) |
+
+## Verified for v0.98.0
+
+- Owner request 2026-11-28: a board mode showing only recently modified cards.
+  Recent filter beside All and Needs me, window menu (1 h, 24 h default, 7 days,
+  since my last visit), change line on cards, tree fades unchanged cards
+  (REQ-BOARD-073, T256). App-only; MCP `server.js` unchanged.
+- Merged as PR #27 (`5bdee1c`); `Build & Release` dispatched with tag `v0.98.0`
+  (run 46113193632), Pages 46113191335 succeeded. Release non-draft; both HTML
+  assets 3,123,655 bytes, sha256 `6c48b257...3753f5398`, equal to the committed
+  `dist-template/index.html`. MCP tarball `af4d3c3d...5651a2e` unchanged.
+- Pre-merge evidence: typecheck clean; lint 0 errors (35 warnings); MCP 13/13;
+  bridge all passed; PR CI green. Full campaign 1,067/1,068 in 10.4 min: T191
+  (rotation snap) fails on main in this container too. Board folder 91/91 after
+  the last card-face change. Capture run: 0 console errors.
+- Showcase: https://claude.ai/artifact/BvpyvduzGrAXpdSifGwG8L
 
 ## Verified for v0.97.1
 
