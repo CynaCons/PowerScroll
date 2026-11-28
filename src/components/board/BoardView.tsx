@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, Clock, Plus } from 'lucide-react';
 import type { BoardCard, BoardColumnId, BoardData } from '../../types/data';
 import {
   BOARD_COLUMNS,
@@ -12,6 +12,17 @@ import {
 } from '../../board/boardOps';
 import { boardLabelColors, confirmStart, dependencyLines, displayName, labelColor, relativeTime, workableColumn } from './boardUi';
 import { LabelColorsContext } from './labelColors';
+import { RecentChangesContext } from './recentChanges';
+import { BoardMenu } from './BoardMenu';
+import {
+  isRecent,
+  lastChanges,
+  RECENT_DEFAULT,
+  RECENT_WINDOWS,
+  recentSince,
+  recentWindow,
+  type RecentWindow,
+} from '../../board/recent';
 import {
   AGENT_ACTIVE_MS,
   AGENT_QUIET_MS,
@@ -36,6 +47,52 @@ import './BoardView.css';
 const LIST_BREAK = '\n';
 const ACTOR = 'you';
 const VIEW_KEY = 'powerscroll-board-view';
+const RECENT_KEY = 'powerscroll-board-recent';
+const VISIT_KEY = 'powerscroll-board-visit:';
+
+type BoardScope = 'all' | 'needs' | 'recent';
+
+interface RecentPref {
+  on: boolean;
+  window: RecentWindow;
+}
+
+// Like the view mode, the Recent filter and its window are a device preference (REQ-BOARD-073).
+function readRecent(): RecentPref {
+  try {
+    const raw = JSON.parse(localStorage.getItem(RECENT_KEY) ?? '{}') as Partial<RecentPref>;
+    const window = RECENT_WINDOWS.some((item) => item.id === raw.window) ? raw.window as RecentWindow : RECENT_DEFAULT;
+    return { on: raw.on === true, window };
+  } catch {
+    return { on: false, window: RECENT_DEFAULT };
+  }
+}
+
+function writeRecent(pref: RecentPref) {
+  try {
+    localStorage.setItem(RECENT_KEY, JSON.stringify(pref));
+  } catch {
+    // not kept
+  }
+}
+
+/** When this board was last left in this browser, or null for a first visit. */
+function readVisit(pageId: string): number | null {
+  try {
+    const at = Number(localStorage.getItem(VISIT_KEY + pageId));
+    return Number.isFinite(at) && at > 0 ? at : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeVisit(pageId: string, at: number) {
+  try {
+    localStorage.setItem(VISIT_KEY + pageId, String(at));
+  } catch {
+    // not kept
+  }
+}
 
 type BoardViewMode = 'cards' | 'tree';
 
@@ -100,7 +157,31 @@ export function BoardView() {
   const actors = useAgentPresenceStore((state) => state.actors);
   const left = useAgentPresenceStore((state) => state.left);
   const now = useAgentPresenceStore((state) => state.now);
-  const [needsMe, setNeedsMe] = useState(false);
+  const [scope, setScopeState] = useState<BoardScope>(() => (readRecent().on ? 'recent' : 'all'));
+  const [recentWindowId, setRecentWindowId] = useState<RecentWindow>(() => readRecent().window);
+  const needsMe = scope === 'needs';
+  const recentOn = scope === 'recent';
+  const setScope = (next: BoardScope) => {
+    setScopeState(next);
+    writeRecent({ on: next === 'recent', window: recentWindowId });
+  };
+  const chooseWindow = (id: RecentWindow) => {
+    setRecentWindowId(id);
+    setScopeState('recent');
+    writeRecent({ on: true, window: id });
+  };
+  const pageId = page?.id ?? '';
+  // Read before this visit's effects run, so leaving (and StrictMode's rehearsal) cannot overwrite it.
+  const lastVisit = useMemo(() => (pageId ? readVisit(pageId) : null), [pageId]);
+  useEffect(() => {
+    if (!pageId) return undefined;
+    const leave = () => writeVisit(pageId, Date.now());
+    window.addEventListener('pagehide', leave);
+    return () => {
+      window.removeEventListener('pagehide', leave);
+      leave();
+    };
+  }, [pageId]);
   const [viewMode, setViewMode] = useState<BoardViewMode>(readViewMode);
   // Label filter per board page, for this session only (not saved in the notebook).
   const [labelFilters, setLabelFilters] = useState<Record<string, string[]>>({});
@@ -296,10 +377,19 @@ export function BoardView() {
   const labels = boardLabels(live);
   const labelFilter = (labelFilters[page.id] ?? []).filter((label) => labels.some((entry) => entry.label === label));
   const setLabelFilter = (selected: string[]) => setLabelFilters((current) => ({ ...current, [page.id]: selected }));
-  const visibleCards = live
+  const changes = lastChanges(board);
+  const since = recentSince(recentWindowId, now, lastVisit);
+  // The tree keeps every card it would show and fades the unchanged ones, so it skips the Recent filter.
+  const treeCards = live
     .filter((card) => !needsMe || card.column === 'waiting')
     .filter((card) => !labelFilter.length || card.labels.some((label) => labelFilter.includes(label)));
-  const filtered = needsMe || labelFilter.length > 0;
+  const visibleCards = recentOn ? treeCards.filter((card) => isRecent(card, changes, since)) : treeCards;
+  const recentKey = recentOn ? visibleCards.map((card) => card.id).sort().join(',') : null;
+  const filtered = needsMe || recentOn || labelFilter.length > 0;
+  const windowInfo = recentWindow(recentWindowId);
+  const windowPhrase = recentWindowId === 'visit'
+    ? (lastVisit === null ? 'in the last 24 hours' : 'since your last visit')
+    : `in the ${windowInfo.label.toLowerCase()}`;
   const lanes = boardLanes(live, visibleCards, labelFilter);
   const collapsed = collapsedLanes[page.id] ?? [];
   const collapsedNow = (key: string) => collapsed.includes(key);
@@ -443,6 +533,7 @@ export function BoardView() {
 
   return (
     <LabelColorsContext.Provider value={labelColors}>
+    <RecentChangesContext.Provider value={recentOn ? changes : null}>
       <main
         className="board-view"
         data-testid="board-view"
@@ -498,8 +589,9 @@ export function BoardView() {
             </div>
             <button
               type="button"
-              className={!needsMe ? 'board-filter board-filter--active' : 'board-filter'}
-              onClick={() => setNeedsMe(false)}
+              className={scope === 'all' ? 'board-filter board-filter--active' : 'board-filter'}
+              data-testid="board-filter-all"
+              onClick={() => setScope('all')}
             >
               All
             </button>
@@ -507,7 +599,7 @@ export function BoardView() {
               type="button"
               className={needsMe ? 'board-filter board-filter--active' : 'board-filter'}
               data-testid="board-filter-needs-me"
-              onClick={() => setNeedsMe(true)}
+              onClick={() => setScope('needs')}
             >
               Needs me
               {waitingCount > 0 && (
@@ -516,6 +608,54 @@ export function BoardView() {
                 </span>
               )}
             </button>
+            <div className={`board-recent${recentOn ? ' board-recent--active' : ''}`}>
+              <button
+                type="button"
+                className={recentOn ? 'board-filter board-filter--active board-recent__toggle' : 'board-filter board-recent__toggle'}
+                data-testid="board-filter-recent"
+                aria-pressed={recentOn}
+                onClick={() => setScope('recent')}
+              >
+                <Clock size={14} />
+                Recent
+              </button>
+              <BoardMenu
+                label="Recent window"
+                testId="board-recent-window"
+                align="end"
+                triggerClassName={`board-filter board-recent__window${recentOn ? ' board-filter--active' : ''}`}
+                trigger={(
+                  <>
+                    {windowInfo.short}
+                    <ChevronDown size={14} className="board-property__chevron" />
+                  </>
+                )}
+              >
+                {(close) => (
+                  <div role="listbox" aria-label="Recent window">
+                    {RECENT_WINDOWS.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        role="option"
+                        aria-selected={recentOn && item.id === recentWindowId}
+                        className="board-menu__option"
+                        data-testid={`board-recent-window-${item.id}`}
+                        onClick={() => {
+                          chooseWindow(item.id);
+                          close();
+                        }}
+                      >
+                        <span className="board-label-filter__box">
+                          {item.id === recentWindowId && <Check size={12} />}
+                        </span>
+                        <span className="board-menu__option-text">{item.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </BoardMenu>
+            </div>
             <LabelFilter labels={labels} selected={labelFilter} onChange={setLabelFilter} />
             {archivedCards.length > 0 && (
               <button
@@ -533,7 +673,7 @@ export function BoardView() {
               className="board-button board-button--primary"
               data-testid="board-new-card"
               onClick={() => {
-                setNeedsMe(false);
+                setScope('all');
                 document.querySelector<HTMLButtonElement>('[data-testid="board-add-card-todo"]')?.click();
               }}
             >
@@ -572,6 +712,25 @@ export function BoardView() {
             ))}
           </div>
         )}
+        {recentOn && visibleCards.length === 0 && treeCards.length > 0 && (
+          <div className="board-recent-empty" data-testid="board-recent-empty">
+            <span>Nothing changed {windowPhrase}.</span>
+            {recentWindowId !== 'week' ? (
+              <button
+                type="button"
+                className="board-button"
+                data-testid="board-recent-widen"
+                onClick={() => chooseWindow('week')}
+              >
+                Show the last 7 days
+              </button>
+            ) : (
+              <button type="button" className="board-button" data-testid="board-recent-widen" onClick={() => setScope('all')}>
+                Show all cards
+              </button>
+            )}
+          </div>
+        )}
         <div
           className={`board-view__content${
             activityCollapsed ? ' board-view__content--activity-collapsed' : ''
@@ -579,7 +738,8 @@ export function BoardView() {
         >
           {viewMode === 'tree' ? (
             <BoardTree
-              cards={visibleCards}
+              cards={treeCards}
+              recentKey={recentKey}
               events={board.events}
               quietCardIds={quietCardIds}
               agents={treeAgents}
@@ -742,6 +902,7 @@ export function BoardView() {
           />
         )}
       </main>
+    </RecentChangesContext.Provider>
     </LabelColorsContext.Provider>
   );
 }

@@ -23,6 +23,8 @@ function readShow(): TreeShow {
 
 interface BoardTreeProps {
   cards: BoardCard[];
+  /** While the Recent filter is on: the ids of the cards that changed, comma-joined; the rest fade (REQ-BOARD-073). */
+  recentKey?: string | null;
   events: BoardEvent[];
   quietCardIds: Set<string>;
   /** Connected agents that hold a card on this board. */
@@ -34,7 +36,7 @@ interface BoardTreeProps {
   onOpenCard: (cardId: string) => void;
 }
 
-export function BoardTree({ cards, events, quietCardIds, agents, agentNotes, spotlight, title, onOpenCard }: BoardTreeProps) {
+export function BoardTree({ cards, recentKey = null, events, quietCardIds, agents, agentNotes, spotlight, title, onOpenCard }: BoardTreeProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const tipRef = useRef<HTMLDivElement>(null);
@@ -107,6 +109,10 @@ export function BoardTree({ cards, events, quietCardIds, agents, agentNotes, spo
       document.removeEventListener('keydown', onKey);
     };
   }, [menuOpen]);
+
+  useEffect(() => {
+    rendererRef.current?.setRecent(recentKey === null ? null : new Set(recentKey ? recentKey.split(',') : []));
+  }, [recentKey, layout]);
 
   // After the layout, so the spotlight finds its node when both change together.
   useEffect(() => {

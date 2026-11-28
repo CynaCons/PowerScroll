@@ -1,6 +1,7 @@
 import { CheckSquare, Lock, MessageSquare } from 'lucide-react';
 import { ChecklistPreview, ChecklistProgress } from './Checklist';
 import { useLabelColor } from './labelColors';
+import { useRecentChange } from './recentChanges';
 import type { BoardCard } from '../../types/data';
 import {
   avatarColor,
@@ -45,6 +46,7 @@ export function BoardCardFace({
   onKeyDown,
 }: BoardCardFaceProps) {
   const labelColor = useLabelColor();
+  const change = useRecentChange(card.id);
   const complete = card.checklist.filter((item) => item.done).length;
   const metadata = card.checklist.length
     ? `${complete}/${card.checklist.length}`
@@ -110,6 +112,11 @@ export function BoardCardFace({
             : `Waits on ${dependencies.waits.map((number) => `#${number}`).join(' ')}`}
         </span>
       )}
+      {change && !ghost && (
+        <span className="board-card__change" data-testid={`board-card-change-${card.number}`}>
+          {[relativeTime(change.at), change.actor ? displayName(change.actor) : '', change.what].filter(Boolean).join(' · ')}
+        </span>
+      )}
       <ChecklistProgress items={card.checklist} testId={`board-card-progress-${card.number}`} />
       <ChecklistPreview items={card.checklist} testId={`board-card-subtasks-${card.number}`} />
       <footer className="board-card__footer">
@@ -128,8 +135,10 @@ export function BoardCardFace({
             </>
           ) : (
             <>
-              {card.assignee ? `${displayName(card.assignee)} · ` : ''}
-              {relativeTime(card.updatedAt)}
+              {/* With the Recent filter on, the change line above already says when. */}
+              {change && !ghost
+                ? (card.assignee ? displayName(card.assignee) : '')
+                : <>{card.assignee ? `${displayName(card.assignee)} · ` : ''}{relativeTime(card.updatedAt)}</>}
             </>
           )}
         </span>
